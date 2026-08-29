@@ -19,11 +19,33 @@
 
   <main>
     <section class="hero">
-      <h1>Load test your APIs<br />from the browser.</h1>
-      <p class="sub">LoadForge is a Chrome extension for authorized HTTP API load and stress testing. No backend cluster. No setup.</p>
-      <div class="cta">
-        <a class="btn solid" href="#install">Get started</a>
-        <a class="btn ghost" href="https://github.com/hexiangtao/loadforge" target="_blank" rel="noopener">View on GitHub</a>
+      <div class="hero-copy">
+        <h1>Load test your APIs<br />from the browser.</h1>
+        <p class="sub">LoadForge is a Chrome extension for authorized HTTP API load and stress testing. No backend cluster. No setup.</p>
+        <div class="cta">
+          <a class="btn solid" href="#install">Get started</a>
+          <a class="btn ghost" href="https://github.com/hexiangtao/loadforge" target="_blank" rel="noopener">View on GitHub</a>
+        </div>
+      </div>
+      <div class="hero-visual">
+        <div class="terminal">
+          <div class="term-bar">
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+            <span class="term-title">loadforge</span>
+          </div>
+          <div class="term-body">
+<pre><code><span class="ln">1</span><span class="cmd">$</span> <span class="arg">loadforge</span> <span class="flag">--url</span> <span class="str">https://api.example.com/v1/orders</span>
+<span class="ln">2</span><span class="cmd">$</span> <span class="arg">loadforge</span> <span class="flag">--users</span> <span class="num">50</span> <span class="flag">--rps</span> <span class="num">25</span> <span class="flag">--duration</span> <span class="num">60</span>
+<span class="ln">3</span>
+<span class="ln">4</span><span class="ok">▸ Load test running…</span>
+<span class="ln">5</span>  users    <span class="num">50</span>   target rps  <span class="num">25</span>
+<span class="ln">6</span>  duration <span class="num">60s</span>  ramp-up     <span class="num">5s</span>
+<span class="ln">7</span>
+<span class="ln">8</span><span class="ok">✓</span> <span class="num">12,348</span> requests completed
+<span class="ln">9</span>  avg  <span class="num">42 ms</span>   p95  <span class="num">118 ms</span>   p99  <span class="num">203 ms</span>
+<span class="ln">10</span>  errors  <span class="num">0</span> <span class="muted">(0.0%)</span>   success rate  <span class="num">100%</span></code></pre>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -60,11 +82,11 @@
     <section id="install" class="section">
       <p class="eyebrow">Install</p>
       <div class="steps">
-        <div class="step"><span>01</span><code>git clone git@github.com:hexiangtao/loadforge.git</code></div>
-        <div class="step"><span>02</span><code>npm install</code></div>
-        <div class="step"><span>03</span><code>npm run build</code></div>
-        <div class="step"><span>04</span><code>chrome://extensions/</code> → enable Developer mode</div>
-        <div class="step"><span>05</span>Load unpacked → select <code>.output/chrome-mv3</code></div>
+        <div class="step"><span>01</span><div><code class="sh"><span class="cmd">$</span> <span class="arg">git clone</span> <span class="str">git@github.com:hexiangtao/loadforge.git</span></code></div></div>
+        <div class="step"><span>02</span><div><code class="sh"><span class="cmd">$</span> <span class="arg">npm install</span></code></div></div>
+        <div class="step"><span>03</span><div><code class="sh"><span class="cmd">$</span> <span class="arg">npm run build</span></code></div></div>
+        <div class="step"><span>04</span><div><code class="sh">chrome://extensions/</code> <span class="dim">→ enable Developer mode</span></div></div>
+        <div class="step"><span>05</span><div>Load unpacked <span class="dim">→ select</span> <code class="sh">.output/chrome-mv3</code></div></div>
       </div>
     </section>
   </main>

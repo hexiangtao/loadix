@@ -4,6 +4,7 @@
   --muted: #6b6b6b;
   --line: #e5e5e5;
   --accent: #0a0a0a;
+  --term-bg: #0a0a0a;
 }
 
 * { box-sizing: border-box; }
@@ -33,29 +34,31 @@ body {
   text-decoration: none;
 }
 .links { display: flex; gap: 32px; }
-.links a {
-  color: var(--muted);
-  text-decoration: none;
-  font-size: 14px;
-}
+.links a { color: var(--muted); text-decoration: none; font-size: 14px; }
 .links a:hover { color: var(--text); }
 
+/* ---- Hero ---- */
 .hero {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 140px 48px 120px;
+  padding: 120px 48px 120px;
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 64px;
+  align-items: center;
 }
+.hero-copy { animation: rise 0.8s ease both; }
 .hero h1 {
-  font-size: 64px;
+  font-size: 58px;
   line-height: 1.1;
   letter-spacing: -0.03em;
   font-weight: 600;
   margin: 0 0 28px;
 }
 .sub {
-  font-size: 20px;
+  font-size: 19px;
   color: var(--muted);
-  max-width: 560px;
+  max-width: 480px;
   margin: 0 0 40px;
   line-height: 1.5;
 }
@@ -75,6 +78,53 @@ body {
 .btn.ghost { color: var(--text); border: 1px solid var(--line); }
 .btn.ghost:hover { border-color: var(--text); }
 
+/* ---- Terminal visual ---- */
+.hero-visual { animation: rise 0.8s ease 0.15s both; }
+.terminal {
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--term-bg);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.14);
+}
+.term-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 16px;
+  background: #161616;
+  border-bottom: 1px solid #2a2a2a;
+}
+.term-bar .dot { width: 11px; height: 11px; border-radius: 50%; background: #3a3a3a; }
+.term-bar .dot:first-child { background: #ff5f57; }
+.term-bar .dot:nth-child(2) { background: #febc2e; }
+.term-bar .dot:nth-child(3) { background: #28c840; }
+.term-title {
+  margin-left: 10px;
+  color: #8b8b8b;
+  font-size: 12px;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+.term-body { padding: 20px 22px; }
+.term-body pre { margin: 0; }
+.term-body code {
+  font-family: ui-monospace, "SFMono-Regular", "SF Mono", Menlo, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.75;
+  color: #d4d4d4;
+  display: block;
+}
+
+/* syntax highlighting tokens */
+.ln { display: inline-block; width: 22px; color: #4a4a4a; user-select: none; }
+.cmd { color: #6b6b6b; }
+.arg { color: #e6e6e6; font-weight: 500; }
+.flag { color: #9ecbff; }
+.str { color: #a5d6a7; }
+.num { color: #ffd580; }
+.ok { color: #7ee787; }
+.muted { color: #6b6b6b; }
+
+/* ---- Sections ---- */
 .section {
   max-width: 1200px;
   margin: 0 auto;
@@ -95,29 +145,17 @@ body {
   grid-template-columns: repeat(3, 1fr);
   gap: 64px 48px;
 }
-.feature h3 {
-  font-size: 16px;
-  font-weight: 600;
-  margin: 0 0 12px;
-}
-.feature p {
-  margin: 0;
-  color: var(--muted);
-  font-size: 14px;
-  line-height: 1.6;
-}
-.feature code, .steps code {
-  font-family: ui-monospace, "SFMono-Regular", "SF Mono", Menlo, Consolas, monospace;
+.feature h3 { font-size: 16px; font-weight: 600; margin: 0 0 12px; }
+.feature p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.6; }
+.feature code {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
   font-size: 13px;
   background: #f5f5f5;
   padding: 1px 5px;
   border-radius: 4px;
 }
 
-.steps {
-  display: flex;
-  flex-direction: column;
-}
+.steps { display: flex; flex-direction: column; }
 .step {
   display: flex;
   align-items: center;
@@ -125,7 +163,6 @@ body {
   padding: 20px 0;
   border-bottom: 1px solid var(--line);
   font-size: 15px;
-  color: var(--text);
 }
 .step span {
   color: var(--muted);
@@ -133,6 +170,17 @@ body {
   font-variant-numeric: tabular-nums;
   min-width: 24px;
 }
+.step .dim { color: var(--muted); }
+code.sh {
+  font-family: ui-monospace, "SFMono-Regular", "SF Mono", Menlo, Consolas, monospace;
+  font-size: 13px;
+  background: #f5f5f5;
+  padding: 3px 8px;
+  border-radius: 5px;
+}
+code.sh .cmd { color: #8b8b8b; }
+code.sh .arg { color: #0a0a0a; font-weight: 500; }
+code.sh .str { color: #0a7a3d; }
 
 .footer {
   max-width: 1200px;
@@ -143,10 +191,20 @@ body {
   font-size: 13px;
 }
 
-@media (max-width: 800px) {
+/* ---- Animations ---- */
+@keyframes rise {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 900px) {
   .nav { padding: 20px 24px; }
   .links { gap: 20px; }
-  .hero { padding: 80px 24px 72px; }
+  .hero {
+    grid-template-columns: 1fr;
+    padding: 80px 24px 64px;
+    gap: 48px;
+  }
   .hero h1 { font-size: 40px; }
   .sub { font-size: 17px; }
   .section { padding: 56px 24px; }
