@@ -1,0 +1,33 @@
+{
+  "name": "api-pressure-tester",
+  "version": "2.0.0",
+  "description": "A professional browser-based HTTP API load and pressure testing workbench.",
+  "type": "module",
+  "scripts": {
+    "dev": "wxt",
+    "dev:firefox": "wxt -b firefox",
+    "build": "wxt build",
+    "zip": "wxt build && wxt zip",
+    "compile": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "i18next": "^23.15.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-i18next": "^15.0.2",
+    "zustand": "^4.5.5"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.10",
+    "@types/chrome": "^0.0.270",
+    "@types/react": "^18.3.5",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^5.2.0",
+    "@wxt-dev/module-react": "^1.1.1",
+    "tailwindcss": "^4.1.10",
+    "typescript": "^5.5.4",
+    "vitest": "^2.0.5",
+    "wxt": "^0.19.10"
+  }
+}

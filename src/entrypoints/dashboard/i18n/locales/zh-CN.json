@@ -1,0 +1,103 @@
+{
+  "app": {
+    "name": "LoadForge",
+    "subtitle": "浏览器压测工作台",
+    "newTest": "＋ 新建",
+    "saveConfig": "保存配置",
+    "exportReport": "导出报告"
+  },
+  "nav": {
+    "title": "测试配置",
+    "request": "① 请求",
+    "load": "② 负载",
+    "assertions": "③ 断言",
+    "variables": "④ 变量",
+    "history": "⑤ 历史"
+  },
+  "sections": {
+    "request": {
+      "title": "请求配置",
+      "desc": "定义目标 API、请求参数与认证信息。"
+    },
+    "load": {
+      "title": "负载模型",
+      "desc": "设置并发用户、目标 RPS、持续时间与升压策略。"
+    },
+    "assertions": {
+      "title": "断言规则",
+      "desc": "定义成功请求的业务与性能判定标准。"
+    },
+    "variables": {
+      "title": "变量",
+      "desc": "定义 URL、Header、Body 中可复用的变量。"
+    },
+    "history": {
+      "title": "历史测试",
+      "desc": "查看并恢复最近保存的测试配置。"
+    }
+  },
+  "request": {
+    "method": "HTTP Method",
+    "url": "Request URL",
+    "urlPlaceholder": "https://api.example.com/v1/orders",
+    "timeout": "超时时间",
+    "headers": "Headers",
+    "body": "Body",
+    "addHeader": "＋ 添加 Header",
+    "contentType": "Content-Type",
+    "headerKey": "Authorization",
+    "headerValue": "Bearer {{token}}"
+  },
+  "load": {
+    "users": "虚拟用户数",
+    "rps": "目标 RPS",
+    "duration": "持续时间（秒）",
+    "ramp": "升压时间（秒）",
+    "hint": "说明：浏览器压测适合接口开发、回归和轻量压力测试。大规模压测应使用专用压测集群。"
+  },
+  "assertions": {
+    "add": "＋ 添加断言",
+    "status": "HTTP 状态码",
+    "latency": "响应时间 ≤ ms",
+    "contains": "响应体包含",
+    "hint": "支持 HTTP 状态码、响应时间、响应体包含文本三类断言。"
+  },
+  "variables": {
+    "name": "变量名",
+    "value": "值",
+    "add": "＋ 添加变量",
+    "hint": "在 URL、Header、Body 中使用 {{variable}}。每个虚拟用户会读取同一组变量。"
+  },
+  "history": {
+    "empty": "还没有测试记录。运行一次压测后，这里会自动保存最近 20 次。",
+    "restore": "恢复",
+    "requests": "次请求"
+  },
+  "results": {
+    "title": "实时结果",
+    "waiting": "等待开始测试",
+    "completed": "完成 {{count}} 次请求，耗时 {{seconds}}s",
+    "stop": "■ 停止",
+    "start": "▶ 开始压测",
+    "running": "● 运行中",
+    "idle": "● 空闲",
+    "requests": "请求数",
+    "success": "成功",
+    "errors": "错误",
+    "rps": "RPS",
+    "avg": "平均",
+    "p95": "P95",
+    "p99": "P99",
+    "successRate": "成功率",
+    "throughput": "吞吐量 / 秒",
+    "latency": "延迟",
+    "breakdown": "状态 / 错误分布",
+    "recent": "最近请求"
+  },
+  "common": {
+    "delete": "删除",
+    "invalidUrl": "请输入完整的 HTTP/HTTPS URL",
+    "configSaved": "配置已保存",
+    "engineReady": "Browser Engine Ready"
+  }
+}

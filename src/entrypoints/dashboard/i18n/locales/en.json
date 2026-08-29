@@ -1,0 +1,103 @@
+{
+  "app": {
+    "name": "LoadForge",
+    "subtitle": "Browser Load Testing Workbench",
+    "newTest": "New Test",
+    "saveConfig": "Save Config",
+    "exportReport": "Export Report"
+  },
+  "nav": {
+    "title": "Test Configuration",
+    "request": "① Request",
+    "load": "② Load",
+    "assertions": "③ Assertions",
+    "variables": "④ Variables",
+    "history": "⑤ History"
+  },
+  "sections": {
+    "request": {
+      "title": "Request Configuration",
+      "desc": "Define the target API, request parameters and authentication."
+    },
+    "load": {
+      "title": "Load Model",
+      "desc": "Configure virtual users, target RPS, duration and ramp-up strategy."
+    },
+    "assertions": {
+      "title": "Assertion Rules",
+      "desc": "Define business and performance criteria for a successful request."
+    },
+    "variables": {
+      "title": "Variables",
+      "desc": "Define reusable variables for URL, headers and body."
+    },
+    "history": {
+      "title": "Test History",
+      "desc": "Review and restore recently saved test configurations."
+    }
+  },
+  "request": {
+    "method": "HTTP Method",
+    "url": "Request URL",
+    "urlPlaceholder": "https://api.example.com/v1/orders",
+    "timeout": "Timeout",
+    "headers": "Headers",
+    "body": "Body",
+    "addHeader": "＋ Add Header",
+    "contentType": "Content-Type",
+    "headerKey": "Authorization",
+    "headerValue": "Bearer {{token}}"
+  },
+  "load": {
+    "users": "Virtual Users",
+    "rps": "Target RPS",
+    "duration": "Duration (sec)",
+    "ramp": "Ramp-up (sec)",
+    "hint": "Browser-based load testing is ideal for API development, regression and light stress testing. Use a dedicated load-testing cluster for large-scale tests."
+  },
+  "assertions": {
+    "add": "＋ Add Assertion",
+    "status": "HTTP Status",
+    "latency": "Latency ≤ ms",
+    "contains": "Body contains",
+    "hint": "Supports HTTP status code, response time and response body text assertions."
+  },
+  "variables": {
+    "name": "name",
+    "value": "value",
+    "add": "＋ Add Variable",
+    "hint": "Use {{variable}} in URL, headers or body. Every virtual user reads the same set of variables."
+  },
+  "history": {
+    "empty": "No test records yet. Run a test and the last 20 runs will be saved here automatically.",
+    "restore": "Restore",
+    "requests": "requests"
+  },
+  "results": {
+    "title": "Live Results",
+    "waiting": "Waiting to start",
+    "completed": "{{count}} requests completed in {{seconds}}s",
+    "stop": "■ Stop",
+    "start": "▶ Start Test",
+    "running": "● RUNNING",
+    "idle": "● IDLE",
+    "requests": "Requests",
+    "success": "Success",
+    "errors": "Error",
+    "rps": "RPS",
+    "avg": "Avg",
+    "p95": "P95",
+    "p99": "P99",
+    "successRate": "Success Rate",
+    "throughput": "Throughput / sec",
+    "latency": "Latency",
+    "breakdown": "Status / Error Breakdown",
+    "recent": "Recent Requests"
+  },
+  "common": {
+    "delete": "Delete",
+    "invalidUrl": "Please enter a complete HTTP/HTTPS URL",
+    "configSaved": "Configuration saved",
+    "engineReady": "Browser Engine Ready"
+  }
+}

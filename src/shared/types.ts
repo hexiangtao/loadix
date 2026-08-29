@@ -1,0 +1,65 @@
+/** Shared types used by both the dashboard UI and the load-testing engine. */
+
+export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD';
+
+export type ContentType = 'application/json' | 'application/x-www-form-urlencoded' | 'text/plain';
+
+export type AssertionType = 'status' | 'latency' | 'contains';
+
+export interface Assertion {
+  type: AssertionType;
+  value: string;
+}
+
+export interface TestConfig {
+  method: HttpMethod;
+  url: string;
+  timeout: number;
+  headers: [string, string][];
+  body: string;
+  contentType: ContentType;
+  users: number;
+  rps: number;
+  duration: number;
+  ramp: number;
+  assertions: Assertion[];
+  variables: [string, string][];
+}
+
+export interface RequestResult {
+  status: number;
+  ms: number;
+  body: string;
+  ok: boolean;
+  error: string;
+  pass: boolean;
+  ts: number;
+}
+
+export interface MetricsSnapshot {
+  requests: number;
+  success: number;
+  errors: number;
+  rps: number;
+  avg: number;
+  p95: number;
+  p99: number;
+  successRate: number;
+  statusBreakdown: Record<string, number>;
+  recent: RequestResult[];
+  throughput: number[];
+  latencySeries: number[];
+}
+
+export type EngineState = 'idle' | 'running' | 'finished' | 'aborted';
+
+/** Messages sent from the dashboard to the background engine. */
+export type EngineCommand =
+  | { type: 'START'; config: TestConfig }
+  | { type: 'STOP' }
+  | { type: 'GET_STATE' };
+
+/** Messages pushed from the background engine to the dashboard. */
+export type EngineEvent =
+  | { type: 'STATE'; state: EngineState; message?: string }
+  | { type: 'METRICS'; metrics: MetricsSnapshot };
