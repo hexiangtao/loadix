@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/hexiangtao/loadix/compare/v1.0.2...v1.1.0) (2026-08-29)
+
+
+### Features
+
+* add web version sharing engine and UI with extension ([256bb0a](https://github.com/hexiangtao/loadix/commit/256bb0a458d78fb8ed3f7585b73e02be92b43685))
+
 ## [1.0.2](https://github.com/hexiangtao/loadix/compare/v1.0.1...v1.0.2) (2026-08-29)
 
 
