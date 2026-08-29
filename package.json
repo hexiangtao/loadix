@@ -1,5 +1,5 @@
 {
-  "name": "api-pressure-tester",
+  "name": "loadforge",
   "version": "1.0.0",
   "description": "LoadForge — a browser-based HTTP API load & stress testing workbench.",
   "type": "module",
