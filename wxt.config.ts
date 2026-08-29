@@ -10,7 +10,7 @@ export default defineConfig({
   }),
   manifest: {
     name: 'LoadForge',
-    description: 'A professional browser-based HTTP API load and pressure testing workbench.',
+    description: 'LoadForge — a browser-based HTTP API load & stress testing workbench.',
     permissions: ['storage'],
     host_permissions: ['<all_urls>'],
     action: {
