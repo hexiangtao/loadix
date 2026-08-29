@@ -105,17 +105,17 @@ body {
   font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
 }
 .term-body { padding: 20px 22px; }
-.term-body pre { margin: 0; }
-.term-body code {
+.term-lines {
   font-family: ui-monospace, "SFMono-Regular", "SF Mono", Menlo, Consolas, monospace;
   font-size: 13px;
   line-height: 1.75;
   color: #d4d4d4;
-  display: block;
 }
+.tline { white-space: pre; min-height: 1.75em; opacity: 0; transform: translateY(3px); }
+.tline.visible { opacity: 1; transform: translateY(0); transition: opacity 0.3s ease, transform 0.3s ease; }
+.tline.blank { opacity: 0; }
 
 /* syntax highlighting tokens */
-.ln { display: inline-block; width: 22px; color: #4a4a4a; user-select: none; }
 .cmd { color: #6b6b6b; }
 .arg { color: #e6e6e6; font-weight: 500; }
 .flag { color: #9ecbff; }
@@ -147,6 +147,12 @@ body {
 }
 .feature h3 { font-size: 16px; font-weight: 600; margin: 0 0 12px; }
 .feature p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.6; }
+.feature {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+.feature.visible { opacity: 1; transform: translateY(0); }
 .feature code {
   font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
   font-size: 13px;
