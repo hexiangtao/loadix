@@ -1,3 +1,10 @@
+## [1.0.1](https://github.com/hexiangtao/loadforge/compare/v1.0.0...v1.0.1) (2026-08-29)
+
+
+### Bug Fixes
+
+* rename npm package to loadforge (zip filename prefix) ([7f7a0dd](https://github.com/hexiangtao/loadforge/commit/7f7a0dde1a34abb5ca58e48ce19516d36ec5753b))
+
 # 1.0.0 (2026-08-29)
 
 

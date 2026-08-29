@@ -1,6 +1,6 @@
 {
   "name": "loadforge",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "LoadForge — a browser-based HTTP API load & stress testing workbench.",
   "type": "module",
   "repository": {
