@@ -3,13 +3,18 @@
   "version": "2.0.0",
   "description": "LoadForge — a browser-based HTTP API load & stress testing workbench.",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hexiangtao/loadforge.git"
+  },
   "scripts": {
     "dev": "wxt",
     "dev:firefox": "wxt -b firefox",
     "build": "wxt build",
     "zip": "wxt build && wxt zip",
     "compile": "wxt prepare && tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "release": "semantic-release"
   },
   "dependencies": {
     "i18next": "^23.15.1",
@@ -19,12 +24,19 @@
     "zustand": "^4.5.5"
   },
   "devDependencies": {
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/commit-analyzer": "^13.0.1",
+    "@semantic-release/exec": "^7.1.0",
+    "@semantic-release/git": "^10.0.1",
+    "@semantic-release/github": "^12.0.9",
+    "@semantic-release/release-notes-generator": "^14.1.1",
     "@tailwindcss/vite": "^4.1.10",
     "@types/chrome": "^0.0.270",
     "@types/react": "^18.3.5",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^5.2.0",
     "@wxt-dev/module-react": "^1.1.1",
+    "semantic-release": "^25.0.9",
     "tailwindcss": "^4.1.10",
     "typescript": "^5.5.4",
     "vitest": "^2.0.5",
