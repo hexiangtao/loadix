@@ -23,7 +23,7 @@
     [
       "@semantic-release/github",
       {
-        "assets": [{ "path": "dist/*.zip", "label": "LoadForge Extension (zip)" }]
+        "assets": [{ "path": "dist/*.zip", "label": "Loadix Extension (zip)" }]
       }
     ]
   ]

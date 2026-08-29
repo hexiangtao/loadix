@@ -40,7 +40,7 @@ jobs:
       - name: Upload extension artifact
         uses: actions/upload-artifact@v4
         with:
-          name: loadforge-extension
+          name: Loadix-extension
           path: dist/*.zip
           if-no-files-found: error
 
@@ -71,7 +71,7 @@ jobs:
       - name: Download extension artifact
         uses: actions/download-artifact@v4
         with:
-          name: loadforge-extension
+          name: Loadix-extension
           path: dist
 
       - name: Release

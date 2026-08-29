@@ -9,12 +9,12 @@ export default defineConfig({
     plugins: [tailwindcss() as any],
   }),
   manifest: {
-    name: 'LoadForge',
-    description: 'LoadForge — a browser-based HTTP API load & stress testing workbench.',
+    name: 'Loadix',
+    description: 'Loadix — a browser-based HTTP API load & stress testing workbench.',
     permissions: ['storage'],
     host_permissions: ['<all_urls>'],
     action: {
-      default_title: 'LoadForge',
+      default_title: 'Loadix',
     },
   },
 });

@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "LoadForge",
+    "name": "Loadix",
     "subtitle": "浏览器压测工作台",
     "newTest": "＋ 新建",
     "saveConfig": "保存配置",

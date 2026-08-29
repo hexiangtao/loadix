@@ -1,12 +1,12 @@
-# LoadForge
+# Loadix
 
 用于授权 HTTP API 负载测试的 Chrome Manifest V3 浏览器扩展。
 
 基于 [WXT](https://wxt.dev) + React + TypeScript 构建，支持中英文（English / 简体中文）。
 
-[English](README.md) · [官网](https://loadforge.pages.dev)
+[English](README.md) · [官网](https://Loadix.pages.dev)
 
-[![CI](https://github.com/hexiangtao/loadforge/actions/workflows/ci.yml/badge.svg)](https://github.com/hexiangtao/loadforge/actions/workflows/ci.yml)
+[![CI](https://github.com/hexiangtao/loadix/actions/workflows/ci.yml/badge.svg)](https://github.com/hexiangtao/loadix/actions/workflows/ci.yml)
 
 ## 功能特性
 - HTTP GET/POST/PUT/PATCH/DELETE/HEAD

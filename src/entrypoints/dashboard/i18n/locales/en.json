@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "LoadForge",
+    "name": "Loadix",
     "subtitle": "Browser Load Testing Workbench",
     "newTest": "New Test",
     "saveConfig": "Save Config",

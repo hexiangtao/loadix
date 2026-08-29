@@ -1,11 +1,11 @@
 {
-  "name": "loadforge",
+  "name": "loadix",
   "version": "1.0.1",
-  "description": "LoadForge — a browser-based HTTP API load & stress testing workbench.",
+  "description": "Loadix — a browser-based HTTP API load & stress testing workbench.",
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "https://github.com/hexiangtao/loadforge.git"
+    "url": "https://github.com/hexiangtao/loadix.git"
   },
   "scripts": {
     "dev": "wxt",
