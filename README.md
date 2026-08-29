@@ -4,7 +4,7 @@ Chrome Manifest V3 browser extension for authorized HTTP API load testing.
 
 Built with [WXT](https://wxt.dev) + React + TypeScript, with i18n (English / 简体中文).
 
-[中文文档](README.zh-CN.md) · [官网](https://loadix.pages.dev)
+[中文文档](README.zh-CN.md) · [官网](https://loadix.dev)
 
 [![CI](https://github.com/hexiangtao/loadix/actions/workflows/ci.yml/badge.svg)](https://github.com/hexiangtao/loadix/actions/workflows/ci.yml)
 

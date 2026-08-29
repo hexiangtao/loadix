@@ -4,7 +4,7 @@
 
 基于 [WXT](https://wxt.dev) + React + TypeScript 构建，支持中英文（English / 简体中文）。
 
-[English](README.md) · [官网](https://loadix.pages.dev)
+[English](README.md) · [官网](https://loadix.dev)
 
 [![CI](https://github.com/hexiangtao/loadix/actions/workflows/ci.yml/badge.svg)](https://github.com/hexiangtao/loadix/actions/workflows/ci.yml)
 
