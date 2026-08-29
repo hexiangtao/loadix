@@ -4,6 +4,10 @@ Chrome Manifest V3 browser extension for authorized HTTP API load testing.
 
 Built with [WXT](https://wxt.dev) + React + TypeScript, with i18n (English / 简体中文).
 
+[中文文档](README.zh-CN.md) · [官网](https://loadforge.pages.dev)
+
+[![CI](https://github.com/hexiangtao/loadforge/actions/workflows/ci.yml/badge.svg)](https://github.com/hexiangtao/loadforge/actions/workflows/ci.yml)
+
 ## Features
 - HTTP GET/POST/PUT/PATCH/DELETE/HEAD
 - URL, timeout, headers, JSON/form/text body

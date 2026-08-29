@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LoadForge — 浏览器 API 压测工作台</title>
+  <meta name="description" content="LoadForge 是一款 Chrome 浏览器扩展，用于对 HTTP API 进行授权负载与压力测试，支持并发虚拟用户、目标 RPS、断言与实时指标。" />
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <header class="nav">
+    <div class="brand">
+      <span class="logo">⚒️</span>
+      <span class="name">LoadForge</span>
+    </div>
+    <div class="links">
+      <a href="#features">功能</a>
+      <a href="#install">安装</a>
+      <a href="#quickstart">快速开始</a>
+      <a class="btn" href="https://github.com/hexiangtao/loadforge" target="_blank" rel="noopener">GitHub</a>
+    </div>
+  </header>
+
+  <section class="hero">
+    <h1>在浏览器里<span>锻造负载</span>，压测你的 API</h1>
+    <p class="sub">LoadForge 是一款 Chrome 浏览器扩展，面向开发者的轻量 HTTP API 负载与压力测试工作台。无需安装后端集群，点击图标即可开始。</p>
+    <div class="cta">
+      <a class="btn primary" href="#install">安装扩展</a>
+      <a class="btn" href="https://github.com/hexiangtao/loadforge" target="_blank" rel="noopener">查看源码</a>
+    </div>
+    <div class="badges">
+      <span>Manifest V3</span>
+      <span>WXT + React + TypeScript</span>
+      <span>中英双语</span>
+      <span>开源 MIT</span>
+    </div>
+  </section>
+
+  <section id="features" class="section">
+    <h2>核心能力</h2>
+    <div class="grid">
+      <div class="card">
+        <h3>六种 HTTP 方法</h3>
+        <p>GET / POST / PUT / PATCH / DELETE / HEAD，自定义请求头、超时与 JSON / form / text 请求体。</p>
+      </div>
+      <div class="card">
+        <h3>负载模型</h3>
+        <p>并发虚拟用户、目标 RPS、持续时间与升压（ramp-up）策略，内置 Smoke / Normal / Stress / Spike 预设。</p>
+      </div>
+      <div class="card">
+        <h3>断言规则</h3>
+        <p>HTTP 状态码、最大延迟、响应体包含文本三类断言，精准定义「成功」标准。</p>
+      </div>
+      <div class="card">
+        <h3>实时指标</h3>
+        <p>请求数 / 成功 / 错误 / RPS / 平均 / P95 / P99 / 成功率，配合吞吐与延迟图表。</p>
+      </div>
+      <div class="card">
+        <h3>变量插值</h3>
+        <p>在 URL、请求头、请求体中使用 <code>{{variable}}</code>，复用配置、灵活构造请求。</p>
+      </div>
+      <div class="card">
+        <h3>历史与报告</h3>
+        <p>自动保存最近测试记录，一键恢复配置，导出 JSON 报告。</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="install" class="section alt">
+    <h2>安装</h2>
+    <ol class="steps">
+      <li>克隆仓库 <code>git clone git@github.com:hexiangtao/loadforge.git</code></li>
+      <li>安装依赖 <code>npm install</code></li>
+      <li>构建 <code>npm run build</code></li>
+      <li>打开 <code>chrome://extensions/</code>，开启「开发者模式」</li>
+      <li>点击「加载已解压的扩展程序」，选择 <code>.output/chrome-mv3</code></li>
+    </ol>
+  </section>
+
+  <section id="quickstart" class="section">
+    <h2>快速开始</h2>
+    <div class="grid two">
+      <div class="card">
+        <h3>开发模式</h3>
+        <pre><code>npm run dev</code></pre>
+        <p>启动带热更新的 dev server，加载一次扩展后即可实时调试。</p>
+      </div>
+      <div class="card">
+        <h3>打包发布</h3>
+        <pre><code>npm run zip</code></pre>
+        <p>构建并生成可上传 Chrome Web Store 的 zip 包。</p>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <p>⚒️ LoadForge — 仅用于你拥有或明确授权测试的系统。基于浏览器的负载生成不能替代分布式压测基础设施。</p>
+  </footer>
+</body>
+</html>
