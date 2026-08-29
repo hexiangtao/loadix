@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Assertion, TestConfig } from '@/shared/types';
-import { EngineClient } from './engine-client';
+import type { EngineHost } from '@/engine/engine-host';
 import { changeLanguage, SUPPORTED_LANGUAGES, type SupportedLanguage } from './i18n';
 import { Breakdown } from './components/Breakdown';
 import { LineChart } from './components/LineChart';
@@ -43,7 +43,7 @@ const SECTION_META = {
 
 const SECTIONS = ['request', 'load', 'assertions', 'variables', 'history'] as const;
 
-export default function App() {
+export default function App({ host }: { host: EngineHost }) {
   const { t, i18n } = useTranslation();
   const { activeSection, engineState, resultMessage, metrics, setActiveSection, setEngineState, setMetrics } = useUiStore();
 
@@ -51,16 +51,15 @@ export default function App() {
   const [load, setLoad] = useState<LoadFormValue>(DEFAULT_LOAD);
   const [assertions, setAssertions] = useState<Assertion[]>(DEFAULT_ASSERTIONS);
   const [variables, setVariables] = useState<[string, string][]>([['token', '']]);
-  const clientRef = useRef<EngineClient | null>(null);
+  const clientRef = useRef<EngineHost | null>(null);
 
   const running = engineState === 'running';
 
-  // Connect to the background engine once; re-sync state after refresh.
+  // Connect to the engine host once; re-sync state after refresh.
   useEffect(() => {
-    const client = new EngineClient(setMetrics, setEngineState);
-    client.connect();
-    clientRef.current = client;
-  }, [setMetrics, setEngineState]);
+    host.connect(setMetrics, setEngineState);
+    clientRef.current = host;
+  }, [host, setMetrics, setEngineState]);
 
   // Restore last saved config on mount.
   useEffect(() => {

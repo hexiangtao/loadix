@@ -1,5 +1,9 @@
 @import 'tailwindcss';
 
+/* Scan the shared dashboard UI (and web entry) for utility classes, regardless
+   of which Vite root builds this CSS (WXT extension or standalone web). */
+@source '../../**/*.{ts,tsx}';
+
 @theme {
   --color-primary: #635bff;
   --color-danger: #e5484d;

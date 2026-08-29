@@ -12,11 +12,20 @@ export function LineChart({ values, color = '#635bff' }: LineChartProps) {
   useEffect(() => {
     const canvas = ref.current;
     if (!canvas) return;
+
+    // Measure the parent element instead of the canvas itself, to avoid a
+    // feedback loop where the canvas' own width attribute inflates clientWidth.
+    const parent = canvas.parentElement;
     const dpr = window.devicePixelRatio || 1;
-    const W = canvas.clientWidth;
-    const H = canvas.clientHeight;
-    canvas.width = W * dpr;
-    canvas.height = H * dpr;
+    const W = parent?.clientWidth ?? canvas.clientWidth;
+    const H = parent?.clientHeight ?? canvas.clientHeight;
+    if (W <= 0 || H <= 0) return;
+
+    canvas.width = Math.floor(W * dpr);
+    canvas.height = Math.floor(H * dpr);
+    canvas.style.width = `${W}px`;
+    canvas.style.height = `${H}px`;
+
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     ctx.scale(dpr, dpr);
@@ -45,5 +54,5 @@ export function LineChart({ values, color = '#635bff' }: LineChartProps) {
     ctx.stroke();
   }, [values, color]);
 
-  return <canvas ref={ref} className="h-full w-full flex-1" />;
+  return <canvas ref={ref} className="block h-full w-full" />;
 }

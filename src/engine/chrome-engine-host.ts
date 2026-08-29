@@ -1,30 +1,24 @@
-/** Messaging client: talks to the background engine over a long-lived Port. */
+/** Engine host for the Chrome extension: talks to the background service worker over a Port. */
 
+import type { EngineHost } from '@/engine/engine-host';
 import type { EngineCommand, EngineEvent, EngineState, MetricsSnapshot, TestConfig } from '@/shared/types';
 
 const PORT_NAME = 'engine';
 
-export class EngineClient {
+export class ChromeEngineHost implements EngineHost {
   private port: chrome.runtime.Port | null = null;
-  private pendingState: { state: EngineState; message?: string } | null = null;
 
-  constructor(
-    private onMetrics: (metrics: MetricsSnapshot) => void,
-    private onState: (state: EngineState, message?: string) => void,
-  ) {}
-
-  connect(): void {
+  connect(onMetrics: (m: MetricsSnapshot) => void, onState: (s: EngineState, msg?: string) => void): void {
     if (this.port) return;
     if (typeof chrome === 'undefined' || !chrome.runtime?.connect) return;
     this.port = chrome.runtime.connect({ name: PORT_NAME });
     this.port.onMessage.addListener((event: EngineEvent) => {
-      if (event.type === 'METRICS') this.onMetrics(event.metrics);
-      if (event.type === 'STATE') this.onState(event.state, event.message);
+      if (event.type === 'METRICS') onMetrics(event.metrics);
+      if (event.type === 'STATE') onState(event.state, event.message);
     });
     this.port.onDisconnect.addListener(() => {
       this.port = null;
     });
-    // Ask for the current engine state so a refreshed UI can re-sync.
     this.send({ type: 'GET_STATE' });
   }
 
