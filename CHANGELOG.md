@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/hexiangtao/loadix/compare/v1.1.0...v1.2.0) (2026-08-29)
+
+
+### Features
+
+* point landing CTA to app.loadix.dev workbench, fix terminal command casing ([04ffae3](https://github.com/hexiangtao/loadix/commit/04ffae390bbf9e39e7d406a1467d11396917d49e))
+
 # [1.1.0](https://github.com/hexiangtao/loadix/compare/v1.0.2...v1.1.0) (2026-08-29)
 
 
