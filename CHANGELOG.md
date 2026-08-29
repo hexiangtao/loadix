@@ -1,3 +1,10 @@
+## [1.0.2](https://github.com/hexiangtao/loadix/compare/v1.0.1...v1.0.2) (2026-08-29)
+
+
+### Bug Fixes
+
+* use lowercase loadix for Pages project name and docs links ([ded6f4e](https://github.com/hexiangtao/loadix/commit/ded6f4efcb34834b4f88bf761d1e21c6c4fca4f6))
+
 ## [1.0.1](https://github.com/hexiangtao/loadforge/compare/v1.0.0...v1.0.1) (2026-08-29)
 
 
