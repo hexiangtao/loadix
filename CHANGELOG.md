@@ -1,3 +1,10 @@
+# [1.10.0](https://github.com/hexiangtao/loadix/compare/v1.9.1...v1.10.0) (2026-08-30)
+
+
+### Features
+
+* link brand header to landing page ([1ec7cf5](https://github.com/hexiangtao/loadix/commit/1ec7cf57bd442fb22a8a261653ce3acebbb3116b))
+
 ## [1.9.1](https://github.com/hexiangtao/loadix/compare/v1.9.0...v1.9.1) (2026-08-30)
 
 
