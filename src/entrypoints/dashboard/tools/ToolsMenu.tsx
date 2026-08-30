@@ -130,8 +130,9 @@ export function ToolsMenu({ activeTool, view, onSelect }: ToolsMenuProps) {
               />
             </div>
 
-            {/* Mega-menu body: grouped columns, e-commerce style */}
-            <div className="max-h-[420px] overflow-y-auto p-4 [scrollbar-width:thin] [scrollbar-color:var(--color-line)_transparent]">
+            {/* Mega-menu body: grouped columns, e-commerce style.
+                No max-height / no scrolling — all tools visible at once. */}
+            <div className="p-4">
               {GROUPS.map((group) => {
                 const tools = filtered.filter((tool) => tool.group === group.id);
                 if (!tools.length) return null;
