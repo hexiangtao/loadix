@@ -43,8 +43,11 @@ export interface MetricsSnapshot {
   errors: number;
   rps: number;
   avg: number;
+  p50: number;
+  p90: number;
   p95: number;
   p99: number;
+  max: number;
   successRate: number;
   statusBreakdown: Record<string, number>;
   recent: RequestResult[];

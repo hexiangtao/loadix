@@ -15,8 +15,11 @@ export function MetricsGrid({ metrics, compact }: MetricsGridProps) {
     [t('results.errors'), String(m?.errors ?? 0)],
     [t('results.rps'), (m?.rps ?? 0).toFixed(1)],
     [t('results.avg'), `${(m?.avg ?? 0).toFixed(0)} ms`],
+    [t('results.p50'), `${(m?.p50 ?? 0).toFixed(0)} ms`],
+    [t('results.p90'), `${(m?.p90 ?? 0).toFixed(0)} ms`],
     [t('results.p95'), `${(m?.p95 ?? 0).toFixed(0)} ms`],
     [t('results.p99'), `${(m?.p99 ?? 0).toFixed(0)} ms`],
+    [t('results.max'), `${(m?.max ?? 0).toFixed(0)} ms`],
     [t('results.successRate'), `${(m?.successRate ?? 0).toFixed(1)}%`],
   ];
   return (

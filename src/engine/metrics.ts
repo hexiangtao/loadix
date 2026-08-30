@@ -41,14 +41,18 @@ export class MetricsCollector {
     const elapsed = Math.max(0.1, (now - this.startedAt) / 1000);
     const success = this.results.filter((r) => r.pass).length;
     const slowest = [...this.results].sort((a, b) => b.ms - a.ms).slice(0, SLOWEST_LIMIT);
+    const max = this.latencies.length ? Math.max(...this.latencies) : 0;
     return {
       requests: this.results.length,
       success,
       errors: this.results.length - success,
       rps: this.results.length / elapsed,
       avg: average(this.latencies),
+      p50: percentile(this.latencies, 50),
+      p90: percentile(this.latencies, 90),
       p95: percentile(this.latencies, 95),
       p99: percentile(this.latencies, 99),
+      max,
       successRate: (success / (this.results.length || 1)) * 100,
       statusBreakdown: { ...this.statusCount },
       recent: this.results.slice(-RECENT_LIMIT).reverse(),
