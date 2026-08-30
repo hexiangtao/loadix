@@ -117,5 +117,13 @@
     "invalidUrl": "完全なHTTP/HTTPS URLを入力してください",
     "configSaved": "設定を保存しました",
     "engineReady": "Browser Engine Ready"
+  },
+  "views": {
+    "loadtest": "負荷テスト",
+    "tools": "ツール"
+  },
+  "tools": {
+    "title": "ツール",
+    "subtitle": "開発者のためのローカルツールボックス——すべてブラウザ内で動作します。"
   }
 }

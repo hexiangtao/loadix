@@ -117,5 +117,13 @@
     "invalidUrl": "완전한 HTTP/HTTPS URL을 입력하세요",
     "configSaved": "설정이 저장되었습니다",
     "engineReady": "Browser Engine Ready"
+  },
+  "views": {
+    "loadtest": "부하 테스트",
+    "tools": "도구"
+  },
+  "tools": {
+    "title": "도구",
+    "subtitle": "개발자를 위한 로컬 도구 상자——모두 브라우저 안에서 실행됩니다."
   }
 }

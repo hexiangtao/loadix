@@ -17,6 +17,9 @@ import { RequestPanel, type RequestFormValue } from './panels/RequestPanel';
 import { VariablesPanel } from './panels/VariablesPanel';
 import { useUiStore } from './store/ui-store';
 import { storageGet, storageSet } from './storage';
+import { CommandPalette } from './tools/CommandPalette';
+import { ToolsWorkspace } from './tools/ToolsWorkspace';
+import { findTool } from './tools/registry';
 
 const CONFIG_KEY = 'api-pressure-config';
 const HISTORY_KEY = 'api-pressure-history';
@@ -72,11 +75,45 @@ export default function App({ host }: { host: EngineHost }) {
   const { activeSection, engineState, resultMessage, metrics, setActiveSection, setEngineState, setMetrics, theme, setTheme } =
     useUiStore();
 
+  const [view, setView] = useState<'loadtest' | 'tools'>(() =>
+    localStorage.getItem('loadix-view') === 'tools' ? 'tools' : 'loadtest',
+  );
   const [request, setRequest] = useState<RequestFormValue>(DEFAULT_REQUEST);
   const [load, setLoad] = useState<LoadFormValue>(DEFAULT_LOAD);
   const [assertions, setAssertions] = useState<Assertion[]>(DEFAULT_ASSERTIONS);
   const [variables, setVariables] = useState<[string, string][]>([['token', '']]);
+  const [activeTool, setActiveTool] = useState<string | null>('base64');
+  const [toolPayload, setToolPayload] = useState<string | undefined>(undefined);
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const clientRef = useRef<EngineHost | null>(null);
+
+  // Persist the active top-level view (load test vs tools).
+  useEffect(() => {
+    localStorage.setItem('loadix-view', view);
+  }, [view]);
+
+  const openTool = (id: string, payload?: string) => {
+    setActiveTool(id);
+    setToolPayload(payload);
+    setView('tools');
+  };
+
+  const switchView = (v: 'loadtest' | 'tools') => {
+    setView(v);
+    if (v === 'loadtest') setActiveTool(null);
+  };
+
+  // Global Ctrl/Cmd+K opens the tool palette; Esc handled inside the palette.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setPaletteOpen((open) => !open);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   // Restore saved theme on mount, then apply to <html>.
   useEffect(() => {
@@ -238,35 +275,67 @@ export default function App({ host }: { host: EngineHost }) {
   return (
     <>
       <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-line bg-surface/90 px-6 backdrop-blur-sm">
-        <a
-          href="https://loadix.dev"
-          target="_blank"
-          rel="noreferrer"
-          title={t('app.name')}
-          className="group block rounded-lg transition-colors duration-150"
-        >
-          <b className="block text-[15px] group-hover:text-primary">{t('app.name')}</b>
-          <span className="mt-0.5 block text-[11px] text-muted">{t('app.subtitle')}</span>
-        </a>
-        <div className="flex items-center gap-1">
-          <motion.button
-            whileTap={{ scale: 0.97 }}
-            className="primary-btn"
-            disabled={running}
-            onClick={handleStart}
+        <div className="flex items-center gap-8">
+          <a
+            href="https://loadix.dev"
+            target="_blank"
+            rel="noreferrer"
+            title={t('app.name')}
+            className="group block rounded-lg transition-colors duration-150"
           >
-            {t('results.start')}
-          </motion.button>
-          <motion.button
-            whileTap={{ scale: 0.97 }}
-            className="danger-btn"
-            disabled={!running}
-            onClick={handleStop}
-          >
-            {t('results.stop')}
-          </motion.button>
+            <b className="block text-[15px] group-hover:text-primary">{t('app.name')}</b>
+            <span className="mt-0.5 block text-[11px] text-muted">{t('app.subtitle')}</span>
+          </a>
 
-          <span className="mx-2 h-6 w-px bg-line" />
+          <nav className="flex items-center gap-1">
+            <button
+              onClick={() => switchView('loadtest')}
+              className={`relative rounded-lg px-3 py-2 text-sm transition-colors duration-150 ${
+                view === 'loadtest' ? 'font-bold text-primary' : 'text-muted hover:bg-hover hover:text-ink'
+              }`}
+            >
+              {view === 'loadtest' && (
+                <motion.span layoutId="view-active" className="absolute inset-0 rounded-lg bg-primary/10" />
+              )}
+              <span className="relative">{t('views.loadtest')}</span>
+            </button>
+            <button
+              onClick={() => switchView('tools')}
+              className={`relative rounded-lg px-3 py-2 text-sm transition-colors duration-150 ${
+                view === 'tools' ? 'font-bold text-primary' : 'text-muted hover:bg-hover hover:text-ink'
+              }`}
+            >
+              {view === 'tools' && (
+                <motion.span layoutId="view-active" className="absolute inset-0 rounded-lg bg-primary/10" />
+              )}
+              <span className="relative">{t('views.tools')}</span>
+            </button>
+          </nav>
+        </div>
+
+        <div className="flex items-center gap-1">
+          {view === 'loadtest' && (
+            <>
+              <motion.button
+                whileTap={{ scale: 0.97 }}
+                className="primary-btn"
+                disabled={running}
+                onClick={handleStart}
+              >
+                {t('results.start')}
+              </motion.button>
+              <motion.button
+                whileTap={{ scale: 0.97 }}
+                className="danger-btn"
+                disabled={!running}
+                onClick={handleStop}
+              >
+                {t('results.stop')}
+              </motion.button>
+
+              <span className="mx-2 h-6 w-px bg-line" />
+            </>
+          )}
 
           <button className="nav-btn" onClick={toggleTheme} title={theme === 'dark' ? 'Light' : 'Dark'} aria-label="Toggle theme">
             {theme === 'dark' ? (
@@ -291,124 +360,148 @@ export default function App({ host }: { host: EngineHost }) {
               </option>
             ))}
           </select>
-          <button className="nav-btn" onClick={handleNew}>
-            {t('app.newTest')}
-          </button>
-          <button className="nav-btn" onClick={handleSave}>
-            {t('app.saveConfig')}
-          </button>
-          <button className="nav-btn" onClick={handleExport}>
-            {t('app.exportReport')}
-          </button>
+          {view === 'loadtest' && (
+            <>
+              <button className="nav-btn" onClick={handleNew}>
+                {t('app.newTest')}
+              </button>
+              <button className="nav-btn" onClick={handleSave}>
+                {t('app.saveConfig')}
+              </button>
+              <button className="nav-btn" onClick={handleExport}>
+                {t('app.exportReport')}
+              </button>
+            </>
+          )}
         </div>
       </header>
 
-      <main className="mx-auto grid max-w-[1500px] grid-cols-[210px_minmax(0,1fr)]">
-        {/* ——— Left: step navigation ——— */}
-        <aside className="sticky top-16 h-[calc(100vh-4rem)] p-3 pt-5">
-          <div className="px-2.5 pb-3 text-xs font-bold text-muted">{t('nav.title')}</div>
-          {SECTIONS.map((section) => (
-            <button
-              key={section}
-              onClick={() => setActiveSection(section)}
-              className={`relative mb-0.5 w-full rounded-lg px-3 py-2.5 text-left transition-colors duration-150 ${
-                activeSection === section ? 'font-bold text-primary' : 'text-muted hover:bg-hover hover:text-ink'
-              }`}
-            >
-              {activeSection === section && (
-                <motion.span
-                  layoutId="nav-active"
-                  className="absolute inset-0 rounded-lg bg-primary/10"
-                  transition={{ type: 'spring', stiffness: 500, damping: 40 }}
-                />
-              )}
-              <span className="relative">{t(`nav.${section}`)}</span>
-            </button>
-          ))}
-          <div className="absolute bottom-5 left-5 text-[11px] text-muted">
-            <span className="mr-1.5 inline-block size-[7px] rounded-full bg-success" />
-            {t('common.engineReady')}
-          </div>
-        </aside>
-
-        {/* ——— Right: config + results ——— */}
-        <section className="min-w-0 p-7">
-          <div className="mb-4 flex items-start justify-between">
-            <div>
-              <h1 className="mb-1 text-xl font-bold">{t(titleKey)}</h1>
-              <p className="m-0 text-muted">{t(descKey)}</p>
+      {view === 'loadtest' ? (
+        <main className="mx-auto grid max-w-[1500px] grid-cols-[210px_minmax(0,1fr)]">
+          {/* ——— Left: step navigation ——— */}
+          <aside className="sticky top-16 flex h-[calc(100vh-4rem)] flex-col p-3 pt-5">
+            <div className="flex-1 overflow-y-auto">
+              <div className="px-2.5 pb-3 text-xs font-bold text-muted">{t('nav.title')}</div>
+              {SECTIONS.map((section) => (
+                <button
+                  key={section}
+                  onClick={() => setActiveSection(section)}
+                  className={`relative mb-0.5 w-full rounded-lg px-3 py-2.5 text-left transition-colors duration-150 ${
+                    activeSection === section ? 'font-bold text-primary' : 'text-muted hover:bg-hover hover:text-ink'
+                  }`}
+                >
+                  {activeSection === section && (
+                    <motion.span
+                      layoutId="nav-active"
+                      className="absolute inset-0 rounded-lg bg-primary/10"
+                      transition={{ type: 'spring', stiffness: 500, damping: 40 }}
+                    />
+                  )}
+                  <span className="relative">{t(`nav.${section}`)}</span>
+                </button>
+              ))}
             </div>
-            <div
-              className={`rounded-full px-3.5 py-1.5 text-xs font-bold ${
-                running ? 'bg-warning/15 text-warning' : 'bg-success/15 text-success'
-              }`}
-            >
-              {running ? t('results.running') : t('results.idle')}
+            <div className="px-2.5 pt-3 text-[11px] text-muted">
+              <span className="mr-1.5 inline-block size-[7px] rounded-full bg-success" />
+              {t('common.engineReady')}
             </div>
-          </div>
+          </aside>
 
-          <AnimatePresence mode="wait" initial={false}>
-            <motion.div
-              key={activeSection}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.16, ease: 'easeOut' }}
-            >
-              {activeSection === 'request' && <RequestPanel value={request} onChange={setRequest} />}
-              {activeSection === 'load' && <LoadPanel value={load} onChange={setLoad} />}
-              {activeSection === 'assertions' && <AssertionsPanel value={assertions} onChange={setAssertions} />}
-              {activeSection === 'variables' && <VariablesPanel value={variables} onChange={setVariables} />}
-              {activeSection === 'history' && <HistoryPanel onRestore={handleRestore} />}
-            </motion.div>
-          </AnimatePresence>
-
-          <section className="mt-2">
-            <div className="mb-3.5 flex items-center justify-between">
+          {/* ——— Right: config + results ——— */}
+          <section className="min-w-0 p-7">
+            <div className="mb-4 flex items-start justify-between">
               <div>
-                <h2 className="mb-0.5 text-[17px] font-bold">{t('results.title')}</h2>
-                <span className="text-xs text-muted">{resultMessage || t('results.waiting')}</span>
+                <h1 className="mb-1 text-xl font-bold">{t(titleKey)}</h1>
+                <p className="m-0 text-muted">{t(descKey)}</p>
+              </div>
+              <div
+                className={`rounded-full px-3.5 py-1.5 text-xs font-bold ${
+                  running ? 'bg-warning/15 text-warning' : 'bg-success/15 text-success'
+                }`}
+              >
+                {running ? t('results.running') : t('results.idle')}
               </div>
             </div>
 
-            <MetricsGrid metrics={metrics} />
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={activeSection}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.16, ease: 'easeOut' }}
+              >
+                {activeSection === 'request' && <RequestPanel value={request} onChange={setRequest} />}
+                {activeSection === 'load' && <LoadPanel value={load} onChange={setLoad} />}
+                {activeSection === 'assertions' && <AssertionsPanel value={assertions} onChange={setAssertions} />}
+                {activeSection === 'variables' && <VariablesPanel value={variables} onChange={setVariables} />}
+                {activeSection === 'history' && <HistoryPanel onRestore={handleRestore} />}
+              </motion.div>
+            </AnimatePresence>
 
-            <div className="mb-3 grid grid-cols-2 gap-3 max-lg:grid-cols-1">
-              <div className="chart-card flex h-[200px] flex-col">
-                <div className="chart-title">{t('results.throughput')}</div>
-                <div className="min-h-0 flex-1">
-                  <LineChart values={metrics?.throughput ?? []} unit="/s" />
+            <section className="mt-2">
+              <div className="mb-3.5 flex items-center justify-between">
+                <div>
+                  <h2 className="mb-0.5 text-[17px] font-bold">{t('results.title')}</h2>
+                  <span className="text-xs text-muted">{resultMessage || t('results.waiting')}</span>
                 </div>
               </div>
-              <div className="chart-card flex h-[200px] flex-col">
-                <div className="chart-title">{t('results.latency')}</div>
-                <div className="min-h-0 flex-1">
-                  <LineChart values={metrics?.latencySeries ?? []} unit=" ms" />
+
+              <MetricsGrid metrics={metrics} />
+
+              <div className="mb-3 grid grid-cols-2 gap-3 max-lg:grid-cols-1">
+                <div className="chart-card flex h-[200px] flex-col">
+                  <div className="chart-title">{t('results.throughput')}</div>
+                  <div className="min-h-0 flex-1">
+                    <LineChart values={metrics?.throughput ?? []} unit="/s" />
+                  </div>
+                </div>
+                <div className="chart-card flex h-[200px] flex-col">
+                  <div className="chart-title">{t('results.latency')}</div>
+                  <div className="min-h-0 flex-1">
+                    <LineChart values={metrics?.latencySeries ?? []} unit=" ms" />
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="grid grid-cols-2 gap-3 max-lg:grid-cols-1">
-              <div className="chart-card">
-                <div className="chart-title">{t('results.breakdown')}</div>
-                <Breakdown metrics={metrics} />
+              <div className="grid grid-cols-2 gap-3 max-lg:grid-cols-1">
+                <div className="chart-card">
+                  <div className="chart-title">{t('results.breakdown')}</div>
+                  <Breakdown metrics={metrics} />
+                </div>
+                <div className="chart-card">
+                  <div className="chart-title">{t('results.assertionFailures')}</div>
+                  <AssertionFailures metrics={metrics} />
+                </div>
+                <div className="chart-card">
+                  <div className="chart-title">{t('results.slowest')}</div>
+                  <SlowRequests metrics={metrics} />
+                </div>
+                <div className="chart-card">
+                  <div className="chart-title">{t('results.recent')}</div>
+                  <RecentRequests metrics={metrics} />
+                </div>
               </div>
-              <div className="chart-card">
-                <div className="chart-title">{t('results.assertionFailures')}</div>
-                <AssertionFailures metrics={metrics} />
-              </div>
-              <div className="chart-card">
-                <div className="chart-title">{t('results.slowest')}</div>
-                <SlowRequests metrics={metrics} />
-              </div>
-              <div className="chart-card">
-                <div className="chart-title">{t('results.recent')}</div>
-                <RecentRequests metrics={metrics} />
-              </div>
-            </div>
+            </section>
           </section>
-        </section>
-      </main>
+        </main>
+      ) : (
+        <main className="mx-auto max-w-[1300px] px-7 py-7">
+          <ToolsWorkspace activeTool={activeTool ?? 'base64'} onSelect={openTool}>
+            <ToolView id={activeTool ?? 'base64'} payload={toolPayload} />
+          </ToolsWorkspace>
+        </main>
+      )}
+
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} onSelect={openTool} />
     </>
   );
+}
+
+/** Renders the active tool (from the registry). */
+function ToolView({ id, payload }: { id: string; payload?: string }) {
+  const tool = findTool(id);
+  if (!tool) return null;
+  const Component = tool.component;
+  return <Component key={payload ? `${id}:${payload}` : id} initialPayload={payload} />;
 }

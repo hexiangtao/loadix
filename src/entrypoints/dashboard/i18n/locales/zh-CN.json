@@ -117,5 +117,69 @@
     "invalidUrl": "请输入完整的 HTTP/HTTPS URL",
     "configSaved": "配置已保存",
     "engineReady": "Browser Engine Ready"
+  },
+  "views": {
+    "loadtest": "压测",
+    "tools": "工具"
+  },
+  "tools": {
+    "title": "工具",
+    "subtitle": "开发者日常工具集——全部在浏览器本地运行。",
+    "allTools": "全部工具…",
+    "palettePlaceholder": "搜索工具（JWT、Base64、正则、JSON…）",
+    "noResults": "没有匹配的工具",
+    "local": "本地",
+    "localHint": "完全在浏览器本地运行——你的数据不会离开这台设备。",
+    "copy": "复制",
+    "copied": "✓ 已复制",
+    "input": "输入",
+    "output": "输出",
+    "group_encode": "编码 / 解码",
+    "group_format": "格式化",
+    "group_auth": "认证",
+    "group_text": "文本",
+    "base64": {
+      "name": "Base64",
+      "desc": "编码与解码 Base64 字符串",
+      "encode": "编码",
+      "decode": "解码",
+      "input": "Base64 字符串",
+      "placeholder": "输入要编码的文本…",
+      "encoded": "编码结果",
+      "decoded": "解码结果",
+      "invalid": "不是有效的 Base64 字符串"
+    },
+    "json": {
+      "name": "JSON 格式化",
+      "desc": "格式化、校验与压缩 JSON",
+      "spaces": "空格缩进",
+      "keys": "键",
+      "depth": "层深",
+      "size": "大小",
+      "formatted": "格式化结果",
+      "invalid": "JSON 格式错误"
+    },
+    "jwt": {
+      "name": "JWT 解码器",
+      "desc": "解码 JWT 的 header 与 payload",
+      "input": "粘贴 JWT",
+      "header": "Header",
+      "payload": "Payload",
+      "signature": "Signature",
+      "claims": "Claims",
+      "invalid": "不是有效的 JWT（应为 header.payload.signature 三段）",
+      "expired": "已过期",
+      "unverified": "签名未验证——解码完全在本地进行，不持有密钥。"
+    },
+    "regex": {
+      "name": "正则测试器",
+      "desc": "测试正则并提取捕获组",
+      "templates": "模板",
+      "pattern": "正则表达式",
+      "test": "测试文本",
+      "placeholder": "粘贴要匹配的文本…",
+      "matches": "处匹配",
+      "groups": "捕获组"
+    }
   }
 }

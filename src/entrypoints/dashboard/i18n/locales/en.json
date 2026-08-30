@@ -117,5 +117,69 @@
     "invalidUrl": "Please enter a complete HTTP/HTTPS URL",
     "configSaved": "Configuration saved",
     "engineReady": "Browser Engine Ready"
+  },
+  "views": {
+    "loadtest": "Load Test",
+    "tools": "Tools"
+  },
+  "tools": {
+    "title": "Tools",
+    "subtitle": "A local toolbox for everyday developer tasks — everything runs in your browser.",
+    "allTools": "All tools…",
+    "palettePlaceholder": "Search tools (JWT, Base64, Regex, JSON…)",
+    "noResults": "No matching tools",
+    "local": "Local",
+    "localHint": "Runs entirely in your browser — your data never leaves this device.",
+    "copy": "Copy",
+    "copied": "✓ Copied",
+    "input": "Input",
+    "output": "Output",
+    "group_encode": "Encode / Decode",
+    "group_format": "Format",
+    "group_auth": "Auth",
+    "group_text": "Text",
+    "base64": {
+      "name": "Base64",
+      "desc": "Encode & decode Base64 strings",
+      "encode": "Encode",
+      "decode": "Decode",
+      "input": "Base64 string",
+      "placeholder": "Type text to encode…",
+      "encoded": "Encoded",
+      "decoded": "Decoded",
+      "invalid": "Not a valid Base64 string"
+    },
+    "json": {
+      "name": "JSON Formatter",
+      "desc": "Format, validate & minify JSON",
+      "spaces": "spaces",
+      "keys": "keys",
+      "depth": "depth",
+      "size": "size",
+      "formatted": "Formatted",
+      "invalid": "Invalid JSON"
+    },
+    "jwt": {
+      "name": "JWT Decoder",
+      "desc": "Decode JWT header & payload",
+      "input": "Paste a JWT",
+      "header": "Header",
+      "payload": "Payload",
+      "signature": "Signature",
+      "claims": "Claims",
+      "invalid": "Not a valid JWT (expected header.payload.signature)",
+      "expired": "expired",
+      "unverified": "Signature is not verified — decoding happens locally with no secret key."
+    },
+    "regex": {
+      "name": "Regex Tester",
+      "desc": "Test regex & extract capture groups",
+      "templates": "Templates",
+      "pattern": "Pattern",
+      "test": "Test text",
+      "placeholder": "Paste text to test against…",
+      "matches": "matches",
+      "groups": "Capture groups"
+    }
   }
 }

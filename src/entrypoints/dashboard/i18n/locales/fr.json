@@ -117,5 +117,13 @@
     "invalidUrl": "Veuillez entrer une URL HTTP/HTTPS complète",
     "configSaved": "Configuration enregistrée",
     "engineReady": "Browser Engine Ready"
+  },
+  "views": {
+    "loadtest": "Test de charge",
+    "tools": "Outils"
+  },
+  "tools": {
+    "title": "Outils",
+    "subtitle": "Une boîte à outils locale pour les développeurs — tout s'exécute dans le navigateur."
   }
 }
