@@ -138,6 +138,7 @@
     "group_format": "格式化",
     "group_auth": "认证",
     "group_text": "文本",
+    "group_generate": "生成器",
     "base64": {
       "name": "Base64",
       "desc": "编码与解码 Base64 字符串",
@@ -180,6 +181,54 @@
       "placeholder": "粘贴要匹配的文本…",
       "matches": "处匹配",
       "groups": "捕获组"
+    },
+    "url": {
+      "name": "URL 编码",
+      "desc": "编码与解码 URL 组件",
+      "encode": "编码",
+      "decode": "解码",
+      "invalid": "无效的百分号编码"
+    },
+    "html": {
+      "name": "HTML 实体",
+      "desc": "HTML 实体转义与还原",
+      "encode": "转义",
+      "decode": "还原"
+    },
+    "uuid": {
+      "name": "UUID 生成器",
+      "desc": "批量生成 UUID v4 / v7",
+      "count": "数量",
+      "generate": "生成",
+      "hint": "v4 为随机；v7 按时间有序，在数据库中可自然排序。"
+    },
+    "timestamp": {
+      "name": "时间戳转换",
+      "desc": "Unix 时间戳与日期互转",
+      "epochSec": "秒级时间戳",
+      "epochMs": "毫秒时间戳",
+      "local": "本地时间",
+      "input": "时间戳或日期字符串",
+      "invalid": "无法识别的日期格式",
+      "refresh": "↻ 刷新当前时间"
+    },
+    "cron": {
+      "name": "Cron 解析器",
+      "desc": "解析 Cron 并预览执行时间",
+      "input": "Cron 表达式（5 段）",
+      "minute": "分钟",
+      "hour": "小时",
+      "dayOfMonth": "日",
+      "month": "月",
+      "dayOfWeek": "星期",
+      "next": "接下来 5 次执行",
+      "invalid": "无效的 Cron 表达式（应为 5 段）",
+      "hint": "标准 5 段式：分 时 日 月 周。"
+    },
+    "sql": {
+      "name": "SQL 格式化",
+      "desc": "格式化与美化 SQL 语句",
+      "uppercase": "关键字大写"
     }
   }
 }

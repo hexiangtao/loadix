@@ -138,6 +138,7 @@
     "group_format": "Format",
     "group_auth": "Auth",
     "group_text": "Text",
+    "group_generate": "Generate",
     "base64": {
       "name": "Base64",
       "desc": "Encode & decode Base64 strings",
@@ -180,6 +181,54 @@
       "placeholder": "Paste text to test against…",
       "matches": "matches",
       "groups": "Capture groups"
+    },
+    "url": {
+      "name": "URL Encode",
+      "desc": "Encode & decode URL components",
+      "encode": "Encode",
+      "decode": "Decode",
+      "invalid": "Invalid percent encoding"
+    },
+    "html": {
+      "name": "HTML Entities",
+      "desc": "Escape & unescape HTML entities",
+      "encode": "Escape",
+      "decode": "Unescape"
+    },
+    "uuid": {
+      "name": "UUID Generator",
+      "desc": "Generate UUID v4 / v7 in bulk",
+      "count": "Count",
+      "generate": "Generate",
+      "hint": "v4 is random; v7 is time-ordered and sorts naturally in databases."
+    },
+    "timestamp": {
+      "name": "Timestamp",
+      "desc": "Convert epoch & date strings",
+      "epochSec": "Epoch (seconds)",
+      "epochMs": "Epoch (ms)",
+      "local": "Local time",
+      "input": "Epoch or date string",
+      "invalid": "Unrecognized date format",
+      "refresh": "↻ Refresh now"
+    },
+    "cron": {
+      "name": "Cron Parser",
+      "desc": "Parse cron & preview next runs",
+      "input": "Cron expression (5 fields)",
+      "minute": "Minute",
+      "hour": "Hour",
+      "dayOfMonth": "Day of month",
+      "month": "Month",
+      "dayOfWeek": "Day of week",
+      "next": "Next 5 runs",
+      "invalid": "Invalid cron expression (expected 5 fields)",
+      "hint": "Standard 5-field cron: minute hour day-of-month month day-of-week."
+    },
+    "sql": {
+      "name": "SQL Formatter",
+      "desc": "Format & beautify SQL queries",
+      "uppercase": "Uppercase keywords"
     }
   }
 }
