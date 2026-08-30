@@ -1,3 +1,10 @@
+# [1.15.0](https://github.com/hexiangtao/loadix/compare/v1.14.0...v1.15.0) (2026-08-30)
+
+
+### Features
+
+* surface tools directly in header nav ([d9f57e0](https://github.com/hexiangtao/loadix/commit/d9f57e0c8582b3de78fe7c8dc308e538be575b61))
+
 # [1.14.0](https://github.com/hexiangtao/loadix/compare/v1.13.0...v1.14.0) (2026-08-30)
 
 
