@@ -1,3 +1,10 @@
+# [1.8.0](https://github.com/hexiangtao/loadix/compare/v1.7.0...v1.8.0) (2026-08-30)
+
+
+### Features
+
+* add auto-stop conditions (max error rate / max P95) ([12d3fe4](https://github.com/hexiangtao/loadix/commit/12d3fe43e8b737f22f302a6535d6cdd0b8a69303))
+
 # [1.7.0](https://github.com/hexiangtao/loadix/compare/v1.6.0...v1.7.0) (2026-08-30)
 
 
