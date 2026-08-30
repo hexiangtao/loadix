@@ -152,6 +152,15 @@
       "decoded": "Decoded",
       "invalid": "Not a valid Base64 string"
     },
+    "baseconv": {
+      "name": "Base Converter",
+      "desc": "Convert between binary, octal, decimal, and hexadecimal",
+      "input": "Number",
+      "interpretAs": "Interpret as",
+      "invalid": "Not a valid number for the selected base",
+      "decimal": "Decimal value",
+      "negative": "negative"
+    },
     "json": {
       "name": "JSON Formatter",
       "desc": "Format, validate & minify JSON",

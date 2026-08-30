@@ -152,6 +152,15 @@
       "decoded": "解码结果",
       "invalid": "不是有效的 Base64 字符串"
     },
+    "baseconv": {
+      "name": "进制转换",
+      "desc": "二进制、八进制、十进制、十六进制互转",
+      "input": "数字",
+      "interpretAs": "按以下进制解析",
+      "invalid": "不是所选进制的有效数字",
+      "decimal": "十进制值",
+      "negative": "负数"
+    },
     "json": {
       "name": "JSON 格式化",
       "desc": "格式化、校验与压缩 JSON",

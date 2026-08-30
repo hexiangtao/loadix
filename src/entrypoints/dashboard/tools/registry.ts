@@ -15,6 +15,7 @@ import {
   Search,
   Globe,
   GitCompareArrows,
+  Sigma,
   type LucideIcon,
 } from 'lucide-react';
 import { Base64Tool } from './tools/Base64Tool';
@@ -33,6 +34,7 @@ import { MarkdownTool } from './tools/MarkdownTool';
 import { JsonPathTool } from './tools/JsonPathTool';
 import { UrlParserTool } from './tools/UrlParserTool';
 import { DiffTool } from './tools/DiffTool';
+import { BaseConverterTool } from './tools/BaseConverterTool';
 
 export type ToolGroup = 'encode' | 'format' | 'auth' | 'text' | 'generate' | 'query';
 
@@ -97,6 +99,15 @@ export const TOOLS: Tool[] = [
     group: 'format',
     icon: GitCompareArrows,
     component: DiffTool,
+  },
+  {
+    id: 'baseconv',
+    nameKey: 'tools.baseconv.name',
+    descKey: 'tools.baseconv.desc',
+    keywords: ['base', 'radix', 'binary', 'octal', 'decimal', 'hex', 'hexadecimal', '转换', '进制'],
+    group: 'encode',
+    icon: Sigma,
+    component: BaseConverterTool,
   },
   {
     id: 'htmlentity',
