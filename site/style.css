@@ -78,25 +78,23 @@ body {
 .btn.ghost { color: var(--text); border: 1px solid var(--line); }
 .btn.ghost:hover { border-color: var(--text); }
 
-/* Compact CTA used inside the in-page nav.
-   Specificity bump (.links a.nav-cta) is required to beat
-   the .links a { color: var(--muted) } rule above. */
+/* Slightly heavier text than the in-page anchors so the
+   primary action reads as the destination, but no chip /
+   border so it stays in the same family as Features /
+   Tools / Install / GitHub. */
 .links a.nav-cta {
-  padding: 6px 12px;
-  font-size: 14px;
+  color: var(--text);
   font-weight: 500;
-  color: var(--accent);
-  background: var(--bg);
-  border: 1px solid var(--accent);
-  border-radius: 6px;
-  margin-left: 4px;
-  text-decoration: none;
-  transition: background 0.12s ease, color 0.12s ease;
 }
-.links a.nav-cta:hover {
-  background: var(--accent);
-  color: var(--bg);
+.links a.nav-cta::after {
+  content: ' ↗';
+  font-size: 11px;
+  color: var(--muted);
+  margin-left: 1px;
+  vertical-align: 1px;
 }
+.links a.nav-cta:hover { color: var(--text); }
+.links a.nav-cta:hover::after { color: var(--text); }
 
 /* Trust line under the hero CTA. */
 .trust {
