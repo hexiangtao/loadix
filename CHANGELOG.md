@@ -1,3 +1,10 @@
+## [1.2.1](https://github.com/hexiangtao/loadix/compare/v1.2.0...v1.2.1) (2026-08-30)
+
+
+### Bug Fixes
+
+* generate wxt types before web build ([58efe29](https://github.com/hexiangtao/loadix/commit/58efe29053742320f50a15533f0728f391cfd15f))
+
 # [1.2.0](https://github.com/hexiangtao/loadix/compare/v1.1.0...v1.2.0) (2026-08-29)
 
 
