@@ -125,6 +125,7 @@
   "tools": {
     "title": "Tools",
     "subtitle": "A local toolbox for everyday developer tasks — everything runs in your browser.",
+    "more": "More",
     "allTools": "All tools…",
     "palettePlaceholder": "Search tools (JWT, Base64, Regex, JSON…)",
     "noResults": "No matching tools",

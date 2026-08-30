@@ -89,9 +89,9 @@ export function ToolsWorkspace({ activeTool, onSelect, children }: ToolsWorkspac
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={activeTool}
-            initial={{ opacity: 0, x: 12 * direction }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -12 * direction }}
+            initial={{ opacity: 0, y: 10 * direction }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 * direction }}
             transition={{ duration: 0.15, ease: 'easeOut' }}
           >
             {children}

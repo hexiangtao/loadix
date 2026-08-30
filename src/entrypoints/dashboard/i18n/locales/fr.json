@@ -124,6 +124,7 @@
   },
   "tools": {
     "title": "Outils",
-    "subtitle": "Une boîte à outils locale pour les développeurs — tout s'exécute dans le navigateur."
+    "subtitle": "Une boîte à outils locale pour les développeurs — tout s'exécute dans le navigateur.",
+    "more": "Plus"
   }
 }

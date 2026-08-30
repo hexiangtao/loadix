@@ -19,6 +19,7 @@ import { useUiStore } from './store/ui-store';
 import { storageGet, storageSet } from './storage';
 import { CommandPalette } from './tools/CommandPalette';
 import { ToolsWorkspace } from './tools/ToolsWorkspace';
+import { ToolsMenu } from './tools/ToolsMenu';
 import { findTool } from './tools/registry';
 
 const CONFIG_KEY = 'api-pressure-config';
@@ -299,17 +300,10 @@ export default function App({ host }: { host: EngineHost }) {
               )}
               <span className="relative">{t('views.loadtest')}</span>
             </button>
-            <button
-              onClick={() => switchView('tools')}
-              className={`relative rounded-lg px-3 py-2 text-sm transition-colors duration-150 ${
-                view === 'tools' ? 'font-bold text-primary' : 'text-muted hover:bg-hover hover:text-ink'
-              }`}
-            >
-              {view === 'tools' && (
-                <motion.span layoutId="view-active" className="absolute inset-0 rounded-lg bg-primary/10" />
-              )}
-              <span className="relative">{t('views.tools')}</span>
-            </button>
+
+            <span className="mx-1 h-6 w-px bg-line" />
+
+            <ToolsMenu activeTool={activeTool} view={view} onSelect={(id) => openTool(id)} />
           </nav>
         </div>
 

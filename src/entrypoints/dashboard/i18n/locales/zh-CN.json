@@ -125,6 +125,7 @@
   "tools": {
     "title": "工具",
     "subtitle": "开发者日常工具集——全部在浏览器本地运行。",
+    "more": "更多",
     "allTools": "全部工具…",
     "palettePlaceholder": "搜索工具（JWT、Base64、正则、JSON…）",
     "noResults": "没有匹配的工具",
