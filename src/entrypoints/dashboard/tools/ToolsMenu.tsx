@@ -117,9 +117,10 @@ export function ToolsMenu({ activeTool, view, onSelect }: ToolsMenuProps) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.14, ease: 'easeOut' }}
-            className="absolute right-0 top-full z-50 mt-2 w-[340px] overflow-hidden rounded-xl border border-line bg-panel shadow-2xl"
+            className="absolute right-0 top-full z-50 mt-2 w-[560px] overflow-hidden rounded-xl border border-line bg-panel shadow-2xl"
           >
-            <div className="border-b border-line px-3.5 py-2.5">
+            {/* Search */}
+            <div className="border-b border-line px-4 py-2.5">
               <input
                 autoFocus
                 className="w-full bg-transparent text-sm outline-none placeholder:text-muted"
@@ -128,31 +129,47 @@ export function ToolsMenu({ activeTool, view, onSelect }: ToolsMenuProps) {
                 onChange={(e) => setQuery(e.target.value)}
               />
             </div>
-            <div className="max-h-[50vh] overflow-auto py-1.5">
-              {filtered.length === 0 && <p className="px-4 py-5 text-center text-xs text-muted">{t('tools.noResults')}</p>}
-              {filtered.map((tool) => {
-                const Icon = tool.icon;
-                const group = GROUPS.find((g) => g.id === tool.group);
+
+            {/* Mega-menu body: grouped columns, e-commerce style */}
+            <div className="max-h-[420px] overflow-y-auto p-4 [scrollbar-width:thin] [scrollbar-color:var(--color-line)_transparent]">
+              {GROUPS.map((group) => {
+                const tools = filtered.filter((tool) => tool.group === group.id);
+                if (!tools.length) return null;
                 return (
-                  <button
-                    key={tool.id}
-                    onClick={() => {
-                      onSelect(tool.id);
-                      setOpen(false);
-                    }}
-                    className={`flex w-full items-center gap-3 px-4 py-2 text-left transition-colors duration-100 hover:bg-hover ${
-                      tool.id === activeTool ? 'bg-primary/5' : ''
-                    }`}
-                  >
-                    <Icon size={16} className="shrink-0 text-primary" />
-                    <span className="flex-1">
-                      <span className="block text-sm font-semibold">{t(tool.nameKey)}</span>
-                      <span className="block text-[11px] text-muted">{t(tool.descKey)}</span>
-                    </span>
-                    {group && <span className="text-[10px] text-muted">{t(group.labelKey)}</span>}
-                  </button>
+                  <div key={group.id} className="mb-4 last:mb-1">
+                    <div className="mb-2 text-[11px] font-bold uppercase tracking-wide text-muted/70">
+                      {t(group.labelKey)}
+                    </div>
+                    <div className="grid grid-cols-3 gap-1.5 max-sm:grid-cols-2">
+                      {tools.map((tool) => {
+                        const Icon = tool.icon;
+                        const active = tool.id === activeTool;
+                        return (
+                          <button
+                            key={tool.id}
+                            onClick={() => {
+                              onSelect(tool.id);
+                              setOpen(false);
+                            }}
+                            className={`group flex items-start gap-2.5 rounded-lg border border-transparent p-2.5 text-left transition-all duration-150 hover:border-line hover:bg-hover ${
+                              tool.id === activeTool ? 'bg-primary/5' : ''
+                            }`}
+                          >
+                            <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors duration-150 group-hover:bg-primary group-hover:text-white">
+                              <Icon size={16} />
+                            </span>
+                            <span className="min-w-0">
+                              <span className="block truncate text-[13px] font-semibold">{t(tool.nameKey)}</span>
+                              <span className="block truncate text-[11px] leading-snug text-muted">{t(tool.descKey)}</span>
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 );
               })}
+              {filtered.length === 0 && <p className="px-4 py-8 text-center text-xs text-muted">{t('tools.noResults')}</p>}
             </div>
           </motion.div>
         )}
