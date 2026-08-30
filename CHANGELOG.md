@@ -1,3 +1,10 @@
+# [1.23.0](https://github.com/hexiangtao/loadix/compare/v1.22.0...v1.23.0) (2026-08-30)
+
+
+### Features
+
+* **tools:** add CSS Gradient generator ([910dd66](https://github.com/hexiangtao/loadix/commit/910dd66a32cfabe2ccfa901eb2ff607c9cf05470))
+
 # [1.22.0](https://github.com/hexiangtao/loadix/compare/v1.21.0...v1.22.0) (2026-08-30)
 
 
