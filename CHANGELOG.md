@@ -1,3 +1,10 @@
+## [1.18.1](https://github.com/hexiangtao/loadix/compare/v1.18.0...v1.18.1) (2026-08-30)
+
+
+### Bug Fixes
+
+* **jwt:** tighten generate button, remove flex-1 gap, use semantic icons ([0d1f9cc](https://github.com/hexiangtao/loadix/commit/0d1f9cc7bce3a832ea29874257d8dc853f9b331c))
+
 # [1.18.0](https://github.com/hexiangtao/loadix/compare/v1.17.0...v1.18.0) (2026-08-30)
 
 
