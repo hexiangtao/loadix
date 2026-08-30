@@ -80,7 +80,7 @@ export function RegexTool({ initialPayload }: RegexToolProps) {
         </span>
       </div>
       <textarea
-        className="field min-h-[120px] w-full resize-y font-mono text-sm"
+        className="field min-h-[120px] w-full flex-1 resize-y font-mono text-sm"
         value={text}
         onChange={(e) => setText(e.target.value)}
         placeholder={t('tools.regex.placeholder')}

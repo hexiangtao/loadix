@@ -69,7 +69,7 @@ export function JsonTool({ initialPayload }: JsonToolProps) {
 
       <textarea
         autoFocus
-        className="field min-h-[140px] w-full resize-y font-mono text-sm"
+        className="field min-h-[140px] w-full flex-1 resize-y font-mono text-sm"
         value={input}
         onChange={(e) => setInput(e.target.value)}
         placeholder='{"hello":"world","nested":{"a":[1,2,3]}}'
@@ -93,7 +93,7 @@ export function JsonTool({ initialPayload }: JsonToolProps) {
         <label className="text-xs font-semibold text-muted">{t('tools.json.formatted')}</label>
         {result.ok && result.text && <CopyButton text={result.text} />}
       </div>
-      <pre className="field mt-1.5 min-h-[140px] w-full overflow-auto font-mono text-sm">
+      <pre className="field mt-1.5 min-h-[140px] w-full flex-1 overflow-auto font-mono text-sm">
         {result.text}
       </pre>
     </ToolShell>

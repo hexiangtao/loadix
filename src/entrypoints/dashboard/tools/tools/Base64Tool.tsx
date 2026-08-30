@@ -55,7 +55,7 @@ export function Base64Tool({ initialPayload }: Base64ToolProps) {
       </label>
       <textarea
         autoFocus
-        className="field min-h-[120px] w-full resize-y font-mono text-sm"
+        className="field min-h-[120px] w-full flex-1 resize-y font-mono text-sm"
         value={input}
         onChange={(e) => setInput(e.target.value)}
         placeholder={mode === 'encode' ? t('tools.base64.placeholder') : 'SGVsbG8gV29ybGQ='}
@@ -69,7 +69,7 @@ export function Base64Tool({ initialPayload }: Base64ToolProps) {
         </label>
         {output && <CopyButton text={output} />}
       </div>
-      <div className="field mt-1.5 min-h-[120px] w-full break-all bg-hover font-mono text-sm whitespace-pre-wrap">
+      <div className="field mt-1.5 min-h-[120px] w-full flex-1 break-all bg-hover font-mono text-sm whitespace-pre-wrap">
         {output ?? ''}
       </div>
     </ToolShell>

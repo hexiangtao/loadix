@@ -16,7 +16,7 @@ interface ToolShellProps {
 export function ToolShell({ icon: Icon, title, children }: ToolShellProps) {
   const { t } = useTranslation();
   return (
-    <div className="rounded-xl border border-line bg-panel shadow-sm">
+    <div className="flex min-h-[calc(100vh-8.5rem)] flex-col rounded-xl border border-line bg-panel shadow-sm">
       <div className="flex items-center justify-between border-b border-line px-4 py-3">
         <div className="flex items-center gap-2.5">
           <Icon size={18} className="text-primary" />
@@ -30,7 +30,7 @@ export function ToolShell({ icon: Icon, title, children }: ToolShellProps) {
           {t('tools.local')}
         </span>
       </div>
-      <div className="p-4">{children}</div>
+      <div className="flex flex-1 flex-col p-4">{children}</div>
     </div>
   );
 }

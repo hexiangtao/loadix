@@ -46,7 +46,7 @@ export function UrlTool({ initialPayload }: UrlToolProps) {
       <label className="mb-1.5 block text-xs font-semibold text-muted">{t('tools.input')}</label>
       <textarea
         autoFocus
-        className="min-h-[100px] w-full resize-y rounded-lg border border-line bg-panel px-2.5 py-2 font-mono text-sm outline-none transition-colors duration-150 focus:border-primary"
+        className="min-h-[100px] w-full flex-1 resize-y rounded-lg border border-line bg-panel px-2.5 py-2 font-mono text-sm outline-none transition-colors duration-150 focus:border-primary"
         value={input}
         onChange={(e) => setInput(e.target.value)}
         placeholder="https://example.com/search?q=hello world&lang=zh"

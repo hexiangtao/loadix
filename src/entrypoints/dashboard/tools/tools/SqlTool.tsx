@@ -76,7 +76,7 @@ export function SqlTool({ initialPayload }: SqlToolProps) {
       <label className="mb-1.5 block text-xs font-semibold text-muted">{t('tools.input')}</label>
       <textarea
         autoFocus
-        className="min-h-[120px] w-full resize-y rounded-lg border border-line bg-panel px-2.5 py-2 font-mono text-sm outline-none transition-colors duration-150 focus:border-primary"
+        className="min-h-[120px] w-full flex-1 resize-y rounded-lg border border-line bg-panel px-2.5 py-2 font-mono text-sm outline-none transition-colors duration-150 focus:border-primary"
         value={input}
         onChange={(e) => setInput(e.target.value)}
         placeholder="select id,name from users where age>18 order by id limit 10"
@@ -89,7 +89,7 @@ export function SqlTool({ initialPayload }: SqlToolProps) {
         </label>
         {formatted && <CopyButton text={formatted} />}
       </div>
-      <pre className="mt-1.5 min-h-[120px] w-full overflow-auto rounded-lg border border-line bg-hover px-2.5 py-2 font-mono text-sm">
+      <pre className="mt-1.5 min-h-[120px] w-full flex-1 overflow-auto rounded-lg border border-line bg-hover px-2.5 py-2 font-mono text-sm">
         {formatted}
       </pre>
     </ToolShell>
