@@ -1,3 +1,10 @@
+# [1.13.0](https://github.com/hexiangtao/loadix/compare/v1.12.0...v1.13.0) (2026-08-30)
+
+
+### Features
+
+* expand tools module to 10 utilities ([e3e5323](https://github.com/hexiangtao/loadix/commit/e3e5323123e2dc30d5dc947662a56683bcb1c2e0))
+
 # [1.12.0](https://github.com/hexiangtao/loadix/compare/v1.11.0...v1.12.0) (2026-08-30)
 
 
