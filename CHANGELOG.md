@@ -1,3 +1,10 @@
+## [1.19.1](https://github.com/hexiangtao/loadix/compare/v1.19.0...v1.19.1) (2026-08-30)
+
+
+### Bug Fixes
+
+* **site:** restyle nav CTA — white card, shorter label ([ade2322](https://github.com/hexiangtao/loadix/commit/ade2322ae54ad1488e825edd26c12eeae4861786)), closes [#0a0a0a](https://github.com/hexiangtao/loadix/issues/0a0a0a)
+
 # [1.19.0](https://github.com/hexiangtao/loadix/compare/v1.18.2...v1.19.0) (2026-08-30)
 
 
