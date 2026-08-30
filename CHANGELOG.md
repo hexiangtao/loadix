@@ -1,3 +1,10 @@
+# [1.14.0](https://github.com/hexiangtao/loadix/compare/v1.13.0...v1.14.0) (2026-08-30)
+
+
+### Features
+
+* smooth tool switching transitions ([535adb8](https://github.com/hexiangtao/loadix/commit/535adb85b132ec1ea71dfe6a8276c49b83c7b8b9))
+
 # [1.13.0](https://github.com/hexiangtao/loadix/compare/v1.12.0...v1.13.0) (2026-08-30)
 
 
