@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { Search } from 'lucide-react';
 import { TOOLS } from './registry';
@@ -19,7 +20,7 @@ interface ToolsWorkspaceProps {
 export function ToolsWorkspace({ activeTool, onSelect, children }: ToolsWorkspaceProps) {
   const { t } = useTranslation();
   const [filter, setFilter] = useState('');
-  const [pending, setPending] = useState<{ id: string; payload?: string } | null>(null);
+  const [direction, setDirection] = useState(1);
 
   const visible = TOOLS.filter((tool) => {
     const q = filter.trim().toLowerCase();
@@ -30,6 +31,14 @@ export function ToolsWorkspace({ activeTool, onSelect, children }: ToolsWorkspac
       t(tool.nameKey).toLowerCase().includes(q)
     );
   });
+
+  // Slide direction follows list order so switching feels spatial, not random.
+  const handleSelect = (id: string) => {
+    const from = TOOLS.findIndex((tool) => tool.id === activeTool);
+    const to = TOOLS.findIndex((tool) => tool.id === id);
+    setDirection(to > from ? 1 : -1);
+    onSelect(id);
+  };
 
   return (
     <div className="grid grid-cols-[220px_minmax(0,1fr)] gap-6 max-lg:grid-cols-1">
@@ -47,20 +56,27 @@ export function ToolsWorkspace({ activeTool, onSelect, children }: ToolsWorkspac
           />
         </div>
 
-        <nav className="mt-2 flex flex-col gap-0.5">
+        <nav className="relative mt-2 flex flex-col gap-0.5">
           {visible.map((tool) => {
             const Icon = tool.icon;
             const active = tool.id === activeTool;
             return (
               <button
                 key={tool.id}
-                onClick={() => onSelect(tool.id)}
-                className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition-colors duration-150 ${
-                  active ? 'bg-primary/10 font-bold text-primary' : 'text-muted hover:bg-hover hover:text-ink'
+                onClick={() => handleSelect(tool.id)}
+                className={`relative flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition-colors duration-150 ${
+                  active ? 'font-bold text-primary' : 'text-muted hover:bg-hover hover:text-ink'
                 }`}
               >
-                <Icon size={16} className="shrink-0" />
-                <span className="truncate">{t(tool.nameKey)}</span>
+                {active && (
+                  <motion.span
+                    layoutId="tool-active"
+                    className="absolute inset-0 rounded-lg bg-primary/10"
+                    transition={{ type: 'spring', stiffness: 500, damping: 40 }}
+                  />
+                )}
+                <Icon size={16} className="relative shrink-0" />
+                <span className="relative truncate">{t(tool.nameKey)}</span>
               </button>
             );
           })}
@@ -69,7 +85,19 @@ export function ToolsWorkspace({ activeTool, onSelect, children }: ToolsWorkspac
       </aside>
 
       {/* ——— Detail: active tool ——— */}
-      <div className="min-w-0">{children}</div>
+      <div className="min-w-0">
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={activeTool}
+            initial={{ opacity: 0, x: 12 * direction }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -12 * direction }}
+            transition={{ duration: 0.15, ease: 'easeOut' }}
+          >
+            {children}
+          </motion.div>
+        </AnimatePresence>
+      </div>
     </div>
   );
 }
