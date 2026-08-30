@@ -1,3 +1,10 @@
+# [1.12.0](https://github.com/hexiangtao/loadix/compare/v1.11.0...v1.12.0) (2026-08-30)
+
+
+### Features
+
+* add developer tools module with master-detail workspace ([a2d18e2](https://github.com/hexiangtao/loadix/commit/a2d18e24560b9bde5f0d24bbdfee789eb197dc16))
+
 # [1.11.0](https://github.com/hexiangtao/loadix/compare/v1.10.0...v1.11.0) (2026-08-30)
 
 
