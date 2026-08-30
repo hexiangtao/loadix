@@ -28,7 +28,6 @@ import { SqlTool } from './tools/SqlTool';
 import { HashTool } from './tools/HashTool';
 import { ColorTool } from './tools/ColorTool';
 import { MarkdownTool } from './tools/MarkdownTool';
-import { JwtEncodeTool } from './tools/JwtEncodeTool';
 import { JsonPathTool } from './tools/JsonPathTool';
 
 export type ToolGroup = 'encode' | 'format' | 'auth' | 'text' | 'generate' | 'query';
@@ -108,7 +107,7 @@ export const TOOLS: Tool[] = [
     id: 'jwt',
     nameKey: 'tools.jwt.name',
     descKey: 'tools.jwt.desc',
-    keywords: ['jwt', 'token', 'decode', 'claims', 'bearer', '解码'],
+    keywords: ['jwt', 'token', 'decode', 'encode', 'sign', 'hs256', 'claims', 'bearer', '签名', '解码'],
     group: 'auth',
     icon: KeyRound,
     component: JwtTool,
@@ -175,15 +174,6 @@ export const TOOLS: Tool[] = [
     group: 'generate',
     icon: Palette,
     component: ColorTool,
-  },
-  {
-    id: 'jwt-encode',
-    nameKey: 'tools.jwt-encode.name',
-    descKey: 'tools.jwt-encode.desc',
-    keywords: ['jwt', 'sign', 'encode', 'hs256', 'token', '编码', '签名'],
-    group: 'auth',
-    icon: KeyRound,
-    component: JwtEncodeTool,
   },
   {
     id: 'jsonpath',

@@ -163,8 +163,11 @@
       "invalid": "JSON 格式错误"
     },
     "jwt": {
-      "name": "JWT 解码器",
-      "desc": "解码 JWT 的 header 与 payload",
+      "name": "JWT",
+      "desc": "本地解码与签名 JWT",
+      "decode": "解码",
+      "encode": "编码",
+      "editEncode": "在编码模式编辑",
       "input": "粘贴 JWT",
       "header": "Header",
       "payload": "Payload",
@@ -172,7 +175,9 @@
       "claims": "Claims",
       "invalid": "不是有效的 JWT（应为 header.payload.signature 三段）",
       "expired": "已过期",
-      "unverified": "签名未验证——解码完全在本地进行，不持有密钥。"
+      "unverified": "签名未验证——解码完全在本地进行，不持有密钥。",
+      "needSecret": "HS256 需要密钥",
+      "generate": "生成 Token"
     },
     "regex": {
       "name": "正则测试器",
@@ -249,12 +254,6 @@
       "source": "源码",
       "preview": "渲染结果",
       "empty": "在左侧开始输入 Markdown…"
-    },
-    "jwt-encode": {
-      "name": "JWT 编码",
-      "desc": "签名并生成新的 JWT",
-      "needSecret": "HS256 需要密钥",
-      "generate": "生成 Token"
     },
     "jsonpath": {
       "name": "JSONPath",

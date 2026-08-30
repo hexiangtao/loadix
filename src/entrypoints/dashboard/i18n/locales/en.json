@@ -163,8 +163,11 @@
       "invalid": "Invalid JSON"
     },
     "jwt": {
-      "name": "JWT Decoder",
-      "desc": "Decode JWT header & payload",
+      "name": "JWT",
+      "desc": "Decode & sign JWTs locally",
+      "decode": "Decode",
+      "encode": "Encode",
+      "editEncode": "Edit in encode mode",
       "input": "Paste a JWT",
       "header": "Header",
       "payload": "Payload",
@@ -172,7 +175,9 @@
       "claims": "Claims",
       "invalid": "Not a valid JWT (expected header.payload.signature)",
       "expired": "expired",
-      "unverified": "Signature is not verified — decoding happens locally with no secret key."
+      "unverified": "Signature is not verified — decoding happens locally with no secret key.",
+      "needSecret": "A secret is required for HS256",
+      "generate": "Generate token"
     },
     "regex": {
       "name": "Regex Tester",
@@ -249,12 +254,6 @@
       "source": "Markdown source",
       "preview": "Rendered preview",
       "empty": "Start typing markdown on the left…"
-    },
-    "jwt-encode": {
-      "name": "JWT Encode",
-      "desc": "Sign & encode a new JWT",
-      "needSecret": "A secret is required for HS256",
-      "generate": "Generate token"
     },
     "jsonpath": {
       "name": "JSONPath",
