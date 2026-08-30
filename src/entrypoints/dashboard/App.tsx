@@ -377,13 +377,13 @@ export default function App({ host }: { host: EngineHost }) {
               <div className="chart-card flex h-[200px] flex-col">
                 <div className="chart-title">{t('results.throughput')}</div>
                 <div className="min-h-0 flex-1">
-                  <LineChart values={metrics?.throughput ?? []} />
+                  <LineChart values={metrics?.throughput ?? []} unit="/s" />
                 </div>
               </div>
               <div className="chart-card flex h-[200px] flex-col">
                 <div className="chart-title">{t('results.latency')}</div>
                 <div className="min-h-0 flex-1">
-                  <LineChart values={metrics?.latencySeries ?? []} />
+                  <LineChart values={metrics?.latencySeries ?? []} unit=" ms" />
                 </div>
               </div>
             </div>
