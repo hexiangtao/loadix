@@ -1,10 +1,17 @@
 import { useTranslation } from 'react-i18next';
 
+export type LoadModelKind = 'constant' | 'ramp' | 'step' | 'spike' | 'soak';
+
 export interface LoadFormValue {
+  loadModel: LoadModelKind;
   users: number;
   rps: number;
   duration: number;
   ramp: number;
+  stepUsers: number;
+  stepDuration: number;
+  spikeUsers: number;
+  spikeDuration: number;
   maxErrorRate: number;
   maxP95: number;
 }
@@ -14,19 +21,46 @@ interface LoadPanelProps {
   onChange: (value: LoadFormValue) => void;
 }
 
-const PRESETS: { label: string; users: number; rps: number; duration: number }[] = [
-  { label: 'Smoke', users: 1, rps: 1, duration: 10 },
-  { label: 'Normal', users: 10, rps: 5, duration: 30 },
-  { label: 'Stress', users: 50, rps: 25, duration: 60 },
-  { label: 'Spike', users: 100, rps: 50, duration: 120 },
-];
+const MODELS: LoadModelKind[] = ['constant', 'ramp', 'step', 'spike', 'soak'];
 
 export function LoadPanel({ value, onChange }: LoadPanelProps) {
   const { t } = useTranslation();
   const patch = (partial: Partial<LoadFormValue>) => onChange({ ...value, ...partial });
 
+  const selectModel = (kind: LoadModelKind) => {
+    const defaults: Partial<LoadFormValue> = {
+      loadModel: kind,
+      ramp: kind === 'ramp' ? 5 : 0,
+      stepUsers: kind === 'step' ? 10 : 0,
+      stepDuration: kind === 'step' ? 10 : 0,
+      spikeUsers: kind === 'spike' ? 100 : 0,
+      spikeDuration: kind === 'spike' ? 10 : 0,
+    };
+    onChange({ ...value, ...defaults });
+  };
+
   return (
     <section className="panel">
+      {/* Load model selector */}
+      <div className="mb-4 flex flex-col gap-1.5">
+        <label className="text-xs font-semibold text-muted">{t('load.model')}</label>
+        <div className="flex flex-wrap gap-1.5">
+          {MODELS.map((kind) => (
+            <button
+              key={kind}
+              onClick={() => selectModel(kind)}
+              className={`rounded-lg px-3.5 py-2 text-sm transition-colors duration-150 ${
+                value.loadModel === kind
+                  ? 'bg-primary/10 font-semibold text-primary'
+                  : 'text-muted hover:bg-hover hover:text-ink'
+              }`}
+            >
+              {t(`load.model_${kind}`)}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="grid grid-cols-4 gap-3 max-md:grid-cols-2">
         <label className="flex flex-col gap-1.5 text-xs font-semibold text-muted">
           {t('load.users')}
@@ -46,11 +80,63 @@ export function LoadPanel({ value, onChange }: LoadPanelProps) {
             onChange={(e) => patch({ duration: +e.target.value || 10 })}
           />
         </label>
-        <label className="flex flex-col gap-1.5 text-xs font-semibold text-muted">
-          {t('load.ramp')}
-          <input className="field" type="number" min={0} value={value.ramp} onChange={(e) => patch({ ramp: +e.target.value || 0 })} />
-        </label>
+        {value.loadModel === 'ramp' && (
+          <label className="flex flex-col gap-1.5 text-xs font-semibold text-muted">
+            {t('load.ramp')}
+            <input className="field" type="number" min={0} value={value.ramp} onChange={(e) => patch({ ramp: +e.target.value || 0 })} />
+          </label>
+        )}
       </div>
+
+      {/* Model-specific fields */}
+      {value.loadModel === 'step' && (
+        <div className="mt-3 grid grid-cols-2 gap-3 max-md:grid-cols-1">
+          <label className="flex flex-col gap-1.5 text-xs font-semibold text-muted">
+            {t('load.stepUsers')}
+            <input
+              className="field"
+              type="number"
+              min={1}
+              value={value.stepUsers}
+              onChange={(e) => patch({ stepUsers: +e.target.value || 1 })}
+            />
+          </label>
+          <label className="flex flex-col gap-1.5 text-xs font-semibold text-muted">
+            {t('load.stepDuration')}
+            <input
+              className="field"
+              type="number"
+              min={1}
+              value={value.stepDuration}
+              onChange={(e) => patch({ stepDuration: +e.target.value || 1 })}
+            />
+          </label>
+        </div>
+      )}
+      {value.loadModel === 'spike' && (
+        <div className="mt-3 grid grid-cols-2 gap-3 max-md:grid-cols-1">
+          <label className="flex flex-col gap-1.5 text-xs font-semibold text-muted">
+            {t('load.spikeUsers')}
+            <input
+              className="field"
+              type="number"
+              min={1}
+              value={value.spikeUsers}
+              onChange={(e) => patch({ spikeUsers: +e.target.value || 1 })}
+            />
+          </label>
+          <label className="flex flex-col gap-1.5 text-xs font-semibold text-muted">
+            {t('load.spikeDuration')}
+            <input
+              className="field"
+              type="number"
+              min={1}
+              value={value.spikeDuration}
+              onChange={(e) => patch({ spikeDuration: +e.target.value || 1 })}
+            />
+          </label>
+        </div>
+      )}
 
       <div className="mt-4 flex items-center gap-2 text-xs font-semibold text-muted">
         <span>{t('load.autoStop')}</span>
@@ -78,13 +164,6 @@ export function LoadPanel({ value, onChange }: LoadPanelProps) {
             onChange={(e) => patch({ maxP95: +e.target.value || 0 })}
           />
         </label>
-      </div>
-      <div className="mt-4 flex gap-2">
-        {PRESETS.map((p) => (
-          <button key={p.label} className="ghost-btn" onClick={() => patch({ users: p.users, rps: p.rps, duration: p.duration })}>
-            {p.label}
-          </button>
-        ))}
       </div>
       <div className="mt-3.5 text-xs leading-relaxed text-muted">{t('load.hint')}</div>
     </section>

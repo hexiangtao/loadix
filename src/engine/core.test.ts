@@ -50,7 +50,17 @@ describe('assertionsPass', () => {
 });
 
 describe('targetConcurrency', () => {
-  const base = { kind: 'constant' as const, users: 10, duration: 30, ramp: 0, rps: 0 };
+  const base = {
+    kind: 'constant' as const,
+    users: 10,
+    duration: 30,
+    ramp: 0,
+    rps: 0,
+    stepUsers: 0,
+    stepDuration: 0,
+    spikeUsers: 0,
+    spikeDuration: 0,
+  };
 
   it('constant model holds users for whole run', () => {
     expect(targetConcurrency(base, 0)).toBe(10);
@@ -65,6 +75,29 @@ describe('targetConcurrency', () => {
     expect(targetConcurrency(ramp, 5)).toBeLessThan(10);
     expect(targetConcurrency(ramp, 10)).toBe(10);
     expect(targetConcurrency(ramp, 20)).toBe(10); // holds after ramp
+  });
+
+  it('step model increases by stepUsers every stepDuration', () => {
+    const step = { ...base, kind: 'step' as const, stepUsers: 3, stepDuration: 5 };
+    expect(targetConcurrency(step, 0)).toBe(1);
+    expect(targetConcurrency(step, 4)).toBe(1);
+    expect(targetConcurrency(step, 5)).toBe(4); // 1 + 3
+    expect(targetConcurrency(step, 10)).toBe(7); // 1 + 3 + 3
+    expect(targetConcurrency(step, 100)).toBe(10); // capped at users
+  });
+
+  it('spike model bursts in the middle then returns to users', () => {
+    const spike = { ...base, kind: 'spike' as const, spikeUsers: 50, spikeDuration: 10, duration: 30 };
+    expect(targetConcurrency(spike, 0)).toBe(10); // before spike
+    expect(targetConcurrency(spike, 10)).toBe(50); // mid = 30/2 - 10/2 = 10
+    expect(targetConcurrency(spike, 15)).toBe(50); // inside spike
+    expect(targetConcurrency(spike, 20)).toBe(10); // after spike
+  });
+
+  it('soak model holds users for whole run', () => {
+    const soak = { ...base, kind: 'soak' as const };
+    expect(targetConcurrency(soak, 0)).toBe(10);
+    expect(targetConcurrency(soak, 500)).toBe(10);
   });
 
   it('clamps users to at least 1', () => {

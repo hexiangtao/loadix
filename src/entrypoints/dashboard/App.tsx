@@ -31,7 +31,19 @@ const DEFAULT_REQUEST: RequestFormValue = {
   contentType: 'application/json',
 };
 
-const DEFAULT_LOAD: LoadFormValue = { users: 10, rps: 5, duration: 30, ramp: 5, maxErrorRate: 0, maxP95: 0 };
+const DEFAULT_LOAD: LoadFormValue = {
+  loadModel: 'constant',
+  users: 10,
+  rps: 5,
+  duration: 30,
+  ramp: 0,
+  stepUsers: 10,
+  stepDuration: 10,
+  spikeUsers: 100,
+  spikeDuration: 10,
+  maxErrorRate: 0,
+  maxP95: 0,
+};
 const DEFAULT_ASSERTIONS: Assertion[] = [
   { type: 'status', value: '200' },
   { type: 'latency', value: '1000' },
@@ -103,10 +115,15 @@ export default function App({ host }: { host: EngineHost }) {
         contentType: saved.contentType ?? DEFAULT_REQUEST.contentType,
       });
       setLoad({
+        loadModel: saved.loadModel ?? DEFAULT_LOAD.loadModel,
         users: saved.users ?? DEFAULT_LOAD.users,
         rps: saved.rps ?? DEFAULT_LOAD.rps,
         duration: saved.duration ?? DEFAULT_LOAD.duration,
         ramp: saved.ramp ?? DEFAULT_LOAD.ramp,
+        stepUsers: saved.stepUsers ?? DEFAULT_LOAD.stepUsers,
+        stepDuration: saved.stepDuration ?? DEFAULT_LOAD.stepDuration,
+        spikeUsers: saved.spikeUsers ?? DEFAULT_LOAD.spikeUsers,
+        spikeDuration: saved.spikeDuration ?? DEFAULT_LOAD.spikeDuration,
         maxErrorRate: saved.maxErrorRate ?? 0,
         maxP95: saved.maxP95 ?? 0,
       });
@@ -180,10 +197,15 @@ export default function App({ host }: { host: EngineHost }) {
       contentType: config.contentType,
     });
     setLoad({
+      loadModel: config.loadModel ?? 'constant',
       users: config.users,
       rps: config.rps,
       duration: config.duration,
       ramp: config.ramp,
+      stepUsers: config.stepUsers,
+      stepDuration: config.stepDuration,
+      spikeUsers: config.spikeUsers,
+      spikeDuration: config.spikeDuration,
       maxErrorRate: config.maxErrorRate,
       maxP95: config.maxP95,
     });

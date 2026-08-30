@@ -18,10 +18,20 @@ export interface TestConfig {
   headers: [string, string][];
   body: string;
   contentType: ContentType;
+  /** Load model kind. */
+  loadModel: 'constant' | 'ramp' | 'step' | 'spike' | 'soak';
   users: number;
   rps: number;
   duration: number;
   ramp: number;
+  /** Step load: users added per step. */
+  stepUsers: number;
+  /** Step load: seconds per step. */
+  stepDuration: number;
+  /** Spike: peak users during the spike. */
+  spikeUsers: number;
+  /** Spike: spike length in seconds. */
+  spikeDuration: number;
   /** Auto-stop when error rate exceeds this % (0 = disabled). */
   maxErrorRate: number;
   /** Auto-stop when P95 exceeds this ms (0 = disabled). */

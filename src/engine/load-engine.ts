@@ -51,11 +51,15 @@ export class LoadEngine {
     }, METRICS_INTERVAL_MS);
 
     const model: LoadModel = {
-      kind: config.ramp > 0 ? 'ramp' : 'constant',
+      kind: config.loadModel ?? (config.ramp > 0 ? 'ramp' : 'constant'),
       users: Math.max(1, config.users),
       duration: config.duration,
       ramp: config.ramp,
       rps: config.rps,
+      stepUsers: config.stepUsers ?? 0,
+      stepDuration: config.stepDuration ?? 0,
+      spikeUsers: config.spikeUsers ?? 0,
+      spikeDuration: config.spikeDuration ?? 0,
     };
 
     await this.runLoop(model);

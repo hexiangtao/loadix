@@ -62,13 +62,13 @@ every advanced load model. This is the highest-priority architectural change.
 - [x] Precise RPS pacing (token bucket / leaky bucket, no shared-slot race)
 - [x] Graceful stop + full AbortController cancellation
 - [ ] Backpressure: prevent unbounded Promise accumulation
-- [ ] Memory control for long runs (ring buffers, bounded history)
+- [x] Memory control for long runs (ring buffers, bounded history)
 
-> Status: core scheduler rewritten (`load-model.ts` + `LoadEngine`). Concurrency
-> and RPS are now independent (target-concurrency control loop + token bucket).
-> Current models: `constant` and `ramp`. Step / Spike / Soak are future model
-> kinds to add on top of this foundation. Per-VU session lifecycle, backpressure,
-> and memory caps are still pending.
+> Status: **Phase 2 complete.** All six load models implemented (constant, ramp,
+> step, spike, soak + constant-RPS via token bucket). Memory control done via
+> bounded ring buffers, reservoir sampling for percentiles, and incremental
+> counters. Remaining for a future phase: per-VU session lifecycle and
+> backpressure tuning (both become important only with Scenario/CSV, Phase 3+).
 
 ---
 

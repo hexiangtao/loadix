@@ -9,7 +9,7 @@
  * while a rate limiter answers "when exactly may the next request start?".
  */
 
-export type LoadModelKind = 'constant' | 'ramp';
+export type LoadModelKind = 'constant' | 'ramp' | 'step' | 'spike' | 'soak';
 
 export interface LoadModel {
   kind: LoadModelKind;
@@ -21,21 +21,55 @@ export interface LoadModel {
   ramp: number;
   /** Target RPS; 0 = unlimited (bounded only by concurrency). */
   rps: number;
+  /** Step load: users added per step (used when kind === 'step'). */
+  stepUsers: number;
+  /** Step load: seconds per step (used when kind === 'step'). */
+  stepDuration: number;
+  /** Spike: peak users during the spike (used when kind === 'spike'). */
+  spikeUsers: number;
+  /** Spike: spike length in seconds (used when kind === 'spike'). */
+  spikeDuration: number;
 }
 
 /**
  * Concurrency target at a given elapsed second.
  *  - constant: `users` for the whole run.
+ *  - soak: same as constant (long, steady load).
  *  - ramp: linear from 1 → `users` over `ramp` seconds, then hold.
+ *  - step: starts at 1, adds `stepUsers` every `stepDuration` sec up to `users`.
+ *  - spike: holds `users`, then bursts to `spikeUsers` for `spikeDuration`
+ *    sec in the middle, then returns to `users`.
  */
 export function targetConcurrency(model: LoadModel, elapsedSec: number): number {
   const users = Math.max(1, model.users);
-  if (model.kind === 'constant') return users;
-  // ramp
-  if (elapsedSec <= 0) return 1;
-  if (elapsedSec >= model.ramp) return users;
-  const progress = elapsedSec / Math.max(1, model.ramp);
-  return Math.max(1, Math.round(1 + (users - 1) * progress));
+  switch (model.kind) {
+    case 'constant':
+    case 'soak':
+      return users;
+
+    case 'ramp': {
+      if (elapsedSec <= 0) return 1;
+      if (elapsedSec >= model.ramp) return users;
+      const progress = elapsedSec / Math.max(1, model.ramp);
+      return Math.max(1, Math.round(1 + (users - 1) * progress));
+    }
+
+    case 'step': {
+      const stepDur = Math.max(1, model.stepDuration || 1);
+      const inc = Math.max(1, model.stepUsers || 1);
+      const steps = Math.floor(elapsedSec / stepDur);
+      return Math.min(users, 1 + steps * inc);
+    }
+
+    case 'spike': {
+      const spike = Math.max(users, model.spikeUsers || 0);
+      const spikeDur = Math.max(1, model.spikeDuration || 1);
+      // Place the spike in the middle of the run.
+      const mid = model.duration / 2 - spikeDur / 2;
+      if (elapsedSec >= mid && elapsedSec < mid + spikeDur) return spike;
+      return users;
+    }
+  }
 }
 
 /**
