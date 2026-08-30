@@ -1,0 +1,103 @@
+{
+  "app": {
+    "name": "Loadix",
+    "subtitle": "브라우저 부하 테스트 워크벤치",
+    "newTest": "새로 만들기",
+    "saveConfig": "설정 저장",
+    "exportReport": "리포트 내보내기"
+  },
+  "nav": {
+    "title": "테스트 설정",
+    "request": "① 요청",
+    "load": "② 부하",
+    "assertions": "③ 어서션",
+    "variables": "④ 변수",
+    "history": "⑤ 이력"
+  },
+  "sections": {
+    "request": {
+      "title": "요청 설정",
+      "desc": "대상 API, 요청 파라미터 및 인증 정보를 정의합니다."
+    },
+    "load": {
+      "title": "부하 모델",
+      "desc": "가상 사용자 수, 목표 RPS, 지속 시간, 램프업 전략을 설정합니다."
+    },
+    "assertions": {
+      "title": "어서션 규칙",
+      "desc": "성공 요청의 비즈니스 및 성능 기준을 정의합니다."
+    },
+    "variables": {
+      "title": "변수",
+      "desc": "URL, 헤더, 바디에서 재사용 가능한 변수를 정의합니다."
+    },
+    "history": {
+      "title": "테스트 이력",
+      "desc": "최근 저장된 테스트 설정을 확인하고 복원합니다."
+    }
+  },
+  "request": {
+    "method": "HTTP 메서드",
+    "url": "요청 URL",
+    "urlPlaceholder": "https://api.example.com/v1/orders",
+    "timeout": "타임아웃",
+    "headers": "헤더",
+    "body": "바디",
+    "addHeader": "＋ 헤더 추가",
+    "contentType": "Content-Type",
+    "headerKey": "Authorization",
+    "headerValue": "Bearer {{token}}"
+  },
+  "load": {
+    "users": "가상 사용자",
+    "rps": "목표 RPS",
+    "duration": "지속 시간 (초)",
+    "ramp": "램프업 (초)",
+    "hint": "브라우저 기반 부하 테스트는 API 개발, 회귀 테스트, 경량 스트레스 테스트에 적합합니다. 대규모 테스트는 전용 클러스터를 사용하세요."
+  },
+  "assertions": {
+    "add": "＋ 어서션 추가",
+    "status": "HTTP 상태",
+    "latency": "지연 ≤ ms",
+    "contains": "바디 포함",
+    "hint": "HTTP 상태 코드, 응답 시간, 응답 바디 텍스트 어서션을 지원합니다."
+  },
+  "variables": {
+    "name": "변수명",
+    "value": "값",
+    "add": "＋ 변수 추가",
+    "hint": "URL, 헤더, 바디에서 {{variable}} 을 사용합니다. 모든 가상 사용자가 동일한 변수 세트를 읽습니다."
+  },
+  "history": {
+    "empty": "아직 테스트 기록이 없습니다. 테스트를 실행하면 최근 20건이 여기에 자동 저장됩니다.",
+    "restore": "복원",
+    "requests": "요청"
+  },
+  "results": {
+    "title": "실시간 결과",
+    "waiting": "시작 대기 중",
+    "completed": "{{count}} 요청 완료 ({{seconds}}초)",
+    "stop": "■ 중지",
+    "start": "▶ 테스트 시작",
+    "running": "● 실행 중",
+    "idle": "● 대기 중",
+    "requests": "요청 수",
+    "success": "성공",
+    "errors": "오류",
+    "rps": "RPS",
+    "avg": "평균",
+    "p95": "P95",
+    "p99": "P99",
+    "successRate": "성공률",
+    "throughput": "처리량 / 초",
+    "latency": "지연",
+    "breakdown": "상태 / 오류 분포",
+    "recent": "최근 요청"
+  },
+  "common": {
+    "delete": "삭제",
+    "invalidUrl": "완전한 HTTP/HTTPS URL을 입력하세요",
+    "configSaved": "설정이 저장되었습니다",
+    "engineReady": "Browser Engine Ready"
+  }
+}

@@ -1,0 +1,103 @@
+{
+  "app": {
+    "name": "Loadix",
+    "subtitle": "Plan de charge navigateur",
+    "newTest": "Nouveau",
+    "saveConfig": "Enregistrer",
+    "exportReport": "Exporter"
+  },
+  "nav": {
+    "title": "Configuration",
+    "request": "① Requête",
+    "load": "② Charge",
+    "assertions": "③ Assertions",
+    "variables": "④ Variables",
+    "history": "⑤ Historique"
+  },
+  "sections": {
+    "request": {
+      "title": "Configuration de la requête",
+      "desc": "Définissez l'API cible, les paramètres et l'authentification."
+    },
+    "load": {
+      "title": "Modèle de charge",
+      "desc": "Configurez les utilisateurs virtuels, le RPS cible, la durée et la montée en charge."
+    },
+    "assertions": {
+      "title": "Règles d'assertion",
+      "desc": "Définissez les critères métier et de performance pour une requête réussie."
+    },
+    "variables": {
+      "title": "Variables",
+      "desc": "Définissez des variables réutilisables pour l'URL, les en-têtes et le corps."
+    },
+    "history": {
+      "title": "Historique",
+      "desc": "Consultez et restaurez les configurations de test récentes."
+    }
+  },
+  "request": {
+    "method": "Méthode HTTP",
+    "url": "URL de la requête",
+    "urlPlaceholder": "https://api.example.com/v1/orders",
+    "timeout": "Délai d'expiration",
+    "headers": "En-têtes",
+    "body": "Corps",
+    "addHeader": "＋ Ajouter un en-tête",
+    "contentType": "Content-Type",
+    "headerKey": "Authorization",
+    "headerValue": "Bearer {{token}}"
+  },
+  "load": {
+    "users": "Utilisateurs virtuels",
+    "rps": "RPS cible",
+    "duration": "Durée (sec)",
+    "ramp": "Montée (sec)",
+    "hint": "Les tests de charge navigateur sont idéaux pour le développement, la régression et les tests de stress légers. Utilisez un cluster dédié pour les tests à grande échelle."
+  },
+  "assertions": {
+    "add": "＋ Ajouter une assertion",
+    "status": "Statut HTTP",
+    "latency": "Latence ≤ ms",
+    "contains": "Corps contient",
+    "hint": "Assertions sur le statut HTTP, le temps de réponse et le contenu du corps."
+  },
+  "variables": {
+    "name": "nom",
+    "value": "valeur",
+    "add": "＋ Ajouter une variable",
+    "hint": "Utilisez {{variable}} dans l'URL, les en-têtes ou le corps. Chaque utilisateur virtuel lit le même ensemble de variables."
+  },
+  "history": {
+    "empty": "Aucun test enregistré. Lancez un test et les 20 derniers seront sauvegardés ici.",
+    "restore": "Restaurer",
+    "requests": "requêtes"
+  },
+  "results": {
+    "title": "Résultats en direct",
+    "waiting": "En attente",
+    "completed": "{{count}} requêtes en {{seconds}}s",
+    "stop": "■ Arrêter",
+    "start": "▶ Lancer",
+    "running": "● EN COURS",
+    "idle": "● INACTIF",
+    "requests": "Requêtes",
+    "success": "Succès",
+    "errors": "Erreurs",
+    "rps": "RPS",
+    "avg": "Moy",
+    "p95": "P95",
+    "p99": "P99",
+    "successRate": "Taux de succès",
+    "throughput": "Débit / sec",
+    "latency": "Latence",
+    "breakdown": "Répartition statuts / erreurs",
+    "recent": "Requêtes récentes"
+  },
+  "common": {
+    "delete": "Supprimer",
+    "invalidUrl": "Veuillez entrer une URL HTTP/HTTPS complète",
+    "configSaved": "Configuration enregistrée",
+    "engineReady": "Browser Engine Ready"
+  }
+}

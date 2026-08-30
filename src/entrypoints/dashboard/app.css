@@ -58,6 +58,15 @@ body {
 .panel {
   @apply mb-4.5 rounded-xl border border-line bg-panel p-5 shadow-sm;
 }
+
+/* Panel enter transition — fades + slides up on mount (nav switching). */
+.panel-enter {
+  animation: panel-in 0.22s ease;
+}
+@keyframes panel-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 .chart-card {
   @apply rounded-xl border border-line bg-panel p-3.5;
 }

@@ -1,0 +1,103 @@
+{
+  "app": {
+    "name": "Loadix",
+    "subtitle": "ブラウザ負荷テストワークベンチ",
+    "newTest": "新規作成",
+    "saveConfig": "設定を保存",
+    "exportReport": "レポート出力"
+  },
+  "nav": {
+    "title": "テスト設定",
+    "request": "① リクエスト",
+    "load": "② 負荷",
+    "assertions": "③ アサーション",
+    "variables": "④ 変数",
+    "history": "⑤ 履歴"
+  },
+  "sections": {
+    "request": {
+      "title": "リクエスト設定",
+      "desc": "対象API、リクエストパラメータ、認証情報を定義します。"
+    },
+    "load": {
+      "title": "負荷モデル",
+      "desc": "仮想ユーザー数、目標RPS、実行時間、ランプアップ戦略を設定します。"
+    },
+    "assertions": {
+      "title": "アサーションルール",
+      "desc": "成功リクエストのビジネスおよびパフォーマンス基準を定義します。"
+    },
+    "variables": {
+      "title": "変数",
+      "desc": "URL、ヘッダー、ボディで再利用可能な変数を定義します。"
+    },
+    "history": {
+      "title": "テスト履歴",
+      "desc": "最近保存されたテスト設定を確認・復元します。"
+    }
+  },
+  "request": {
+    "method": "HTTPメソッド",
+    "url": "リクエストURL",
+    "urlPlaceholder": "https://api.example.com/v1/orders",
+    "timeout": "タイムアウト",
+    "headers": "ヘッダー",
+    "body": "ボディ",
+    "addHeader": "＋ ヘッダーを追加",
+    "contentType": "Content-Type",
+    "headerKey": "Authorization",
+    "headerValue": "Bearer {{token}}"
+  },
+  "load": {
+    "users": "仮想ユーザー数",
+    "rps": "目標RPS",
+    "duration": "実行時間（秒）",
+    "ramp": "ランプアップ（秒）",
+    "hint": "ブラウザベースの負荷テストはAPI開発、回帰テスト、軽量ストレステストに最適です。大規模テストには専用クラスタをご利用ください。"
+  },
+  "assertions": {
+    "add": "＋ アサーションを追加",
+    "status": "HTTPステータス",
+    "latency": "レイテンシ ≤ ms",
+    "contains": "ボディに含む",
+    "hint": "HTTPステータスコード、応答時間、レスポンスボディのテキストアサーションをサポートします。"
+  },
+  "variables": {
+    "name": "変数名",
+    "value": "値",
+    "add": "＋ 変数を追加",
+    "hint": "URL、ヘッダー、ボディで {{variable}} を使用します。すべての仮想ユーザーが同じ変数セットを読み取ります。"
+  },
+  "history": {
+    "empty": "まだテスト記録がありません。テストを実行すると、直近20件がここに自動保存されます。",
+    "restore": "復元",
+    "requests": "リクエスト"
+  },
+  "results": {
+    "title": "リアルタイム結果",
+    "waiting": "開始待ち",
+    "completed": "{{count}} リクエスト完了（{{seconds}}秒）",
+    "stop": "■ 停止",
+    "start": "▶ テスト開始",
+    "running": "● 実行中",
+    "idle": "● 待機中",
+    "requests": "リクエスト数",
+    "success": "成功",
+    "errors": "エラー",
+    "rps": "RPS",
+    "avg": "平均",
+    "p95": "P95",
+    "p99": "P99",
+    "successRate": "成功率",
+    "throughput": "スループット / 秒",
+    "latency": "レイテンシ",
+    "breakdown": "ステータス / エラー内訳",
+    "recent": "最近のリクエスト"
+  },
+  "common": {
+    "delete": "削除",
+    "invalidUrl": "完全なHTTP/HTTPS URLを入力してください",
+    "configSaved": "設定を保存しました",
+    "engineReady": "Browser Engine Ready"
+  }
+}

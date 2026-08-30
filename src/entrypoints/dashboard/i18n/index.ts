@@ -2,16 +2,24 @@ import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import en from './locales/en.json';
 import zhCN from './locales/zh-CN.json';
+import ja from './locales/ja.json';
+import ko from './locales/ko.json';
+import fr from './locales/fr.json';
 import { storageGet, storageSet } from '../storage';
 
-export const SUPPORTED_LANGUAGES = ['en', 'zh-CN'] as const;
+export const SUPPORTED_LANGUAGES = ['en', 'zh-CN', 'ja', 'ko', 'fr'] as const;
 export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number];
 
 const STORAGE_KEY = 'api-pressure-language';
 
 export function detectLanguage(): SupportedLanguage {
   const uiLang = chrome.i18n?.getUILanguage?.() ?? navigator.language ?? 'en';
-  return uiLang.toLowerCase().startsWith('zh') ? 'zh-CN' : 'en';
+  const lang = uiLang.toLowerCase();
+  if (lang.startsWith('zh')) return 'zh-CN';
+  if (lang.startsWith('ja')) return 'ja';
+  if (lang.startsWith('ko')) return 'ko';
+  if (lang.startsWith('fr')) return 'fr';
+  return 'en';
 }
 
 export async function initI18n(): Promise<typeof i18n> {
@@ -20,6 +28,9 @@ export async function initI18n(): Promise<typeof i18n> {
     resources: {
       en: { translation: en },
       'zh-CN': { translation: zhCN },
+      ja: { translation: ja },
+      ko: { translation: ko },
+      fr: { translation: fr },
     },
     lng: stored ?? detectLanguage(),
     fallbackLng: 'en',

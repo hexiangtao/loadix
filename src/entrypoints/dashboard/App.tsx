@@ -44,6 +44,14 @@ const SECTION_META = {
 
 const SECTIONS = ['request', 'load', 'assertions', 'variables', 'history'] as const;
 
+const LANGUAGE_LABELS: Record<SupportedLanguage, string> = {
+  en: 'English',
+  'zh-CN': '简体中文',
+  ja: '日本語',
+  ko: '한국어',
+  fr: 'Français',
+};
+
 export default function App({ host }: { host: EngineHost }) {
   const { t, i18n } = useTranslation();
   const { activeSection, engineState, resultMessage, metrics, setActiveSection, setEngineState, setMetrics, theme, setTheme } =
@@ -220,7 +228,7 @@ export default function App({ host }: { host: EngineHost }) {
           >
             {SUPPORTED_LANGUAGES.map((lang) => (
               <option key={lang} value={lang}>
-                {lang === 'en' ? 'English' : '简体中文'}
+                {LANGUAGE_LABELS[lang]}
               </option>
             ))}
           </select>
@@ -271,11 +279,13 @@ export default function App({ host }: { host: EngineHost }) {
             </div>
           </div>
 
-          {activeSection === 'request' && <RequestPanel value={request} onChange={setRequest} />}
-          {activeSection === 'load' && <LoadPanel value={load} onChange={setLoad} />}
-          {activeSection === 'assertions' && <AssertionsPanel value={assertions} onChange={setAssertions} />}
-          {activeSection === 'variables' && <VariablesPanel value={variables} onChange={setVariables} />}
-          {activeSection === 'history' && <HistoryPanel onRestore={handleRestore} />}
+          <div key={activeSection} className="panel-enter">
+            {activeSection === 'request' && <RequestPanel value={request} onChange={setRequest} />}
+            {activeSection === 'load' && <LoadPanel value={load} onChange={setLoad} />}
+            {activeSection === 'assertions' && <AssertionsPanel value={assertions} onChange={setAssertions} />}
+            {activeSection === 'variables' && <VariablesPanel value={variables} onChange={setVariables} />}
+            {activeSection === 'history' && <HistoryPanel onRestore={handleRestore} />}
+          </div>
 
           <section className="mt-2">
             <div className="mb-3.5 flex items-center justify-between">
