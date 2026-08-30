@@ -196,12 +196,9 @@ export default function App({ host }: { host: EngineHost }) {
   return (
     <>
       <header className="sticky top-0 z-5 flex h-16 items-center justify-between border-b border-line bg-panel px-6">
-        <div className="flex items-center gap-3">
-          <div className="grid size-9 place-items-center rounded-lg bg-primary/10 text-lg font-bold text-primary">L</div>
-          <div>
-            <b className="block text-[15px]">{t('app.name')}</b>
-            <span className="mt-0.5 block text-[11px] text-muted">{t('app.subtitle')}</span>
-          </div>
+        <div>
+          <b className="block text-[15px]">{t('app.name')}</b>
+          <span className="mt-0.5 block text-[11px] text-muted">{t('app.subtitle')}</span>
         </div>
         <div className="flex items-center gap-2">
           <button className="ghost-btn" onClick={toggleTheme} title={theme === 'dark' ? 'Light' : 'Dark'} aria-label="Toggle theme">
@@ -274,11 +271,11 @@ export default function App({ host }: { host: EngineHost }) {
             </div>
           </div>
 
-          <RequestPanel value={request} onChange={setRequest} />
-          <LoadPanel value={load} onChange={setLoad} />
-          <AssertionsPanel value={assertions} onChange={setAssertions} />
-          <VariablesPanel value={variables} onChange={setVariables} />
-          <HistoryPanel onRestore={handleRestore} />
+          {activeSection === 'request' && <RequestPanel value={request} onChange={setRequest} />}
+          {activeSection === 'load' && <LoadPanel value={load} onChange={setLoad} />}
+          {activeSection === 'assertions' && <AssertionsPanel value={assertions} onChange={setAssertions} />}
+          {activeSection === 'variables' && <VariablesPanel value={variables} onChange={setVariables} />}
+          {activeSection === 'history' && <HistoryPanel onRestore={handleRestore} />}
 
           <section className="mt-2">
             <div className="mb-3.5 flex items-center justify-between">
