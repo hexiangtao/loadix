@@ -158,7 +158,7 @@ export const TOOLS: Tool[] = [
     id: 'uuid',
     nameKey: 'tools.uuid.name',
     descKey: 'tools.uuid.desc',
-    keywords: ['uuid', 'guid', 'uuidv4', 'uuidv7', 'id', '生成'],
+    keywords: ['uuid', 'guid', 'uuidv1', 'uuidv3', 'uuidv4', 'uuidv5', 'uuidv7', 'id', '生成', 'namespace'],
     group: 'generate',
     icon: Fingerprint,
     component: UuidTool,

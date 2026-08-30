@@ -235,10 +235,13 @@
     },
     "uuid": {
       "name": "UUID Generator",
-      "desc": "Generate UUID v4 / v7 in bulk",
+      "desc": "Generate UUID v1 / v3 / v4 / v5 / v7",
       "count": "Count",
       "generate": "Generate",
-      "hint": "v4 is random; v7 is time-ordered and sorts naturally in databases."
+      "nameLabel": "Name",
+      "namespace": "Namespace",
+      "customNamespace": "Custom namespace (UUID)",
+      "hint": "v4 is random; v7 is time-ordered. v3/v5 are namespace-derived (v3=MD5, v5=SHA-1). v1 embeds a timestamp."
     },
     "timestamp": {
       "name": "Timestamp",

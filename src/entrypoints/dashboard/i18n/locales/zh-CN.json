@@ -235,10 +235,13 @@
     },
     "uuid": {
       "name": "UUID 生成器",
-      "desc": "批量生成 UUID v4 / v7",
+      "desc": "生成 UUID v1 / v3 / v4 / v5 / v7",
       "count": "数量",
       "generate": "生成",
-      "hint": "v4 为随机；v7 按时间有序，在数据库中可自然排序。"
+      "nameLabel": "名称",
+      "namespace": "命名空间",
+      "customNamespace": "自定义命名空间 (UUID)",
+      "hint": "v4 为随机；v7 按时间有序。v3/v5 由命名空间派生 (v3=MD5, v5=SHA-1)。v1 嵌入时间戳。"
     },
     "timestamp": {
       "name": "时间戳转换",
