@@ -1,3 +1,10 @@
+## [1.18.2](https://github.com/hexiangtao/loadix/compare/v1.18.1...v1.18.2) (2026-08-30)
+
+
+### Bug Fixes
+
+* **site:** open workbench links in same tab ([5efe58a](https://github.com/hexiangtao/loadix/commit/5efe58aaa9c898f4bbbd07bdaeb16049abdf36e7))
+
 ## [1.18.1](https://github.com/hexiangtao/loadix/compare/v1.18.0...v1.18.1) (2026-08-30)
 
 
