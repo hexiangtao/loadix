@@ -1,3 +1,10 @@
+# [1.7.0](https://github.com/hexiangtao/loadix/compare/v1.6.0...v1.7.0) (2026-08-30)
+
+
+### Features
+
+* add P50/P90/Max latency percentiles to metrics, add ROADMAP.md ([1d29e86](https://github.com/hexiangtao/loadix/commit/1d29e8655bd7184e162b4da14d818d4e7250cef1))
+
 # [1.6.0](https://github.com/hexiangtao/loadix/compare/v1.5.0...v1.6.0) (2026-08-30)
 
 
