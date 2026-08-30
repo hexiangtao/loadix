@@ -1,3 +1,10 @@
+# [1.22.0](https://github.com/hexiangtao/loadix/compare/v1.21.0...v1.22.0) (2026-08-30)
+
+
+### Features
+
+* **tools:** add UUID v1 / v3 / v5 to UUID Generator ([242418f](https://github.com/hexiangtao/loadix/commit/242418f857a396f2d0de926881058bed64f2a9ca))
+
 # [1.21.0](https://github.com/hexiangtao/loadix/compare/v1.20.0...v1.21.0) (2026-08-30)
 
 
