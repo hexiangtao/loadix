@@ -238,10 +238,16 @@ export default function App({ host }: { host: EngineHost }) {
   return (
     <>
       <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-line bg-surface/90 px-6 backdrop-blur-sm">
-        <div>
-          <b className="block text-[15px]">{t('app.name')}</b>
+        <a
+          href="https://loadix.dev"
+          target="_blank"
+          rel="noreferrer"
+          title={t('app.name')}
+          className="group block rounded-lg transition-colors duration-150"
+        >
+          <b className="block text-[15px] group-hover:text-primary">{t('app.name')}</b>
           <span className="mt-0.5 block text-[11px] text-muted">{t('app.subtitle')}</span>
-        </div>
+        </a>
         <div className="flex items-center gap-1">
           <motion.button
             whileTap={{ scale: 0.97 }}
