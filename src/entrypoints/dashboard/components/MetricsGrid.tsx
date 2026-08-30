@@ -3,9 +3,10 @@ import type { MetricsSnapshot } from '@/shared/types';
 
 interface MetricsGridProps {
   metrics: MetricsSnapshot | null;
+  compact?: boolean;
 }
 
-export function MetricsGrid({ metrics }: MetricsGridProps) {
+export function MetricsGrid({ metrics, compact }: MetricsGridProps) {
   const { t } = useTranslation();
   const m = metrics;
   const cells: [string, string][] = [
@@ -19,11 +20,11 @@ export function MetricsGrid({ metrics }: MetricsGridProps) {
     [t('results.successRate'), `${(m?.successRate ?? 0).toFixed(1)}%`],
   ];
   return (
-    <div className="mb-4 grid grid-cols-8 gap-2.5 max-xl:grid-cols-4">
+    <div className={compact ? 'grid grid-cols-2 gap-2' : 'mb-4 grid grid-cols-8 gap-2.5 max-xl:grid-cols-4'}>
       {cells.map(([label, value]) => (
         <div className="rounded-lg border border-line bg-panel p-3" key={label}>
           <span className="mb-1 block text-[11px] text-muted">{label}</span>
-          <b className="text-[17px]">{value}</b>
+          <b className={compact ? 'text-[15px]' : 'text-[17px]'}>{value}</b>
         </div>
       ))}
     </div>

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import type { Assertion, TestConfig } from '@/shared/types';
 import type { EngineHost } from '@/engine/engine-host';
@@ -244,90 +245,117 @@ export default function App({ host }: { host: EngineHost }) {
         </div>
       </header>
 
-      <main className="mx-auto grid max-w-[1500px] grid-cols-[210px_minmax(0,1fr)]">
-        <aside className="sticky top-16 h-[calc(100vh-4rem)] border-r border-line bg-panel p-3 pt-5">
-          <div className="px-2.5 pb-3 text-xs font-bold text-muted">{t('nav.title')}</div>
-          {SECTIONS.map((section) => (
-            <button
-              key={section}
-              className={`mb-0.5 w-full rounded-lg px-3 py-2.5 text-left text-muted hover:bg-hover ${
-                activeSection === section ? 'bg-primary/10 font-bold text-primary' : ''
-              }`}
-              onClick={() => setActiveSection(section)}
-            >
-              {t(`nav.${section}`)}
-            </button>
-          ))}
-          <div className="absolute bottom-5 left-5 text-[11px] text-muted">
-            <span className="mr-1.5 inline-block size-[7px] rounded-full bg-success" />
-            {t('common.engineReady')}
-          </div>
-        </aside>
-
-        <section className="min-w-0 p-7">
+      <main className="mx-auto grid max-w-[1500px] grid-cols-[minmax(0,1fr)_380px] max-lg:grid-cols-1">
+        {/* ——— Left: configuration ——— */}
+        <section className="min-w-0 p-6">
           <div className="mb-4 flex items-start justify-between">
             <div>
               <h1 className="mb-1 text-xl font-bold">{t(titleKey)}</h1>
               <p className="m-0 text-muted">{t(descKey)}</p>
             </div>
-            <div
-              className={`rounded-full px-3.5 py-1.5 text-xs font-bold ${
-                running ? 'bg-warning/15 text-warning' : 'bg-success/15 text-success'
-              }`}
+          </div>
+
+          {/* Step tabs (horizontal) */}
+          <div className="mb-4 flex gap-1 border-b border-line">
+            {SECTIONS.map((section) => (
+              <button
+                key={section}
+                onClick={() => setActiveSection(section)}
+                className={`relative px-4 py-2.5 text-sm transition-colors duration-150 ${
+                  activeSection === section ? 'font-semibold text-primary' : 'text-muted hover:text-ink'
+                }`}
+              >
+                {t(`nav.${section}`)}
+                {activeSection === section && (
+                  <motion.span
+                    layoutId="tab-underline"
+                    className="absolute inset-x-0 -bottom-px h-0.5 bg-primary"
+                    transition={{ type: 'spring', stiffness: 500, damping: 40 }}
+                  />
+                )}
+              </button>
+            ))}
+          </div>
+
+          {/* Panel with enter/exit transition */}
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={activeSection}
+              initial={{ opacity: 0, x: 12 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -12 }}
+              transition={{ duration: 0.16, ease: 'easeOut' }}
             >
-              {running ? t('results.running') : t('results.idle')}
-            </div>
-          </div>
+              {activeSection === 'request' && <RequestPanel value={request} onChange={setRequest} />}
+              {activeSection === 'load' && <LoadPanel value={load} onChange={setLoad} />}
+              {activeSection === 'assertions' && <AssertionsPanel value={assertions} onChange={setAssertions} />}
+              {activeSection === 'variables' && <VariablesPanel value={variables} onChange={setVariables} />}
+              {activeSection === 'history' && <HistoryPanel onRestore={handleRestore} />}
+            </motion.div>
+          </AnimatePresence>
+        </section>
 
-          <div key={activeSection} className="panel-enter">
-            {activeSection === 'request' && <RequestPanel value={request} onChange={setRequest} />}
-            {activeSection === 'load' && <LoadPanel value={load} onChange={setLoad} />}
-            {activeSection === 'assertions' && <AssertionsPanel value={assertions} onChange={setAssertions} />}
-            {activeSection === 'variables' && <VariablesPanel value={variables} onChange={setVariables} />}
-            {activeSection === 'history' && <HistoryPanel onRestore={handleRestore} />}
-          </div>
-
-          <section className="mt-2">
-            <div className="mb-3.5 flex items-center justify-between">
-              <div>
-                <h2 className="mb-0.5 text-[17px] font-bold">{t('results.title')}</h2>
+        {/* ——— Right: run + live monitor (sticky) ——— */}
+        <aside className="min-w-0 border-l border-line bg-panel/40 p-5 max-lg:border-l-0 max-lg:border-t">
+          <div className="sticky top-16 flex flex-col gap-4">
+            <div className="rounded-xl border border-line bg-panel p-4">
+              <div className="mb-3 flex items-center justify-between">
+                <div
+                  className={`rounded-full px-3 py-1 text-xs font-bold ${
+                    running ? 'bg-warning/15 text-warning' : 'bg-success/15 text-success'
+                  }`}
+                >
+                  {running ? t('results.running') : t('results.idle')}
+                </div>
                 <span className="text-xs text-muted">{resultMessage || t('results.waiting')}</span>
               </div>
               <div className="flex gap-2">
-                <button className="danger-btn" disabled={!running} onClick={handleStop}>
-                  {t('results.stop')}
-                </button>
-                <button className="primary-btn" disabled={running} onClick={handleStart}>
+                <motion.button
+                  whileTap={{ scale: 0.97 }}
+                  className="primary-btn flex-1"
+                  disabled={running}
+                  onClick={handleStart}
+                >
                   {t('results.start')}
-                </button>
+                </motion.button>
+                <motion.button
+                  whileTap={{ scale: 0.97 }}
+                  className="danger-btn"
+                  disabled={!running}
+                  onClick={handleStop}
+                >
+                  {t('results.stop')}
+                </motion.button>
               </div>
             </div>
 
-            <MetricsGrid metrics={metrics} />
+            <MetricsGrid metrics={metrics} compact />
 
-            <div className="mb-3 grid grid-cols-2 gap-3 max-lg:grid-cols-1">
-              <div className="chart-card h-[200px]">
-                <div className="chart-title">{t('results.throughput')}</div>
+            <div className="chart-card">
+              <div className="chart-title">{t('results.throughput')}</div>
+              <div className="h-[120px]">
                 <LineChart values={metrics?.throughput ?? []} />
               </div>
-              <div className="chart-card h-[200px]">
-                <div className="chart-title">{t('results.latency')}</div>
+            </div>
+
+            <div className="chart-card">
+              <div className="chart-title">{t('results.latency')}</div>
+              <div className="h-[120px]">
                 <LineChart values={metrics?.latencySeries ?? []} />
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 max-lg:grid-cols-1">
-              <div className="chart-card">
-                <div className="chart-title">{t('results.breakdown')}</div>
-                <Breakdown metrics={metrics} />
-              </div>
-              <div className="chart-card">
-                <div className="chart-title">{t('results.recent')}</div>
-                <RecentRequests metrics={metrics} />
-              </div>
+            <div className="chart-card">
+              <div className="chart-title">{t('results.breakdown')}</div>
+              <Breakdown metrics={metrics} />
             </div>
-          </section>
-        </section>
+
+            <div className="chart-card">
+              <div className="chart-title">{t('results.recent')}</div>
+              <RecentRequests metrics={metrics} />
+            </div>
+          </div>
+        </aside>
       </main>
     </>
   );
