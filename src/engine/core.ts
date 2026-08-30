@@ -47,35 +47,3 @@ export function buildHeaders(config: TestConfig, vars: Record<string, string>): 
   }
   return headers;
 }
-
-/**
- * Compute the launch delay (ms) for a virtual user so that the ramp-up
- * period spreads user starts evenly across `ramp` seconds.
- */
-export function rampUpDelay(userIndex: number, totalUsers: number, rampSeconds: number): number {
-  if (rampSeconds <= 0 || totalUsers <= 1) return 0;
-  return (userIndex / totalUsers) * rampSeconds * 1000;
-}
-
-/**
- * Global RPS scheduler: given the target interval and the number of slots
- * already consumed, return the timestamp (ms, performance clock) at which
- * the next request should be launched, or null if the caller should wait.
- */
-export class RpsScheduler {
-  private nextAt: number;
-  private readonly interval: number;
-
-  constructor(rps: number, now: number) {
-    this.interval = rps > 0 ? 1000 / rps : 0;
-    this.nextAt = now;
-  }
-
-  /** Returns the wait time in ms before the next launch (0 = launch now). */
-  acquire(now: number): number {
-    if (this.interval === 0) return 0;
-    const wait = this.nextAt - now;
-    this.nextAt = Math.max(this.nextAt + this.interval, now + this.interval);
-    return Math.max(0, wait);
-  }
-}

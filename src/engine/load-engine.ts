@@ -1,11 +1,17 @@
 /**
- * Load-testing orchestrator: manages virtual users, RPS pacing, ramp-up,
- * duration and abort. Framework-agnostic — the host (background service
- * worker) wires `onMetrics` / `onState` callbacks to messaging.
+ * Load-testing orchestrator.
+ *
+ * Separates **concurrency** from **RPS**:
+ *  - A control loop adjusts the number of in-flight requests to match the
+ *    load model's concurrency target over time.
+ *  - A token bucket paces request starts to the target RPS.
+ *
+ * Framework-agnostic — the host wires `onMetrics` / `onState` to messaging.
  */
 
 import type { EngineState, MetricsSnapshot, TestConfig } from '../shared/types';
-import { RpsScheduler, rampUpDelay } from './core';
+import type { LoadModel } from './load-model';
+import { TokenBucket, targetConcurrency } from './load-model';
 import { MetricsCollector } from './metrics';
 import { executeAndAssert } from './runner';
 
@@ -41,27 +47,20 @@ export class LoadEngine {
       this.onMetrics(this.collector.snapshot(Date.now()));
     }, METRICS_INTERVAL_MS);
 
-    const deadline = Date.now() + config.duration * 1000;
-    const workers = Math.max(1, Math.min(config.users, 100));
-    const scheduler = new RpsScheduler(config.rps, performance.now());
-
-    const worker = async (index: number): Promise<void> => {
-      const vars = Object.fromEntries(config.variables);
-      const delay = rampUpDelay(index, workers, config.ramp);
-      if (delay > 0) await sleep(delay);
-      while (!this.abortFlag && Date.now() < deadline) {
-        const wait = scheduler.acquire(performance.now());
-        if (wait > 0) await sleep(wait);
-        if (this.abortFlag || Date.now() >= deadline) break;
-        const result = await executeAndAssert(config, vars);
-        this.collector.add(result);
-      }
+    const model: LoadModel = {
+      kind: config.ramp > 0 ? 'ramp' : 'constant',
+      users: Math.max(1, config.users),
+      duration: config.duration,
+      ramp: config.ramp,
+      rps: config.rps,
     };
 
-    await Promise.all(Array.from({ length: workers }, (_, i) => worker(i)));
+    await this.runLoop(model);
 
-    clearInterval(this.metricsTimer!);
-    this.metricsTimer = null;
+    if (this.metricsTimer) {
+      clearInterval(this.metricsTimer);
+      this.metricsTimer = null;
+    }
     this.running = false;
     const finalState: EngineState = this.abortFlag ? 'aborted' : 'finished';
     this.onState(finalState);
@@ -70,6 +69,48 @@ export class LoadEngine {
 
   stop(): void {
     this.abortFlag = true;
+  }
+
+  /**
+   * Control loop: keeps the number of in-flight requests at the model's
+   * concurrency target, paced by the token bucket.
+   */
+  private async runLoop(model: LoadModel): Promise<void> {
+    const deadline = this.startedAt + model.duration * 1000;
+    const vars = Object.fromEntries(this.config?.variables ?? []);
+    const bucket = new TokenBucket(model.rps, performance.now());
+    let inFlight = 0;
+
+    const shouldStop = (): boolean => this.abortFlag || Date.now() >= deadline;
+
+    while (!shouldStop()) {
+      const elapsedSec = (Date.now() - this.startedAt) / 1000;
+      const target = targetConcurrency(model, elapsedSec);
+
+      // Scale up: start requests until we hit the concurrency target,
+      // respecting the RPS token bucket.
+      while (inFlight < target && !shouldStop()) {
+        if (!bucket.take(performance.now())) break; // rate-limited; wait
+        inFlight++;
+        void this.runOne(vars).finally(() => {
+          inFlight--;
+        });
+      }
+
+      await sleep(10);
+    }
+
+    // Graceful drain: wait for in-flight requests to finish, with a cap.
+    const drainDeadline = Date.now() + 5000;
+    while (inFlight > 0 && Date.now() < drainDeadline) {
+      await sleep(20);
+    }
+  }
+
+  private async runOne(vars: Record<string, string>): Promise<void> {
+    if (!this.config) return;
+    const result = await executeAndAssert(this.config, vars);
+    this.collector.add(result);
   }
 }
 

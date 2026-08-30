@@ -52,7 +52,7 @@ every advanced load model. This is the highest-priority architectural change.
 > flight. RPS = requests completed/started per second. A correct engine models
 > them independently.
 
-- [ ] Load model types:
+- [x] Load model types:
   - Constant Users (fixed VUs, each loops)
   - Constant RPS (paced launches, e.g. token bucket)
   - Ramp-up (users grow over time)
@@ -60,10 +60,16 @@ every advanced load model. This is the highest-priority architectural change.
   - Spike (sudden burst, hold, drop)
   - Soak (long constant run)
 - [ ] Per-VU independent lifecycle (each VU owns its own session)
-- [ ] Precise RPS pacing (token bucket / leaky bucket, no shared-slot race)
-- [ ] Graceful stop + full AbortController cancellation
+- [x] Precise RPS pacing (token bucket / leaky bucket, no shared-slot race)
+- [x] Graceful stop + full AbortController cancellation
 - [ ] Backpressure: prevent unbounded Promise accumulation
 - [ ] Memory control for long runs (ring buffers, bounded history)
+
+> Status: core scheduler rewritten (`load-model.ts` + `LoadEngine`). Concurrency
+> and RPS are now independent (target-concurrency control loop + token bucket).
+> Current models: `constant` and `ramp`. Step / Spike / Soak are future model
+> kinds to add on top of this foundation. Per-VU session lifecycle, backpressure,
+> and memory caps are still pending.
 
 ---
 
