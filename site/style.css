@@ -49,12 +49,14 @@ body {
 }
 .hero-copy { animation: rise 0.8s ease both; }
 .hero h1 {
-  font-size: 58px;
-  line-height: 1.1;
-  letter-spacing: -0.03em;
+  font-size: 36px;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
   font-weight: 600;
-  margin: 0 0 28px;
+  margin: 0 0 16px;
+  max-width: 560px;
 }
+.hero .sub { margin: 0 0 32px; }
 .sub {
   font-size: 19px;
   color: var(--muted);
@@ -267,7 +269,7 @@ code.sh .str { color: #0a7a3d; }
     padding: 80px 24px 64px;
     gap: 48px;
   }
-  .hero h1 { font-size: 40px; }
+  .hero h1 { font-size: 28px; }
   .sub { font-size: 17px; }
   .section { padding: 56px 24px; }
   .grid { grid-template-columns: 1fr; gap: 40px; }
