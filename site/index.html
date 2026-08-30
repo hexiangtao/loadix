@@ -3,8 +3,58 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Loadix</title>
-  <meta name="description" content="Loadix — a browser-based HTTP API load & stress testing workbench." />
+
+  <title>Loadix — Local API Workbench & Browser Load Tester</title>
+  <meta name="description" content="Loadix is a free, local-first workbench for API developers: load testing, plus 14 everyday tools — JWT decoder, Base64, URL parser, JSON formatter, regex tester, hash, UUID, cron, and more. All in your browser, no data leaves your device." />
+  <meta name="keywords" content="loadix, api load testing, browser load tester, jwt decoder, jwt encoder, base64 encoder, url parser, json formatter, regex tester, hash generator, uuid generator, cron parser, dev tools, api workbench" />
+  <meta name="robots" content="index, follow" />
+  <meta name="theme-color" content="#0f172a" />
+  <link rel="canonical" href="https://loadix.dev/" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://loadix.dev/" />
+  <meta property="og:title" content="Loadix — Local API Workbench & Browser Load Tester" />
+  <meta property="og:description" content="Free, local-first workbench for API developers. Load testing plus 14 everyday tools (JWT, Base64, URL parser, JSON, regex, hash, UUID, cron, …) — all in your browser." />
+  <meta property="og:site_name" content="Loadix" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Loadix — Local API Workbench & Browser Load Tester" />
+  <meta name="twitter:description" content="Free, local-first workbench for API developers: load testing + 14 everyday tools, all in your browser." />
+
+  <!-- Structured data: Google rich-result candidate -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Loadix",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Chrome, Edge, Brave, any Chromium browser",
+    "description": "Local API workbench and browser-based HTTP load tester. Includes 14 developer tools (JWT, Base64, URL parser, JSON formatter, regex, hash, UUID, cron, etc.) that run entirely in the browser.",
+    "url": "https://loadix.dev/",
+    "downloadUrl": "https://github.com/hexiangtao/loadix/releases",
+    "softwareVersion": "1.18.1",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "featureList": [
+      "HTTP load & stress testing (6 methods, virtual users, RPS, ramp-up)",
+      "JWT decoder & HS256 signer/verifier",
+      "Base64, URL, HTML-entity encode/decode",
+      "URL parser with editable query parameters",
+      "JSON, SQL, Markdown formatters",
+      "Regex tester with capture-group extraction",
+      "Hash (MD5, SHA-1/256/512)",
+      "UUID v4 / v7 generator",
+      "Cron expression parser with next 5 runs",
+      "Timestamp converter, Color picker, JSONPath query"
+    ]
+  }
+  </script>
+
   <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
@@ -12,6 +62,7 @@
     <a class="brand" href="https://lab.loadix.dev">Loadix</a>
     <nav class="links">
       <a href="#features">Features</a>
+      <a href="#tools">Tools</a>
       <a href="#install">Install</a>
       <a href="https://github.com/hexiangtao/loadix" target="_blank" rel="noopener">GitHub</a>
     </nav>
@@ -78,6 +129,28 @@
           <h3>History &amp; reports</h3>
           <p>Recent runs saved automatically. Restore configs and export JSON reports.</p>
         </div>
+      </div>
+    </section>
+
+    <section id="tools" class="section">
+      <p class="eyebrow">Built-in developer tools</p>
+      <p class="section-lede">14 everyday tools, all running locally in your browser. No upload, no account, no tracking.</p>
+      <div class="tool-grid">
+        <div class="tool"><h3>JWT</h3><p>Decode payloads, sign &amp; verify HS256 tokens.</p></div>
+        <div class="tool"><h3>Base64</h3><p>Encode &amp; decode Base64 strings.</p></div>
+        <div class="tool"><h3>URL Parser</h3><p>Decompose URLs, edit query parameters in place.</p></div>
+        <div class="tool"><h3>URL Encode</h3><p>Percent-encode &amp; decode URL components.</p></div>
+        <div class="tool"><h3>JSON Formatter</h3><p>Pretty-print, minify, validate JSON.</p></div>
+        <div class="tool"><h3>SQL Formatter</h3><p>Pretty-print SQL queries.</p></div>
+        <div class="tool"><h3>HTML Entities</h3><p>Escape &amp; unescape HTML entities.</p></div>
+        <div class="tool"><h3>Markdown</h3><p>Live-rendered Markdown preview.</p></div>
+        <div class="tool"><h3>Regex Tester</h3><p>Test patterns and extract capture groups.</p></div>
+        <div class="tool"><h3>Hash</h3><p>MD5, SHA-1, SHA-256, SHA-512.</p></div>
+        <div class="tool"><h3>UUID Generator</h3><p>Bulk UUID v4 / v7 in your browser.</p></div>
+        <div class="tool"><h3>Timestamp</h3><p>Unix epoch &harr; human-readable date.</p></div>
+        <div class="tool"><h3>Cron Parser</h3><p>Read cron expressions, preview the next 5 runs.</p></div>
+        <div class="tool"><h3>Color Picker</h3><p>HEX / RGB / HSL with native picker.</p></div>
+        <div class="tool"><h3>JSONPath</h3><p>Query JSON with the JSONPath expression language.</p></div>
       </div>
     </section>
 

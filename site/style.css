@@ -145,6 +145,43 @@ body {
   grid-template-columns: repeat(3, 1fr);
   gap: 64px 48px;
 }
+
+/* Tools grid (denser than .grid so 15 items fit on desktop). */
+.tool-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 24px;
+  margin-top: 24px;
+}
+.tool {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 16px 18px;
+  background: #fff;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+.tool:hover {
+  border-color: #cbd5e1;
+  transform: translateY(-2px);
+}
+.tool h3 {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0 0 6px;
+  color: #0a0a0a;
+}
+.tool p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+.section-lede {
+  margin: -8px 0 0;
+  color: var(--muted);
+  font-size: 15px;
+  max-width: 640px;
+}
 .feature h3 { font-size: 16px; font-weight: 600; margin: 0 0 12px; }
 .feature p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.6; }
 .feature {
@@ -215,4 +252,5 @@ code.sh .str { color: #0a7a3d; }
   .sub { font-size: 17px; }
   .section { padding: 56px 24px; }
   .grid { grid-template-columns: 1fr; gap: 40px; }
+  .tool-grid { grid-template-columns: repeat(2, 1fr); }
 }
