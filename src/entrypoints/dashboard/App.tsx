@@ -282,10 +282,9 @@ export default function App({ host }: { host: EngineHost }) {
             target="_blank"
             rel="noreferrer"
             title={t('app.name')}
-            className="group block rounded-lg transition-colors duration-150"
+            className="rounded-lg text-[15px] font-bold transition-colors duration-150 hover:text-primary"
           >
-            <b className="block text-[15px] group-hover:text-primary">{t('app.name')}</b>
-            <span className="mt-0.5 block text-[11px] text-muted">{t('app.subtitle')}</span>
+            {t('app.name')}
           </a>
 
           <nav className="flex items-center gap-1">

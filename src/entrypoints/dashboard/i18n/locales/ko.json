@@ -1,7 +1,7 @@
 {
   "app": {
     "name": "Loadix",
-    "subtitle": "브라우저 부하 테스트 워크벤치",
+    "subtitle": "로컬 API 워크벤치 · 부하 테스트",
     "newTest": "새로 만들기",
     "saveConfig": "설정 저장",
     "exportReport": "리포트 내보내기"

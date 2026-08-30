@@ -1,7 +1,7 @@
 {
   "app": {
     "name": "Loadix",
-    "subtitle": "浏览器压测工作台",
+    "subtitle": "本地 API 工作台 · 压测",
     "newTest": "＋ 新建",
     "saveConfig": "保存配置",
     "exportReport": "导出报告"

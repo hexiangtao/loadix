@@ -1,7 +1,7 @@
 {
   "app": {
     "name": "Loadix",
-    "subtitle": "Plan de charge navigateur",
+    "subtitle": "Atelier API local · test de charge",
     "newTest": "Nouveau",
     "saveConfig": "Enregistrer",
     "exportReport": "Exporter"

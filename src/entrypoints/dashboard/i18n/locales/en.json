@@ -1,7 +1,7 @@
 {
   "app": {
     "name": "Loadix",
-    "subtitle": "Browser Load Testing Workbench",
+    "subtitle": "Local API Workbench & Load Tester",
     "newTest": "New Test",
     "saveConfig": "Save Config",
     "exportReport": "Export Report"

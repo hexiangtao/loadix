@@ -1,7 +1,7 @@
 {
   "app": {
     "name": "Loadix",
-    "subtitle": "ブラウザ負荷テストワークベンチ",
+    "subtitle": "ローカル API ワークベンチ · 負荷テスト",
     "newTest": "新規作成",
     "saveConfig": "設定を保存",
     "exportReport": "レポート出力"
