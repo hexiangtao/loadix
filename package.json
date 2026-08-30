@@ -10,9 +10,9 @@
   "scripts": {
     "dev": "wxt",
     "dev:firefox": "wxt -b firefox",
-    "dev:web": "vite --config vite.web.config.ts",
+    "dev:web": "wxt prepare && vite --config vite.web.config.ts",
     "build": "wxt build",
-    "build:web": "vite build --config vite.web.config.ts",
+    "build:web": "wxt prepare && vite build --config vite.web.config.ts",
     "zip": "wxt build && wxt zip",
     "compile": "wxt prepare && tsc --noEmit",
     "test": "vitest run",
