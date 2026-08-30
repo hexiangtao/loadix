@@ -1,3 +1,10 @@
+## [1.16.1](https://github.com/hexiangtao/loadix/compare/v1.16.0...v1.16.1) (2026-08-30)
+
+
+### Bug Fixes
+
+* mega menu shows all tools without scrolling; widen tools view ([4757a8a](https://github.com/hexiangtao/loadix/commit/4757a8aef7613b6c989c01eeea0f270c6c524d50))
+
 # [1.16.0](https://github.com/hexiangtao/loadix/compare/v1.15.0...v1.16.0) (2026-08-30)
 
 
