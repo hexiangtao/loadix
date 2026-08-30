@@ -40,6 +40,9 @@ body {
 }
 
 /* Small reusable component classes (via @apply) for elements used many times. */
+.nav-btn {
+  @apply cursor-pointer rounded-lg px-3 py-2 text-sm text-muted transition-colors duration-150 hover:bg-hover hover:text-ink;
+}
 .ghost-btn {
   @apply cursor-pointer rounded-lg border border-line bg-panel px-3 py-2 transition-colors duration-150 hover:border-primary hover:text-primary;
 }

@@ -215,12 +215,12 @@ export default function App({ host }: { host: EngineHost }) {
 
   return (
     <>
-      <header className="sticky top-0 z-5 flex h-16 items-center justify-between border-b border-line bg-panel px-6">
+      <header className="sticky top-0 z-5 flex h-16 items-center justify-between px-6">
         <div>
           <b className="block text-[15px]">{t('app.name')}</b>
           <span className="mt-0.5 block text-[11px] text-muted">{t('app.subtitle')}</span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           <motion.button
             whileTap={{ scale: 0.97 }}
             className="primary-btn"
@@ -238,9 +238,9 @@ export default function App({ host }: { host: EngineHost }) {
             {t('results.stop')}
           </motion.button>
 
-          <span className="mx-1 h-6 w-px bg-line" />
+          <span className="mx-2 h-6 w-px bg-line" />
 
-          <button className="ghost-btn" onClick={toggleTheme} title={theme === 'dark' ? 'Light' : 'Dark'} aria-label="Toggle theme">
+          <button className="nav-btn" onClick={toggleTheme} title={theme === 'dark' ? 'Light' : 'Dark'} aria-label="Toggle theme">
             {theme === 'dark' ? (
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                 <circle cx="12" cy="12" r="4" />
@@ -255,7 +255,7 @@ export default function App({ host }: { host: EngineHost }) {
           <select
             value={i18n.language}
             onChange={(e) => void changeLanguage(e.target.value as SupportedLanguage)}
-            className="rounded-lg border border-line bg-panel px-2 py-1.5 text-sm"
+            className="cursor-pointer rounded-lg px-2 py-1.5 text-sm text-muted outline-none transition-colors duration-150 hover:bg-hover hover:text-ink"
           >
             {SUPPORTED_LANGUAGES.map((lang) => (
               <option key={lang} value={lang}>
@@ -263,13 +263,13 @@ export default function App({ host }: { host: EngineHost }) {
               </option>
             ))}
           </select>
-          <button className="ghost-btn" onClick={handleNew}>
+          <button className="nav-btn" onClick={handleNew}>
             {t('app.newTest')}
           </button>
-          <button className="ghost-btn" onClick={handleSave}>
+          <button className="nav-btn" onClick={handleSave}>
             {t('app.saveConfig')}
           </button>
-          <button className="ghost-btn" onClick={handleExport}>
+          <button className="nav-btn" onClick={handleExport}>
             {t('app.exportReport')}
           </button>
         </div>
@@ -277,7 +277,7 @@ export default function App({ host }: { host: EngineHost }) {
 
       <main className="mx-auto grid max-w-[1500px] grid-cols-[210px_minmax(0,1fr)]">
         {/* ——— Left: step navigation ——— */}
-        <aside className="sticky top-16 h-[calc(100vh-4rem)] border-r border-line bg-panel p-3 pt-5">
+        <aside className="sticky top-16 h-[calc(100vh-4rem)] p-3 pt-5">
           <div className="px-2.5 pb-3 text-xs font-bold text-muted">{t('nav.title')}</div>
           {SECTIONS.map((section) => (
             <button
