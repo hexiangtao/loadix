@@ -13,6 +13,7 @@ import {
   Palette,
   TextQuote,
   Search,
+  Globe,
   type LucideIcon,
 } from 'lucide-react';
 import { Base64Tool } from './tools/Base64Tool';
@@ -29,6 +30,7 @@ import { HashTool } from './tools/HashTool';
 import { ColorTool } from './tools/ColorTool';
 import { MarkdownTool } from './tools/MarkdownTool';
 import { JsonPathTool } from './tools/JsonPathTool';
+import { UrlParserTool } from './tools/UrlParserTool';
 
 export type ToolGroup = 'encode' | 'format' | 'auth' | 'text' | 'generate' | 'query';
 
@@ -75,6 +77,15 @@ export const TOOLS: Tool[] = [
     group: 'encode',
     icon: LinkIcon,
     component: UrlTool,
+  },
+  {
+    id: 'urlparser',
+    nameKey: 'tools.urlparser.name',
+    descKey: 'tools.urlparser.desc',
+    keywords: ['url', 'parser', 'parse', 'query', 'params', 'host', 'port', 'path', 'fragment', '拆解', '解析', '参数'],
+    group: 'encode',
+    icon: Globe,
+    component: UrlParserTool,
   },
   {
     id: 'htmlentity',

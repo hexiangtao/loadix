@@ -201,6 +201,23 @@
       "decode": "解码",
       "invalid": "无效的百分号编码"
     },
+    "urlparser": {
+      "name": "URL 解析器",
+      "desc": "拆解 URL 各部分，可直接编辑 query 参数",
+      "invalid": "不是有效的 URL（应形如 protocol://host/...）",
+      "samples": "示例",
+      "protocol": "协议",
+      "host": "Host",
+      "hostname": "主机名",
+      "port": "端口",
+      "pathname": "路径",
+      "hash": "锚点",
+      "credentials": "凭据",
+      "queryParams": "Query 参数",
+      "add": "新增",
+      "remove": "删除",
+      "noParams": "无 query 参数"
+    },
     "html": {
       "name": "HTML 实体",
       "desc": "HTML 实体转义与还原",

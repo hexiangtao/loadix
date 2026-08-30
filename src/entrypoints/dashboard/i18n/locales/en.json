@@ -201,6 +201,23 @@
       "decode": "Decode",
       "invalid": "Invalid percent encoding"
     },
+    "urlparser": {
+      "name": "URL Parser",
+      "desc": "Inspect every part of a URL & edit query params",
+      "invalid": "Not a valid URL (expected protocol://host/...)",
+      "samples": "Samples",
+      "protocol": "Protocol",
+      "host": "Host",
+      "hostname": "Hostname",
+      "port": "Port",
+      "pathname": "Path",
+      "hash": "Hash",
+      "credentials": "Credentials",
+      "queryParams": "Query params",
+      "add": "Add",
+      "remove": "Remove",
+      "noParams": "No query parameters"
+    },
     "html": {
       "name": "HTML Entities",
       "desc": "Escape & unescape HTML entities",
