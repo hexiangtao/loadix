@@ -1,3 +1,10 @@
+# [1.16.0](https://github.com/hexiangtao/loadix/compare/v1.15.0...v1.16.0) (2026-08-30)
+
+
+### Features
+
+* redesign tools dropdown as mega-menu grid ([ee10312](https://github.com/hexiangtao/loadix/commit/ee10312fa2faf91f9a149f70a392dca49e2e8b61))
+
 # [1.15.0](https://github.com/hexiangtao/loadix/compare/v1.14.0...v1.15.0) (2026-08-30)
 
 
