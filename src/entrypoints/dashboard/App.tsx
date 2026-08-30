@@ -237,7 +237,7 @@ export default function App({ host }: { host: EngineHost }) {
 
   return (
     <>
-      <header className="sticky top-0 z-5 flex h-16 items-center justify-between px-6">
+      <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-line bg-surface/90 px-6 backdrop-blur-sm">
         <div>
           <b className="block text-[15px]">{t('app.name')}</b>
           <span className="mt-0.5 block text-[11px] text-muted">{t('app.subtitle')}</span>
@@ -368,13 +368,17 @@ export default function App({ host }: { host: EngineHost }) {
             <MetricsGrid metrics={metrics} />
 
             <div className="mb-3 grid grid-cols-2 gap-3 max-lg:grid-cols-1">
-              <div className="chart-card h-[200px]">
+              <div className="chart-card flex h-[200px] flex-col">
                 <div className="chart-title">{t('results.throughput')}</div>
-                <LineChart values={metrics?.throughput ?? []} />
+                <div className="min-h-0 flex-1">
+                  <LineChart values={metrics?.throughput ?? []} />
+                </div>
               </div>
-              <div className="chart-card h-[200px]">
+              <div className="chart-card flex h-[200px] flex-col">
                 <div className="chart-title">{t('results.latency')}</div>
-                <LineChart values={metrics?.latencySeries ?? []} />
+                <div className="min-h-0 flex-1">
+                  <LineChart values={metrics?.latencySeries ?? []} />
+                </div>
               </div>
             </div>
 

@@ -131,6 +131,10 @@ export class MetricsCollector {
 
   /** Fill sparse throughput buckets with zeros for the chart. */
   private fillThroughput(): number[] {
-    return this.throughput.map((v) => v ?? 0);
+    const out: number[] = [];
+    for (let i = 0; i < this.throughput.length; i++) {
+      out.push(this.throughput[i] ?? 0);
+    }
+    return out;
   }
 }
