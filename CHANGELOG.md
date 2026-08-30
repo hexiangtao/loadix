@@ -1,3 +1,10 @@
+# [1.18.0](https://github.com/hexiangtao/loadix/compare/v1.17.0...v1.18.0) (2026-08-30)
+
+
+### Features
+
+* expand tools to 15 with Hash, Color, Markdown, JWT Encode, JSONPath ([e4bd996](https://github.com/hexiangtao/loadix/commit/e4bd9969ca094343b40bf77bc26108d774f3bad9))
+
 # [1.17.0](https://github.com/hexiangtao/loadix/compare/v1.16.1...v1.17.0) (2026-08-30)
 
 
