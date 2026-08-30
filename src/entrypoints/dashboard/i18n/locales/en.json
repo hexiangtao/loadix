@@ -177,7 +177,12 @@
       "expired": "expired",
       "unverified": "Signature is not verified — decoding happens locally with no secret key.",
       "needSecret": "A secret is required for HS256",
-      "generate": "Generate token"
+      "generate": "Generate token",
+      "verify": "Verify signature",
+      "verifyHint": "Recompute HS256 with your secret and compare it to the signature in the token.",
+      "verified": "Signature is valid",
+      "invalidSignature": "Signature does not match — wrong secret?",
+      "algMismatch": "Only HS256 is supported for verification (token uses {{alg}})"
     },
     "regex": {
       "name": "Regex Tester",

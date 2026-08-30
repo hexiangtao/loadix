@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { KeyRound, ShieldCheck, FileSearch, Lock } from 'lucide-react';
+import { KeyRound, ShieldCheck, ShieldAlert, FileSearch, Lock } from 'lucide-react';
 import { ToolShell } from '../ToolShell';
 import { CopyButton } from '../CopyButton';
 import { usePersistedState } from '../usePersistedState';
@@ -73,6 +73,14 @@ export function JwtTool({ initialPayload }: JwtToolProps) {
   const [secret, setSecret] = usePersistedState('jwt.secret', '');
   const [signedToken, setSignedToken] = useState('');
   const [encodeError, setEncodeError] = useState('');
+  const [verifyStatus, setVerifyStatus] = useState<'idle' | 'ok' | 'bad' | 'alg' | 'err'>('idle');
+  const [verifyMsg, setVerifyMsg] = useState('');
+
+  // Reset verification whenever the token changes so the old verdict doesn't linger.
+  useEffect(() => {
+    setVerifyStatus('idle');
+    setVerifyMsg('');
+  }, [token]);
 
   const segments = useMemo<JwtSegment[]>(() => {
     const trimmed = token.trim();
@@ -130,6 +138,39 @@ export function JwtTool({ initialPayload }: JwtToolProps) {
       }
     } catch (e) {
       setEncodeError((e as Error).message);
+    }
+  };
+
+  /** Recompute the signature with the provided secret and compare it to the token. */
+  const verify = async () => {
+    const sig = segments.find((s) => s.key === 'signature');
+    const headerObj = segments.find((s) => s.key === 'header')?.obj;
+    const payloadObj = payload?.obj;
+    if (!sig || !headerObj || !payloadObj) return;
+    const alg = String(headerObj.alg ?? '').toUpperCase();
+    if (alg !== 'HS256') {
+      setVerifyStatus('alg');
+      setVerifyMsg(t('tools.jwt.algMismatch', { alg }));
+      return;
+    }
+    if (!secret) {
+      setVerifyStatus('err');
+      setVerifyMsg(t('tools.jwt.needSecret'));
+      return;
+    }
+    try {
+      const recomputed = await signHs256(headerObj, payloadObj, secret);
+      const expected = recomputed.split('.')[2];
+      if (expected === sig.raw) {
+        setVerifyStatus('ok');
+        setVerifyMsg(t('tools.jwt.verified'));
+      } else {
+        setVerifyStatus('bad');
+        setVerifyMsg(t('tools.jwt.invalidSignature'));
+      }
+    } catch (e) {
+      setVerifyStatus('err');
+      setVerifyMsg((e as Error).message);
     }
   };
 
@@ -227,7 +268,47 @@ export function JwtTool({ initialPayload }: JwtToolProps) {
                 </div>
               )}
 
-              <p className="mt-4 text-xs text-muted">{t('tools.jwt.unverified')}</p>
+              <details className="group mt-4">
+                <summary className="flex cursor-pointer list-none items-center gap-1.5 text-xs text-muted transition-colors duration-150 hover:text-ink">
+                  <span className="text-base leading-none transition-transform duration-150 group-open:rotate-90">▸</span>
+                  {t('tools.jwt.verify')}
+                </summary>
+                <div className="mt-2 space-y-2">
+                  <p className="text-[11px] text-muted">{t('tools.jwt.verifyHint')}</p>
+                  <div className="flex gap-2">
+                    <input
+                      type="password"
+                      autoComplete="off"
+                      className="min-w-0 flex-1 rounded-lg border border-line bg-panel px-2.5 py-2 font-mono text-sm outline-none transition-colors duration-150 focus:border-primary"
+                      value={secret}
+                      onChange={(e) => setSecret(e.target.value)}
+                      placeholder="my-very-secret-key"
+                    />
+                    <button
+                      onClick={verify}
+                      className="flex shrink-0 items-center gap-1.5 rounded-lg bg-primary px-3.5 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-primary/90"
+                    >
+                      <ShieldCheck size={14} />
+                      {t('tools.jwt.verify')}
+                    </button>
+                  </div>
+                  {verifyStatus === 'ok' && (
+                    <div className="flex items-center gap-1.5 rounded-md bg-success/10 px-2.5 py-1.5 text-xs font-semibold text-success">
+                      <ShieldCheck size={12} /> {verifyMsg}
+                    </div>
+                  )}
+                  {verifyStatus === 'bad' && (
+                    <div className="flex items-center gap-1.5 rounded-md bg-danger/10 px-2.5 py-1.5 text-xs font-semibold text-danger">
+                      <ShieldAlert size={12} /> {verifyMsg}
+                    </div>
+                  )}
+                  {(verifyStatus === 'alg' || verifyStatus === 'err') && verifyMsg && (
+                    <div className="flex items-center gap-1.5 rounded-md bg-warning/10 px-2.5 py-1.5 text-xs font-semibold text-warning">
+                      <ShieldAlert size={12} /> {verifyMsg}
+                    </div>
+                  )}
+                </div>
+              </details>
             </>
           )}
         </>

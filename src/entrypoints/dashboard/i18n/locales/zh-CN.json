@@ -177,7 +177,12 @@
       "expired": "已过期",
       "unverified": "签名未验证——解码完全在本地进行，不持有密钥。",
       "needSecret": "HS256 需要密钥",
-      "generate": "生成 Token"
+      "generate": "生成 Token",
+      "verify": "验证签名",
+      "verifyHint": "用密钥重新计算 HS256 签名，与 Token 中的签名比对。",
+      "verified": "签名有效",
+      "invalidSignature": "签名不匹配——密钥错误？",
+      "algMismatch": "验证仅支持 HS256（Token 使用 {{alg}}）"
     },
     "regex": {
       "name": "正则测试器",
