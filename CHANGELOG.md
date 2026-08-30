@@ -1,3 +1,13 @@
+# [1.19.0](https://github.com/hexiangtao/loadix/compare/v1.18.2...v1.19.0) (2026-08-30)
+
+
+### Features
+
+* **jwt:** add HS256 signature verification in decode mode ([f824dec](https://github.com/hexiangtao/loadix/commit/f824dec977aaeac80fc46792310fc02ed4c94dec))
+* **site:** reframe hero around 'workbench', add nav CTA to workbench ([7510d52](https://github.com/hexiangtao/loadix/commit/7510d52d4379a851490fa875cad273bc5869d749))
+* **site:** SEO overhaul + 'Built-in developer tools' section ([75864c3](https://github.com/hexiangtao/loadix/commit/75864c3b8053d0729beb9c952b3cbea14370053c))
+* **tools:** add URL Parser (decomposes URL, edits query params) ([dc34909](https://github.com/hexiangtao/loadix/commit/dc34909a5216b8c5ecf6ae4df4e208dc3a5d36e6))
+
 ## [1.18.2](https://github.com/hexiangtao/loadix/compare/v1.18.1...v1.18.2) (2026-08-30)
 
 
