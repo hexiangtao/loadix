@@ -78,6 +78,26 @@ body {
 .btn.ghost { color: var(--text); border: 1px solid var(--line); }
 .btn.ghost:hover { border-color: var(--text); }
 
+/* Compact CTA used inside the in-page nav. */
+.nav-cta {
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 6px;
+  margin-left: 4px;
+}
+.nav-cta:hover { opacity: 0.88; }
+
+/* Trust line under the hero CTA. */
+.trust {
+  margin: 18px 0 0;
+  font-size: 12.5px;
+  color: var(--muted);
+  letter-spacing: 0.01em;
+}
+
 /* ---- Terminal visual ---- */
 .hero-visual { animation: rise 0.8s ease 0.15s both; }
 .terminal {

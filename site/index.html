@@ -64,6 +64,7 @@
       <a href="#features">Features</a>
       <a href="#tools">Tools</a>
       <a href="#install">Install</a>
+      <a class="btn nav-cta" href="https://lab.loadix.dev">Open Workbench</a>
       <a href="https://github.com/hexiangtao/loadix" target="_blank" rel="noopener">GitHub</a>
     </nav>
   </header>
@@ -71,31 +72,34 @@
   <main>
     <section class="hero">
       <div class="hero-copy">
-        <h1>Load test your APIs<br />from the browser.</h1>
-        <p class="sub">Loadix is a Chrome extension for authorized HTTP API load and stress testing. No backend cluster. No setup.</p>
+        <h1>A local API workbench.<br />Right in your browser.</h1>
+        <p class="sub">15 everyday developer tools — JWT, Base64, URL parser, JSON, regex, hash, UUID, cron &amp; more — plus on-demand HTTP load testing. All local, all free, no data leaves your device.</p>
         <div class="cta">
           <a class="btn solid" href="https://lab.loadix.dev">Open the workbench</a>
           <a class="btn ghost" href="https://github.com/hexiangtao/loadix" target="_blank" rel="noopener">View on GitHub</a>
         </div>
+        <p class="trust">Free · Runs locally · No signup · No tracking</p>
       </div>
       <div class="hero-visual">
         <div class="terminal">
           <div class="term-bar">
             <span class="dot"></span><span class="dot"></span><span class="dot"></span>
-            <span class="term-title">loadix</span>
+            <span class="term-title">workbench</span>
           </div>
           <div class="term-body">
             <div class="term-lines">
-              <div class="tline"><span class="cmd">$</span> <span class="arg">loadix</span> <span class="flag">--url</span> <span class="str">https://api.example.com/v1/orders</span></div>
-              <div class="tline"><span class="cmd">$</span> <span class="arg">loadix</span> <span class="flag">--users</span> <span class="num">50</span> <span class="flag">--rps</span> <span class="num">25</span> <span class="flag">--duration</span> <span class="num">60</span></div>
+              <div class="tline"><span class="ok">▸</span> <span class="arg">tools</span>  <span class="muted">→</span>  <span class="str">15 ready</span> <span class="muted">(jwt · base64 · url · json · regex · hash · uuid · cron · …)</span></div>
               <div class="tline blank"></div>
-              <div class="tline"><span class="ok">▸ Load test running…</span></div>
-              <div class="tline">  users    <span class="num">50</span>   target rps  <span class="num">25</span></div>
-              <div class="tline">  duration <span class="num">60s</span>  ramp-up     <span class="num">5s</span></div>
+              <div class="tline"><span class="ok">▸</span> <span class="arg">decode</span>  <span class="flag">--jwt</span>  <span class="str">eyJhbGciOiJIUzI1NiJ9.…</span></div>
+              <div class="tline">  header  <span class="str">{ alg: "HS256", typ: "JWT" }</span></div>
+              <div class="tline">  payload <span class="str">{ sub: "1234567890", name: "John Doe" }</span></div>
+              <div class="tline">  <span class="ok">✓</span> signature verified</div>
               <div class="tline blank"></div>
-              <div class="tline"><span class="ok">✓</span> <span class="num">12,348</span> requests completed</div>
-              <div class="tline">  avg  <span class="num">42 ms</span>   p95  <span class="num">118 ms</span>   p99  <span class="num">203 ms</span></div>
-              <div class="tline">  errors  <span class="num">0</span> <span class="muted">(0.0%)</span>   success rate  <span class="num">100%</span></div>
+              <div class="tline"><span class="ok">▸</span> <span class="arg">parse</span>   <span class="flag">--url</span>  <span class="str">https://api.example.com/v1/orders?status=paid&limit=20</span></div>
+              <div class="tline">  host <span class="str">api.example.com</span>   path <span class="str">/v1/orders</span>   <span class="num">2</span> query params</div>
+              <div class="tline blank"></div>
+              <div class="tline"><span class="ok">▸</span> <span class="arg">load-test</span>  <span class="flag">--users</span> <span class="num">50</span> <span class="flag">--rps</span> <span class="num">25</span> <span class="flag">--duration</span> <span class="num">60</span></div>
+              <div class="tline">  <span class="num">12,348</span> requests  <span class="muted">·</span>  p95 <span class="num">118 ms</span>  <span class="muted">·</span>  errors <span class="num">0.0%</span>  <span class="muted">·</span>  success <span class="num">100%</span></div>
             </div>
           </div>
         </div>
