@@ -275,7 +275,7 @@ export default function App({ host }: { host: EngineHost }) {
 
   return (
     <>
-      <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-line bg-surface/90 px-6 backdrop-blur-sm">
+      <header className="toolbar flex h-14 items-center justify-between px-6">
         <div className="flex items-center gap-8">
           <a
             href="https://loadix.dev"

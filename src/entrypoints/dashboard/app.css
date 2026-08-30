@@ -4,70 +4,86 @@
    of which Vite root builds this CSS (WXT extension or standalone web). */
 @source '../../**/*.{ts,tsx}';
 
-/* Light theme (default). Neutral palette is monochrome; green is the single
-   accent (aligns with the black/white landing page and "performance" semantics). */
+/* macOS-flavoured palette.
+   Neutrals mimic Apple's "graphite" ramps; the single accent is system blue
+   (used for focus, active state, and primary actions). Green is reserved
+   for "verified" success badges. */
 @theme {
-  --color-primary: #0a0a0a;
-  --color-danger: #e5484d;
+  --color-primary: #007aff;
+  --color-primary-ink: #ffffff;
+  --color-danger: #ff3b30;
   --color-success: #1f8a44;
-  --color-warning: #b76a00;
-  --color-surface: #f6f7f9;
+  --color-warning: #c2410c;
+  --color-surface: #f5f5f7;
   --color-panel: #ffffff;
-  --color-hover: #f2f3f5;
-  --color-line: #e5e5e5;
-  --color-muted: #6b6b6b;
-  --color-ink: #0a0a0a;
+  --color-hover: #ececef;
+  --color-line: #e3e3e6;
+  --color-muted: #6e6e73;
+  --color-ink: #1d1d1f;
 }
 
-/* Dark theme — activated by adding `.dark` to <html>. */
+/* Dark theme. */
 .dark {
-  --color-primary: #e6edf3;
-  --color-danger: #f85149;
-  --color-success: #4ac26b;
-  --color-warning: #e3b341;
-  --color-surface: #0d1117;
-  --color-panel: #161b22;
-  --color-hover: #1c2129;
-  --color-line: #30363d;
-  --color-muted: #8b949e;
-  --color-ink: #e6edf3;
+  --color-primary: #0a84ff;
+  --color-primary-ink: #ffffff;
+  --color-danger: #ff453a;
+  --color-success: #30d158;
+  --color-warning: #ff9f0a;
+  --color-surface: #1c1c1e;
+  --color-panel: #2c2c2e;
+  --color-hover: #3a3a3c;
+  --color-line: #3a3a3c;
+  --color-muted: #98989d;
+  --color-ink: #f5f5f7;
 }
 
 body {
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', ui-sans-serif, system-ui, sans-serif;
   color: var(--color-ink);
   background: var(--color-surface);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  letter-spacing: -0.011em;
 }
 
-/* Small reusable component classes (via @apply) for elements used many times. */
+/* Reusable component classes (via @apply) for elements used many times. */
 .nav-btn {
-  @apply cursor-pointer rounded-lg px-3 py-2 text-sm text-muted transition-colors duration-150 hover:bg-hover hover:text-ink;
+  @apply cursor-pointer rounded-md px-3 py-1.5 text-[13px] text-muted transition-colors duration-150 hover:bg-hover hover:text-ink;
 }
 .ghost-btn {
-  @apply cursor-pointer rounded-lg border border-line bg-panel px-3 py-2 transition-colors duration-150 hover:border-primary hover:text-primary;
+  @apply cursor-pointer rounded-lg border border-line bg-panel px-3 py-1.5 text-[13px] transition-colors duration-150 hover:border-primary hover:text-primary;
 }
 .primary-btn {
-  @apply cursor-pointer rounded-lg border border-primary bg-primary px-3 py-2 font-bold text-white transition-opacity duration-150 disabled:cursor-not-allowed disabled:opacity-50;
+  @apply cursor-pointer rounded-lg bg-primary px-3.5 py-1.5 text-[13px] font-semibold text-white transition-colors duration-150 hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50;
 }
 .danger-btn {
-  @apply cursor-pointer rounded-lg border border-line bg-danger/10 px-3 py-2 text-danger transition-colors duration-150 hover:border-danger disabled:cursor-not-allowed disabled:opacity-50;
+  @apply cursor-pointer rounded-lg bg-danger/10 px-3 py-1.5 text-[13px] text-danger transition-colors duration-150 hover:bg-danger/15 disabled:cursor-not-allowed disabled:opacity-50;
 }
 .add-btn {
-  @apply mt-1.5 cursor-pointer rounded-lg border border-line bg-panel px-3 py-2 font-semibold text-primary transition-colors duration-150 hover:border-primary;
+  @apply mt-1.5 cursor-pointer rounded-lg border border-line bg-panel px-3 py-1.5 text-[13px] font-semibold text-primary transition-colors duration-150 hover:border-primary;
 }
 .field {
-  @apply rounded-lg border border-line bg-panel px-2.5 py-2 outline-none transition-colors duration-150 focus:border-primary;
+  @apply rounded-lg border border-line bg-panel px-2.5 py-1.5 text-[13px] outline-none transition-colors duration-150 focus:border-primary focus:ring-2 focus:ring-primary/25;
 }
 .panel {
-  @apply mb-4.5 rounded-xl border border-line bg-panel p-5 shadow-sm;
+  @apply mb-4.5 rounded-xl border border-line bg-panel p-5;
 }
 .chart-card {
   @apply rounded-xl border border-line bg-panel p-3.5;
 }
 .chart-title {
-  @apply mb-2.5 text-xs font-bold text-muted;
+  @apply mb-2.5 text-[11px] font-semibold uppercase tracking-wide text-muted;
 }
 .icon-btn {
-  @apply h-8.5 cursor-pointer rounded-md border-0 bg-transparent text-base text-muted hover:bg-hover hover:text-danger;
+  @apply h-7 cursor-pointer rounded-md border-0 bg-transparent text-base text-muted hover:bg-hover hover:text-danger;
 }
 
+/* Sticky toolbar at the top of the workbench — translucent, subtle separator. */
+.toolbar {
+  @apply sticky top-0 z-30 border-b border-line bg-panel/80 backdrop-blur-md;
+}
+
+/* Subtle, focus-friendly ring used by interactive elements that aren't buttons. */
+.focus-ring {
+  @apply outline-none focus-visible:ring-2 focus-visible:ring-primary/40;
+}
