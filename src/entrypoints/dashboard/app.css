@@ -7,9 +7,9 @@
 /* Light theme (default). Neutral palette is monochrome; green is the single
    accent (aligns with the black/white landing page and "performance" semantics). */
 @theme {
-  --color-primary: #16a34a;
+  --color-primary: #0a0a0a;
   --color-danger: #e5484d;
-  --color-success: #16a34a;
+  --color-success: #1f8a44;
   --color-warning: #b76a00;
   --color-surface: #f6f7f9;
   --color-panel: #ffffff;
@@ -21,9 +21,9 @@
 
 /* Dark theme — activated by adding `.dark` to <html>. */
 .dark {
-  --color-primary: #22c55e;
+  --color-primary: #e6edf3;
   --color-danger: #f85149;
-  --color-success: #22c55e;
+  --color-success: #4ac26b;
   --color-warning: #e3b341;
   --color-surface: #0d1117;
   --color-panel: #161b22;
