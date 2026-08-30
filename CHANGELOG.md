@@ -1,3 +1,10 @@
+# [1.5.0](https://github.com/hexiangtao/loadix/compare/v1.4.0...v1.5.0) (2026-08-30)
+
+
+### Features
+
+* redesign layout with horizontal step tabs + sticky monitor, add framer-motion ([31ed8a4](https://github.com/hexiangtao/loadix/commit/31ed8a498eb698194d476793dc15c10e640a19e6))
+
 # [1.4.0](https://github.com/hexiangtao/loadix/compare/v1.3.1...v1.4.0) (2026-08-30)
 
 
