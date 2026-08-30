@@ -6,7 +6,7 @@ interface LineChartProps {
 }
 
 /** Lightweight canvas line chart (no third-party dependency). */
-export function LineChart({ values, color = '#635bff' }: LineChartProps) {
+export function LineChart({ values, color }: LineChartProps) {
   const ref = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -31,7 +31,12 @@ export function LineChart({ values, color = '#635bff' }: LineChartProps) {
     ctx.scale(dpr, dpr);
     ctx.clearRect(0, 0, W, H);
 
-    ctx.strokeStyle = '#dfe3eb';
+    // Read theme colors from CSS variables so the chart follows light/dark.
+    const styles = getComputedStyle(document.documentElement);
+    const gridColor = styles.getPropertyValue('--color-line').trim() || '#e5e5e5';
+    const lineColor = color || styles.getPropertyValue('--color-primary').trim() || '#16a34a';
+
+    ctx.strokeStyle = gridColor;
     ctx.beginPath();
     for (let i = 1; i < 5; i++) {
       const y = (i * H) / 5;
@@ -42,7 +47,7 @@ export function LineChart({ values, color = '#635bff' }: LineChartProps) {
 
     if (!values.length) return;
     const max = Math.max(1, ...values);
-    ctx.strokeStyle = color;
+    ctx.strokeStyle = lineColor;
     ctx.lineWidth = 2;
     ctx.beginPath();
     values.forEach((v, i) => {

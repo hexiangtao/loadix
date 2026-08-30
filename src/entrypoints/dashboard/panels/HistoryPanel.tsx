@@ -37,7 +37,7 @@ export function HistoryPanel({ onRestore }: HistoryPanelProps) {
         {entries.length === 0 && <div className="text-xs text-muted">{t('history.empty')}</div>}
         {entries.map((entry, i) => (
           <div
-            className="flex items-center justify-between rounded-lg border border-line bg-white px-3.5 py-3"
+            className="flex items-center justify-between rounded-lg border border-line bg-panel px-3.5 py-3"
             key={i}
           >
             <div>

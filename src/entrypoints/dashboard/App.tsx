@@ -17,6 +17,7 @@ import { storageGet, storageSet } from './storage';
 
 const CONFIG_KEY = 'api-pressure-config';
 const HISTORY_KEY = 'api-pressure-history';
+const THEME_KEY = 'api-pressure-theme';
 
 const DEFAULT_REQUEST: RequestFormValue = {
   method: 'GET',
@@ -45,13 +46,30 @@ const SECTIONS = ['request', 'load', 'assertions', 'variables', 'history'] as co
 
 export default function App({ host }: { host: EngineHost }) {
   const { t, i18n } = useTranslation();
-  const { activeSection, engineState, resultMessage, metrics, setActiveSection, setEngineState, setMetrics } = useUiStore();
+  const { activeSection, engineState, resultMessage, metrics, setActiveSection, setEngineState, setMetrics, theme, setTheme } =
+    useUiStore();
 
   const [request, setRequest] = useState<RequestFormValue>(DEFAULT_REQUEST);
   const [load, setLoad] = useState<LoadFormValue>(DEFAULT_LOAD);
   const [assertions, setAssertions] = useState<Assertion[]>(DEFAULT_ASSERTIONS);
   const [variables, setVariables] = useState<[string, string][]>([['token', '']]);
   const clientRef = useRef<EngineHost | null>(null);
+
+  // Restore saved theme on mount, then apply to <html>.
+  useEffect(() => {
+    storageGet<'light' | 'dark'>(THEME_KEY).then((saved) => {
+      const initial = saved ?? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      setTheme(initial);
+    });
+  }, [setTheme]);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.toggle('dark', theme === 'dark');
+    storageSet(THEME_KEY, theme);
+  }, [theme]);
+
+  const toggleTheme = () => setTheme(theme === 'dark' ? 'light' : 'dark');
 
   const running = engineState === 'running';
 
@@ -177,19 +195,31 @@ export default function App({ host }: { host: EngineHost }) {
 
   return (
     <>
-      <header className="sticky top-0 z-5 flex h-16 items-center justify-between border-b border-line bg-white px-6">
+      <header className="sticky top-0 z-5 flex h-16 items-center justify-between border-b border-line bg-panel px-6">
         <div className="flex items-center gap-3">
-          <div className="grid size-9 place-items-center rounded-lg bg-indigo-50 text-lg">⚡</div>
+          <div className="grid size-9 place-items-center rounded-lg bg-primary/10 text-lg font-bold text-primary">L</div>
           <div>
             <b className="block text-[15px]">{t('app.name')}</b>
             <span className="mt-0.5 block text-[11px] text-muted">{t('app.subtitle')}</span>
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <button className="ghost-btn" onClick={toggleTheme} title={theme === 'dark' ? 'Light' : 'Dark'} aria-label="Toggle theme">
+            {theme === 'dark' ? (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <circle cx="12" cy="12" r="4" />
+                <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+              </svg>
+            ) : (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z" />
+              </svg>
+            )}
+          </button>
           <select
             value={i18n.language}
             onChange={(e) => void changeLanguage(e.target.value as SupportedLanguage)}
-            className="rounded-lg border border-line bg-white px-2 py-1.5 text-sm"
+            className="rounded-lg border border-line bg-panel px-2 py-1.5 text-sm"
           >
             {SUPPORTED_LANGUAGES.map((lang) => (
               <option key={lang} value={lang}>
@@ -210,21 +240,21 @@ export default function App({ host }: { host: EngineHost }) {
       </header>
 
       <main className="mx-auto grid max-w-[1500px] grid-cols-[210px_minmax(0,1fr)]">
-        <aside className="sticky top-16 h-[calc(100vh-4rem)] border-r border-line bg-white p-3 pt-5">
+        <aside className="sticky top-16 h-[calc(100vh-4rem)] border-r border-line bg-panel p-3 pt-5">
           <div className="px-2.5 pb-3 text-xs font-bold text-muted">{t('nav.title')}</div>
           {SECTIONS.map((section) => (
             <button
               key={section}
-              className={`mb-0.5 w-full rounded-lg px-3 py-2.5 text-left text-[#536077] hover:bg-gray-50 ${
-                activeSection === section ? 'bg-indigo-50 font-bold text-primary' : ''
+              className={`mb-0.5 w-full rounded-lg px-3 py-2.5 text-left text-muted hover:bg-hover ${
+                activeSection === section ? 'bg-primary/10 font-bold text-primary' : ''
               }`}
               onClick={() => setActiveSection(section)}
             >
               {t(`nav.${section}`)}
             </button>
           ))}
-          <div className="absolute bottom-5 left-5 text-[11px] text-[#8b95a7]">
-            <span className="mr-1.5 inline-block size-[7px] rounded-full bg-emerald-500" />
+          <div className="absolute bottom-5 left-5 text-[11px] text-muted">
+            <span className="mr-1.5 inline-block size-[7px] rounded-full bg-success" />
             {t('common.engineReady')}
           </div>
         </aside>
@@ -237,7 +267,7 @@ export default function App({ host }: { host: EngineHost }) {
             </div>
             <div
               className={`rounded-full px-3.5 py-1.5 text-xs font-bold ${
-                running ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'
+                running ? 'bg-warning/15 text-warning' : 'bg-success/15 text-success'
               }`}
             >
               {running ? t('results.running') : t('results.idle')}

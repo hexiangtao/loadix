@@ -4,13 +4,33 @@
    of which Vite root builds this CSS (WXT extension or standalone web). */
 @source '../../**/*.{ts,tsx}';
 
+/* Light theme (default). Neutral palette is monochrome; green is the single
+   accent (aligns with the black/white landing page and "performance" semantics). */
 @theme {
-  --color-primary: #635bff;
+  --color-primary: #16a34a;
   --color-danger: #e5484d;
-  --color-surface: #f5f7fb;
-  --color-line: #e4e8f0;
-  --color-muted: #758096;
-  --color-ink: #172033;
+  --color-success: #16a34a;
+  --color-warning: #b76a00;
+  --color-surface: #f6f7f9;
+  --color-panel: #ffffff;
+  --color-hover: #f2f3f5;
+  --color-line: #e5e5e5;
+  --color-muted: #6b6b6b;
+  --color-ink: #0a0a0a;
+}
+
+/* Dark theme — activated by adding `.dark` to <html>. */
+.dark {
+  --color-primary: #22c55e;
+  --color-danger: #f85149;
+  --color-success: #22c55e;
+  --color-warning: #e3b341;
+  --color-surface: #0d1117;
+  --color-panel: #161b22;
+  --color-hover: #1c2129;
+  --color-line: #30363d;
+  --color-muted: #8b949e;
+  --color-ink: #e6edf3;
 }
 
 body {
@@ -21,30 +41,30 @@ body {
 
 /* Small reusable component classes (via @apply) for elements used many times. */
 .ghost-btn {
-  @apply cursor-pointer rounded-lg border border-line bg-white px-3 py-2 hover:border-primary hover:text-primary;
+  @apply cursor-pointer rounded-lg border border-line bg-panel px-3 py-2 hover:border-primary hover:text-primary;
 }
 .primary-btn {
   @apply cursor-pointer rounded-lg border border-primary bg-primary px-3 py-2 font-bold text-white disabled:cursor-not-allowed disabled:opacity-50;
 }
 .danger-btn {
-  @apply cursor-pointer rounded-lg border border-line bg-red-50 px-3 py-2 text-danger hover:border-danger disabled:cursor-not-allowed disabled:opacity-50;
+  @apply cursor-pointer rounded-lg border border-line bg-danger/10 px-3 py-2 text-danger hover:border-danger disabled:cursor-not-allowed disabled:opacity-50;
 }
 .add-btn {
-  @apply mt-1.5 cursor-pointer rounded-lg border border-line bg-white px-3 py-2 font-semibold text-primary hover:border-primary;
+  @apply mt-1.5 cursor-pointer rounded-lg border border-line bg-panel px-3 py-2 font-semibold text-primary hover:border-primary;
 }
 .field {
-  @apply rounded-lg border border-line bg-white px-2.5 py-2 outline-none focus:border-primary;
+  @apply rounded-lg border border-line bg-panel px-2.5 py-2 outline-none focus:border-primary;
 }
 .panel {
-  @apply mb-4.5 rounded-xl border border-line bg-white p-5 shadow-sm;
+  @apply mb-4.5 rounded-xl border border-line bg-panel p-5 shadow-sm;
 }
 .chart-card {
-  @apply rounded-xl border border-line bg-white p-3.5;
+  @apply rounded-xl border border-line bg-panel p-3.5;
 }
 .chart-title {
   @apply mb-2.5 text-xs font-bold text-muted;
 }
 .icon-btn {
-  @apply h-8.5 cursor-pointer rounded-md border-0 bg-transparent text-base text-muted hover:bg-gray-100 hover:text-danger;
+  @apply h-8.5 cursor-pointer rounded-md border-0 bg-transparent text-base text-muted hover:bg-hover hover:text-danger;
 }
 

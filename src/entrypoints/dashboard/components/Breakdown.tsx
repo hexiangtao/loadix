@@ -15,7 +15,7 @@ export function Breakdown({ metrics }: BreakdownProps) {
       {entries.map(([key, count]) => (
         <div className="grid grid-cols-[110px_1fr_50px] items-center gap-2.5 text-xs" key={key}>
           <span>{key}</span>
-          <div className="h-2 overflow-hidden rounded-full bg-gray-100">
+          <div className="h-2 overflow-hidden rounded-full bg-line">
             <i className="block h-full rounded-full bg-primary" style={{ width: `${(count / max) * 100}%` }} />
           </div>
           <b>{count}</b>
