@@ -1,3 +1,10 @@
+# [1.9.0](https://github.com/hexiangtao/loadix/compare/v1.8.0...v1.9.0) (2026-08-30)
+
+
+### Features
+
+* complete Phase 2 — step/spike/soak load models + memory control ([548cdd1](https://github.com/hexiangtao/loadix/commit/548cdd1a86f6e5245c29587fe01adb3af712fd77))
+
 # [1.8.0](https://github.com/hexiangtao/loadix/compare/v1.7.0...v1.8.0) (2026-08-30)
 
 
