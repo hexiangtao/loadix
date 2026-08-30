@@ -1,3 +1,10 @@
+## [1.3.1](https://github.com/hexiangtao/loadix/compare/v1.3.0...v1.3.1) (2026-08-30)
+
+
+### Bug Fixes
+
+* nav switching, remove letter logo, add release download guide ([2672c3d](https://github.com/hexiangtao/loadix/commit/2672c3dc07995234910e36b16dab303989f1b6f3))
+
 # [1.3.0](https://github.com/hexiangtao/loadix/compare/v1.2.1...v1.3.0) (2026-08-30)
 
 
