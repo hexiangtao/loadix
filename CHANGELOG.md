@@ -1,3 +1,10 @@
+# [1.4.0](https://github.com/hexiangtao/loadix/compare/v1.3.1...v1.4.0) (2026-08-30)
+
+
+### Features
+
+* add Japanese, Korean, French translations and panel transition animation ([07a32f1](https://github.com/hexiangtao/loadix/commit/07a32f1462b4490f1c19b5dd0273d735464258c2))
+
 ## [1.3.1](https://github.com/hexiangtao/loadix/compare/v1.3.0...v1.3.1) (2026-08-30)
 
 
