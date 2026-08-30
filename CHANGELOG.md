@@ -1,3 +1,12 @@
+## [1.19.2](https://github.com/hexiangtao/loadix/compare/v1.19.1...v1.19.2) (2026-08-30)
+
+
+### Bug Fixes
+
+* **site:** bring back hero sub — short, self-deprecating ([1a52f28](https://github.com/hexiangtao/loadix/commit/1a52f281dac568d4969adaebcc2be10609daf104))
+* **site:** drop nav CTA button styling, blend with other links ([2570739](https://github.com/hexiangtao/loadix/commit/2570739003a09ab98bdd75422d7953da561a1275))
+* **site:** rename nav/hero CTA to 'Launch' / 'Launch Loadix' ([66b1665](https://github.com/hexiangtao/loadix/commit/66b1665039b0ef6cf644898b7d5b21798beb1f68))
+
 ## [1.19.1](https://github.com/hexiangtao/loadix/compare/v1.19.0...v1.19.1) (2026-08-30)
 
 
