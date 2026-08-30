@@ -140,6 +140,7 @@
     "group_auth": "认证",
     "group_text": "文本",
     "group_generate": "生成器",
+    "group_query": "查询",
     "base64": {
       "name": "Base64",
       "desc": "编码与解码 Base64 字符串",
@@ -230,6 +231,36 @@
       "name": "SQL 格式化",
       "desc": "格式化与美化 SQL 语句",
       "uppercase": "关键字大写"
+    },
+    "hash": {
+      "name": "哈希",
+      "desc": "计算 MD5 / SHA-1 / SHA-256 / SHA-512",
+      "hint": "MD5 通过一个轻量 JS 实现本地计算（无需任何第三方库）。"
+    },
+    "color": {
+      "name": "颜色取色器",
+      "desc": "HEX、RGB、HSL 互转与可视化调色",
+      "hex": "HEX",
+      "preview": "实时预览"
+    },
+    "markdown": {
+      "name": "Markdown",
+      "desc": "Markdown 实时预览",
+      "source": "源码",
+      "preview": "渲染结果",
+      "empty": "在左侧开始输入 Markdown…"
+    },
+    "jwt-encode": {
+      "name": "JWT 编码",
+      "desc": "签名并生成新的 JWT",
+      "needSecret": "HS256 需要密钥",
+      "generate": "生成 Token"
+    },
+    "jsonpath": {
+      "name": "JSONPath",
+      "desc": "用路径表达式从 JSON 提取数据",
+      "presets": "快速:",
+      "matches": "匹配"
     }
   }
 }

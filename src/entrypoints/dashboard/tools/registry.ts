@@ -10,6 +10,9 @@ import {
   Clock,
   CalendarClock,
   Database,
+  Palette,
+  TextQuote,
+  Search,
   type LucideIcon,
 } from 'lucide-react';
 import { Base64Tool } from './tools/Base64Tool';
@@ -22,8 +25,13 @@ import { UuidTool } from './tools/UuidTool';
 import { TimestampTool } from './tools/TimestampTool';
 import { CronTool } from './tools/CronTool';
 import { SqlTool } from './tools/SqlTool';
+import { HashTool } from './tools/HashTool';
+import { ColorTool } from './tools/ColorTool';
+import { MarkdownTool } from './tools/MarkdownTool';
+import { JwtEncodeTool } from './tools/JwtEncodeTool';
+import { JsonPathTool } from './tools/JsonPathTool';
 
-export type ToolGroup = 'encode' | 'format' | 'auth' | 'text' | 'generate';
+export type ToolGroup = 'encode' | 'format' | 'auth' | 'text' | 'generate' | 'query';
 
 export interface ToolProps {
   /** Content routed from the smart-paste box (pre-fills the tool input). */
@@ -47,6 +55,7 @@ export const GROUPS: { id: ToolGroup; labelKey: string }[] = [
   { id: 'auth', labelKey: 'tools.group_auth' },
   { id: 'text', labelKey: 'tools.group_text' },
   { id: 'generate', labelKey: 'tools.group_generate' },
+  { id: 'query', labelKey: 'tools.group_query' },
 ];
 
 export const TOOLS: Tool[] = [
@@ -139,6 +148,51 @@ export const TOOLS: Tool[] = [
     group: 'generate',
     icon: CalendarClock,
     component: CronTool,
+  },
+  {
+    id: 'hash',
+    nameKey: 'tools.hash.name',
+    descKey: 'tools.hash.desc',
+    keywords: ['hash', 'md5', 'sha', 'sha1', 'sha256', 'sha512', 'digest', 'checksum', '哈希', '校验'],
+    group: 'encode',
+    icon: Binary,
+    component: HashTool,
+  },
+  {
+    id: 'markdown',
+    nameKey: 'tools.markdown.name',
+    descKey: 'tools.markdown.desc',
+    keywords: ['markdown', 'md', 'preview', 'readme', '预览', '文档'],
+    group: 'format',
+    icon: TextQuote,
+    component: MarkdownTool,
+  },
+  {
+    id: 'color',
+    nameKey: 'tools.color.name',
+    descKey: 'tools.color.desc',
+    keywords: ['color', 'hex', 'rgb', 'hsl', 'picker', '颜色', '色值'],
+    group: 'generate',
+    icon: Palette,
+    component: ColorTool,
+  },
+  {
+    id: 'jwt-encode',
+    nameKey: 'tools.jwt-encode.name',
+    descKey: 'tools.jwt-encode.desc',
+    keywords: ['jwt', 'sign', 'encode', 'hs256', 'token', '编码', '签名'],
+    group: 'auth',
+    icon: KeyRound,
+    component: JwtEncodeTool,
+  },
+  {
+    id: 'jsonpath',
+    nameKey: 'tools.jsonpath.name',
+    descKey: 'tools.jsonpath.desc',
+    keywords: ['jsonpath', 'path', 'query', 'extract', 'json path', '查询', '提取'],
+    group: 'query',
+    icon: Search,
+    component: JsonPathTool,
   },
 ];
 

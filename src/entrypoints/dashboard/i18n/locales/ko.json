@@ -125,6 +125,37 @@
   "tools": {
     "title": "도구",
     "subtitle": "개발자를 위한 로컬 도구 상자——모두 브라우저 안에서 실행됩니다.",
-    "more": "더보기"
+    "more": "더보기",
+    "group_query": "쿼리",
+    "hash": {
+      "name": "해시",
+      "desc": "MD5 / SHA-1 / SHA-256 / SHA-512 계산",
+      "hint": "MD5는 외부 라이브러리 없이 로컬에서 계산됩니다."
+    },
+    "color": {
+      "name": "색상 피커",
+      "desc": "HEX / RGB / HSL 상호 변환",
+      "hex": "HEX",
+      "preview": "실시간 미리보기"
+    },
+    "markdown": {
+      "name": "Markdown",
+      "desc": "Markdown 실시간 미리보기",
+      "source": "소스",
+      "preview": "미리보기",
+      "empty": "왼쪽에서 Markdown 입력…"
+    },
+    "jwt-encode": {
+      "name": "JWT 인코딩",
+      "desc": "새 JWT 서명 및 생성",
+      "needSecret": "HS256에는 시크릿이 필요합니다",
+      "generate": "토큰 생성"
+    },
+    "jsonpath": {
+      "name": "JSONPath",
+      "desc": "경로 표현식으로 JSON에서 값 추출",
+      "presets": "빠른 선택:",
+      "matches": "일치"
+    }
   }
 }

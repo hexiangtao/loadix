@@ -140,6 +140,7 @@
     "group_auth": "Auth",
     "group_text": "Text",
     "group_generate": "Generate",
+    "group_query": "Query",
     "base64": {
       "name": "Base64",
       "desc": "Encode & decode Base64 strings",
@@ -230,6 +231,36 @@
       "name": "SQL Formatter",
       "desc": "Format & beautify SQL queries",
       "uppercase": "Uppercase keywords"
+    },
+    "hash": {
+      "name": "Hash",
+      "desc": "Compute MD5 / SHA-1 / SHA-256 / SHA-512",
+      "hint": "MD5 is computed locally via a tiny JS implementation (no external library)."
+    },
+    "color": {
+      "name": "Color Picker",
+      "desc": "Pick & convert between HEX, RGB, HSL",
+      "hex": "HEX",
+      "preview": "Live preview"
+    },
+    "markdown": {
+      "name": "Markdown",
+      "desc": "Live Markdown preview",
+      "source": "Markdown source",
+      "preview": "Rendered preview",
+      "empty": "Start typing markdown on the left…"
+    },
+    "jwt-encode": {
+      "name": "JWT Encode",
+      "desc": "Sign & encode a new JWT",
+      "needSecret": "A secret is required for HS256",
+      "generate": "Generate token"
+    },
+    "jsonpath": {
+      "name": "JSONPath",
+      "desc": "Extract data from JSON with a path expression",
+      "presets": "Quick:",
+      "matches": "Matches"
     }
   }
 }

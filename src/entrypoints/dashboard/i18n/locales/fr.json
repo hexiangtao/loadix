@@ -125,6 +125,37 @@
   "tools": {
     "title": "Outils",
     "subtitle": "Une boîte à outils locale pour les développeurs — tout s'exécute dans le navigateur.",
-    "more": "Plus"
+    "more": "Plus",
+    "group_query": "Requête",
+    "hash": {
+      "name": "Hash",
+      "desc": "Calculer MD5 / SHA-1 / SHA-256 / SHA-512",
+      "hint": "MD5 calculé localement sans dépendance externe."
+    },
+    "color": {
+      "name": "Pipette",
+      "desc": "Convertir entre HEX, RGB et HSL",
+      "hex": "HEX",
+      "preview": "Aperçu"
+    },
+    "markdown": {
+      "name": "Markdown",
+      "desc": "Aperçu Markdown en direct",
+      "source": "Source",
+      "preview": "Aperçu",
+      "empty": "Commencez à taper du markdown…"
+    },
+    "jwt-encode": {
+      "name": "JWT Encode",
+      "desc": "Signer et générer un nouveau JWT",
+      "needSecret": "Un secret est requis pour HS256",
+      "generate": "Générer le jeton"
+    },
+    "jsonpath": {
+      "name": "JSONPath",
+      "desc": "Extraire des données JSON par expression",
+      "presets": "Exemples :",
+      "matches": "Résultats"
+    }
   }
 }
