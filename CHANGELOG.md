@@ -1,3 +1,10 @@
+# [1.21.0](https://github.com/hexiangtao/loadix/compare/v1.20.0...v1.21.0) (2026-08-30)
+
+
+### Features
+
+* **tools:** add Base Converter (2/8/10/16, BigInt) ([93b42c3](https://github.com/hexiangtao/loadix/commit/93b42c3396061e6ac332e653dfccb530d70d0764))
+
 # [1.20.0](https://github.com/hexiangtao/loadix/compare/v1.19.2...v1.20.0) (2026-08-30)
 
 
