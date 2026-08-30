@@ -1,7 +1,7 @@
 /** Single HTTP request execution with timeout + variable interpolation. */
 
 import type { RequestResult, TestConfig } from '../shared/types';
-import { assertionsPass, buildHeaders, interpolate } from './core';
+import { buildHeaders, evaluateAssertions, interpolate } from './core';
 
 export async function executeRequest(config: TestConfig, vars: Record<string, string>): Promise<RequestResult> {
   const controller = new AbortController();
@@ -43,6 +43,8 @@ export async function executeRequest(config: TestConfig, vars: Record<string, st
 
 export async function executeAndAssert(config: TestConfig, vars: Record<string, string>): Promise<RequestResult> {
   const result = await executeRequest(config, vars);
-  result.pass = assertionsPass(result, config.assertions);
+  const failures = evaluateAssertions(result, config.assertions);
+  result.pass = failures.length === 0;
+  result.failures = failures;
   return result;
 }

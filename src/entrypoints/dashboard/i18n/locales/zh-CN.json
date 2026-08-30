@@ -92,7 +92,9 @@
     "throughput": "吞吐量 / 秒",
     "latency": "延迟",
     "breakdown": "状态 / 错误分布",
-    "recent": "最近请求"
+    "recent": "最近请求",
+    "slowest": "慢请求 Top N",
+    "assertionFailures": "断言失败明细"
   },
   "common": {
     "delete": "删除",

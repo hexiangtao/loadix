@@ -8,6 +8,8 @@ import { Breakdown } from './components/Breakdown';
 import { LineChart } from './components/LineChart';
 import { MetricsGrid } from './components/MetricsGrid';
 import { RecentRequests } from './components/RecentRequests';
+import { SlowRequests } from './components/SlowRequests';
+import { AssertionFailures } from './components/AssertionFailures';
 import { AssertionsPanel } from './panels/AssertionsPanel';
 import { HistoryPanel } from './panels/HistoryPanel';
 import { LoadPanel, type LoadFormValue } from './panels/LoadPanel';
@@ -349,6 +351,14 @@ export default function App({ host }: { host: EngineHost }) {
               <div className="chart-card">
                 <div className="chart-title">{t('results.breakdown')}</div>
                 <Breakdown metrics={metrics} />
+              </div>
+              <div className="chart-card">
+                <div className="chart-title">{t('results.assertionFailures')}</div>
+                <AssertionFailures metrics={metrics} />
+              </div>
+              <div className="chart-card">
+                <div className="chart-title">{t('results.slowest')}</div>
+                <SlowRequests metrics={metrics} />
               </div>
               <div className="chart-card">
                 <div className="chart-title">{t('results.recent')}</div>

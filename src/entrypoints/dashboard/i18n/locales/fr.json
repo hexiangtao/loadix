@@ -92,7 +92,9 @@
     "throughput": "Débit / sec",
     "latency": "Latence",
     "breakdown": "Répartition statuts / erreurs",
-    "recent": "Requêtes récentes"
+    "recent": "Requêtes récentes",
+    "slowest": "Requêtes les plus lentes",
+    "assertionFailures": "Échecs d'assertion"
   },
   "common": {
     "delete": "Supprimer",

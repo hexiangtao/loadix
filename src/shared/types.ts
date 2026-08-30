@@ -34,6 +34,7 @@ export interface RequestResult {
   error: string;
   pass: boolean;
   ts: number;
+  failures?: Assertion[];
 }
 
 export interface MetricsSnapshot {
@@ -49,6 +50,8 @@ export interface MetricsSnapshot {
   recent: RequestResult[];
   throughput: number[];
   latencySeries: number[];
+  assertionFailures: Record<string, number>;
+  slowest: RequestResult[];
 }
 
 export type EngineState = 'idle' | 'running' | 'finished' | 'aborted';

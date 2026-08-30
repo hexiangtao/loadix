@@ -22,12 +22,18 @@ export function average(values: number[]): number {
 
 /** Evaluate all assertions against a single request result. */
 export function assertionsPass(result: Omit<RequestResult, 'pass' | 'ts'>, assertions: Assertion[]): boolean {
-  for (const { type, value } of assertions) {
-    if (type === 'status' && result.status !== Number(value)) return false;
-    if (type === 'latency' && result.ms > Number(value)) return false;
-    if (type === 'contains' && !result.body.includes(value)) return false;
+  return evaluateAssertions(result, assertions).length === 0;
+}
+
+/** Return the list of assertions that failed for a given request result. */
+export function evaluateAssertions(result: Omit<RequestResult, 'pass' | 'ts'>, assertions: Assertion[]): Assertion[] {
+  const failures: Assertion[] = [];
+  for (const a of assertions) {
+    if (a.type === 'status' && result.status !== Number(a.value)) failures.push(a);
+    else if (a.type === 'latency' && result.ms > Number(a.value)) failures.push(a);
+    else if (a.type === 'contains' && !result.body.includes(a.value)) failures.push(a);
   }
-  return true;
+  return failures;
 }
 
 /** Build the per-request headers, applying variable interpolation. */

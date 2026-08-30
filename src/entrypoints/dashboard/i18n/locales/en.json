@@ -92,7 +92,9 @@
     "throughput": "Throughput / sec",
     "latency": "Latency",
     "breakdown": "Status / Error Breakdown",
-    "recent": "Recent Requests"
+    "recent": "Recent Requests",
+    "slowest": "Slowest Requests",
+    "assertionFailures": "Assertion Failures"
   },
   "common": {
     "delete": "Delete",

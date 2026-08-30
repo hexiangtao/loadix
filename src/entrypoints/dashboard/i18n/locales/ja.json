@@ -92,7 +92,9 @@
     "throughput": "スループット / 秒",
     "latency": "レイテンシ",
     "breakdown": "ステータス / エラー内訳",
-    "recent": "最近のリクエスト"
+    "recent": "最近のリクエスト",
+    "slowest": "遅いリクエスト",
+    "assertionFailures": "アサーション失敗"
   },
   "common": {
     "delete": "削除",

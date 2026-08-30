@@ -92,7 +92,9 @@
     "throughput": "처리량 / 초",
     "latency": "지연",
     "breakdown": "상태 / 오류 분포",
-    "recent": "최근 요청"
+    "recent": "최근 요청",
+    "slowest": "느린 요청",
+    "assertionFailures": "어서션 실패"
   },
   "common": {
     "delete": "삭제",
