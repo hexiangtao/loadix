@@ -1,3 +1,10 @@
+# [1.11.0](https://github.com/hexiangtao/loadix/compare/v1.10.0...v1.11.0) (2026-08-30)
+
+
+### Features
+
+* add axis ticks and value labels to charts ([d63df20](https://github.com/hexiangtao/loadix/commit/d63df203787abe4c1fd4aa81aa782fe1c7923dab))
+
 # [1.10.0](https://github.com/hexiangtao/loadix/compare/v1.9.1...v1.10.0) (2026-08-30)
 
 
