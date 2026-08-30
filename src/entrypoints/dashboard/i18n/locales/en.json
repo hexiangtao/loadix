@@ -282,6 +282,16 @@
       "hex": "HEX",
       "preview": "Live preview"
     },
+    "gradient": {
+      "name": "CSS Gradient",
+      "desc": "Build linear / radial CSS gradients with live preview",
+      "type": "Type",
+      "angle": "Angle",
+      "presets": "Presets",
+      "stops": "Stops",
+      "add": "Add",
+      "remove": "Remove"
+    },
     "markdown": {
       "name": "Markdown",
       "desc": "Live Markdown preview",

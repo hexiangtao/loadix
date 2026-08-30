@@ -16,6 +16,7 @@ import {
   Globe,
   GitCompareArrows,
   Sigma,
+  Paintbrush,
   type LucideIcon,
 } from 'lucide-react';
 import { Base64Tool } from './tools/Base64Tool';
@@ -35,6 +36,7 @@ import { JsonPathTool } from './tools/JsonPathTool';
 import { UrlParserTool } from './tools/UrlParserTool';
 import { DiffTool } from './tools/DiffTool';
 import { BaseConverterTool } from './tools/BaseConverterTool';
+import { GradientTool } from './tools/GradientTool';
 
 export type ToolGroup = 'encode' | 'format' | 'auth' | 'text' | 'generate' | 'query';
 
@@ -108,6 +110,15 @@ export const TOOLS: Tool[] = [
     group: 'encode',
     icon: Sigma,
     component: BaseConverterTool,
+  },
+  {
+    id: 'gradient',
+    nameKey: 'tools.gradient.name',
+    descKey: 'tools.gradient.desc',
+    keywords: ['gradient', 'css', 'background', 'linear', 'radial', 'color', '渐变', '色彩', '配色'],
+    group: 'generate',
+    icon: Paintbrush,
+    component: GradientTool,
   },
   {
     id: 'htmlentity',

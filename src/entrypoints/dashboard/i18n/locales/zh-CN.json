@@ -282,6 +282,16 @@
       "hex": "HEX",
       "preview": "实时预览"
     },
+    "gradient": {
+      "name": "CSS 渐变",
+      "desc": "可视化生成 linear / radial CSS 渐变",
+      "type": "类型",
+      "angle": "角度",
+      "presets": "预设",
+      "stops": "色标",
+      "add": "新增",
+      "remove": "删除"
+    },
     "markdown": {
       "name": "Markdown",
       "desc": "Markdown 实时预览",
