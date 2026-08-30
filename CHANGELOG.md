@@ -1,3 +1,10 @@
+## [1.9.1](https://github.com/hexiangtao/loadix/compare/v1.9.0...v1.9.1) (2026-08-30)
+
+
+### Bug Fixes
+
+* resolve nav overlap and chart rendering issues ([777b094](https://github.com/hexiangtao/loadix/commit/777b0943f6e3f192a210aff21f91e0d6346b0574))
+
 # [1.9.0](https://github.com/hexiangtao/loadix/compare/v1.8.0...v1.9.0) (2026-08-30)
 
 
