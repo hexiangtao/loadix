@@ -4,9 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <title>Loadix — Local API tools that don't phone home</title>
-  <meta name="description" content="A small collection of local API tools: JWT, Base64, URLs, JSON, hash, UUID, cron, and load testing. No account, no install, no nothing." />
-  <meta name="keywords" content="loadix, api tools, jwt decoder, base64 encoder, url parser, json formatter, regex tester, hash generator, uuid generator, browser load tester" />
+  <title>Loadix — Swiss Army knife for API developers</title>
+  <meta name="description" content="A small collection of local API tools: JWT, Base64, URLs, JSON, hash, UUID, cron, and load testing. Local. No account. No install." />
+  <meta name="keywords" content="loadix, api tools, swiss army knife, jwt decoder, base64 encoder, url parser, json formatter, regex tester, hash generator, uuid generator, browser load tester" />
   <meta name="robots" content="index, follow" />
   <meta name="theme-color" content="#0f172a" />
   <link rel="canonical" href="https://loadix.dev/" />
@@ -14,14 +14,14 @@
   <!-- Open Graph -->
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://loadix.dev/" />
-  <meta property="og:title" content="Loadix — Local API tools that don't phone home" />
-  <meta property="og:description" content="A small collection of local API tools. No account, no install, no nothing." />
+  <meta property="og:title" content="Loadix — Swiss Army knife for API developers" />
+  <meta property="og:description" content="Local. No account. No install." />
   <meta property="og:site_name" content="Loadix" />
 
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Loadix — Local API tools that don't phone home" />
-  <meta name="twitter:description" content="A small collection of local API tools. No account, no install, no nothing." />
+  <meta name="twitter:title" content="Loadix — Swiss Army knife for API developers" />
+  <meta name="twitter:description" content="Local. No account. No install." />
 
   <!-- Structured data: Google rich-result candidate -->
   <script type="application/ld+json">
@@ -31,7 +31,7 @@
     "name": "Loadix",
     "applicationCategory": "DeveloperApplication",
     "operatingSystem": "Chrome, Edge, Brave, any Chromium browser",
-    "description": "Local API tools that don't phone home. No account, no install, no nothing.",
+    "description": "A Swiss Army knife for API developers. Local. No account. No install.",
     "url": "https://loadix.dev/",
     "downloadUrl": "https://github.com/hexiangtao/loadix/releases",
     "softwareVersion": "1.18.1",
@@ -70,32 +70,49 @@
   <main>
     <section class="hero">
       <div class="hero-copy">
-        <h1>Local API tools that don't phone home.</h1>
-        <p class="sub">A handful of them, for whatever it's worth.</p>
+        <h1>Swiss Army knife for API developers.</h1>
+        <p class="sub">Local. No account. No install.</p>
         <div class="cta">
           <a class="btn solid" href="https://lab.loadix.dev">Launch Loadix</a>
           <a class="btn ghost" href="https://github.com/hexiangtao/loadix" target="_blank" rel="noopener">Source on GitHub</a>
         </div>
       </div>
       <div class="hero-visual">
-        <div class="terminal">
-          <div class="term-bar">
+        <div class="app-mock" role="img" aria-label="Loadix workbench — JWT decode tool">
+          <div class="mock-bar">
             <span class="dot"></span><span class="dot"></span><span class="dot"></span>
-            <span class="term-title">workbench</span>
+            <span class="mock-title">Loadix</span>
           </div>
-          <div class="term-body">
-            <div class="term-lines">
-              <div class="tline"><span class="ok">▸</span> <span class="arg">decode</span>  <span class="flag">--jwt</span>  <span class="str">eyJhbGciOiJIUzI1NiJ9.…</span></div>
-              <div class="tline">  header  <span class="str">{ alg: "HS256", typ: "JWT" }</span></div>
-              <div class="tline">  payload <span class="str">{ sub: "1234567890", name: "John Doe" }</span></div>
-              <div class="tline">  <span class="ok">✓</span> signature verified</div>
-              <div class="tline blank"></div>
-              <div class="tline"><span class="ok">▸</span> <span class="arg">parse</span>   <span class="flag">--url</span>  <span class="str">https://api.example.com/v1/orders?status=paid&limit=20</span></div>
-              <div class="tline">  host <span class="str">api.example.com</span>   path <span class="str">/v1/orders</span>   <span class="num">2</span> query params</div>
-              <div class="tline blank"></div>
-              <div class="tline"><span class="ok">▸</span> <span class="arg">load-test</span>  <span class="flag">--users</span> <span class="num">50</span> <span class="flag">--rps</span> <span class="num">25</span> <span class="flag">--duration</span> <span class="num">60</span></div>
-              <div class="tline">  <span class="num">12,348</span> requests  <span class="muted">·</span>  p95 <span class="num">118 ms</span>  <span class="muted">·</span>  errors <span class="num">0.0%</span>  <span class="muted">·</span>  success <span class="num">100%</span></div>
-            </div>
+          <div class="mock-body">
+            <aside class="mock-side">
+              <div class="mock-tool active">
+                <span class="mock-icon"></span>JWT
+              </div>
+              <div class="mock-tool"><span class="mock-icon"></span>Base64</div>
+              <div class="mock-tool"><span class="mock-icon"></span>URL Parser</div>
+              <div class="mock-tool"><span class="mock-icon"></span>JSON</div>
+              <div class="mock-tool"><span class="mock-icon"></span>Hash</div>
+              <div class="mock-tool"><span class="mock-icon"></span>UUID</div>
+              <div class="mock-tool"><span class="mock-icon"></span>Cron</div>
+            </aside>
+            <main class="mock-main">
+              <div class="mock-tabs">
+                <span class="mock-tab on">Decode</span>
+                <span class="mock-tab">Encode</span>
+              </div>
+              <div class="mock-label">Token</div>
+              <div class="mock-input">eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.abc</div>
+              <div class="mock-chips">
+                <span class="mock-chip on">Header</span>
+                <span class="mock-chip on">Payload</span>
+                <span class="mock-chip">Signature</span>
+              </div>
+              <div class="mock-pre">{ "sub": "1234567890", "name": "John Doe" }</div>
+              <div class="mock-verify">
+                <span class="mock-verify-icon"></span>
+                Signature verified
+              </div>
+            </main>
           </div>
         </div>
       </div>
