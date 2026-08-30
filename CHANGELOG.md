@@ -1,3 +1,10 @@
+# [1.6.0](https://github.com/hexiangtao/loadix/compare/v1.5.0...v1.6.0) (2026-08-30)
+
+
+### Features
+
+* add slowest requests and assertion failure breakdown to results ([368ede5](https://github.com/hexiangtao/loadix/commit/368ede5720838806a58279300d0be0dd18e42066))
+
 # [1.5.0](https://github.com/hexiangtao/loadix/compare/v1.4.0...v1.5.0) (2026-08-30)
 
 
