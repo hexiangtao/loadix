@@ -1,3 +1,10 @@
+# [1.3.0](https://github.com/hexiangtao/loadix/compare/v1.2.1...v1.3.0) (2026-08-30)
+
+
+### Features
+
+* add light/dark theme with monochrome + green accent ([aaf1951](https://github.com/hexiangtao/loadix/commit/aaf1951845991793ba42de9cd0d18093b29c36c4))
+
 ## [1.2.1](https://github.com/hexiangtao/loadix/compare/v1.2.0...v1.2.1) (2026-08-30)
 
 
