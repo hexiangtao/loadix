@@ -53,6 +53,9 @@
     "rps": "RPS cible",
     "duration": "Durée (sec)",
     "ramp": "Montée (sec)",
+    "autoStop": "Arrêt automatique",
+    "maxErrorRate": "Taux d'erreur max (%)",
+    "maxP95": "P95 max (ms)",
     "hint": "Les tests de charge navigateur sont idéaux pour le développement, la régression et les tests de stress légers. Utilisez un cluster dédié pour les tests à grande échelle."
   },
   "assertions": {

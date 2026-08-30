@@ -5,6 +5,8 @@ export interface LoadFormValue {
   rps: number;
   duration: number;
   ramp: number;
+  maxErrorRate: number;
+  maxP95: number;
 }
 
 interface LoadPanelProps {
@@ -47,6 +49,34 @@ export function LoadPanel({ value, onChange }: LoadPanelProps) {
         <label className="flex flex-col gap-1.5 text-xs font-semibold text-muted">
           {t('load.ramp')}
           <input className="field" type="number" min={0} value={value.ramp} onChange={(e) => patch({ ramp: +e.target.value || 0 })} />
+        </label>
+      </div>
+
+      <div className="mt-4 flex items-center gap-2 text-xs font-semibold text-muted">
+        <span>{t('load.autoStop')}</span>
+        <span className="h-px flex-1 bg-line" />
+      </div>
+      <div className="mt-2 grid grid-cols-2 gap-3 max-md:grid-cols-1">
+        <label className="flex flex-col gap-1.5 text-xs font-semibold text-muted">
+          {t('load.maxErrorRate')}
+          <input
+            className="field"
+            type="number"
+            min={0}
+            max={100}
+            value={value.maxErrorRate}
+            onChange={(e) => patch({ maxErrorRate: +e.target.value || 0 })}
+          />
+        </label>
+        <label className="flex flex-col gap-1.5 text-xs font-semibold text-muted">
+          {t('load.maxP95')}
+          <input
+            className="field"
+            type="number"
+            min={0}
+            value={value.maxP95}
+            onChange={(e) => patch({ maxP95: +e.target.value || 0 })}
+          />
         </label>
       </div>
       <div className="mt-4 flex gap-2">

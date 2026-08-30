@@ -10,17 +10,19 @@
  */
 
 import type { EngineState, MetricsSnapshot, TestConfig } from '../shared/types';
-import type { LoadModel } from './load-model';
-import { TokenBucket, targetConcurrency } from './load-model';
+import type { AutoStopReason, LoadModel } from './load-model';
+import { TokenBucket, evaluateAutoStop, targetConcurrency } from './load-model';
 import { MetricsCollector } from './metrics';
 import { executeAndAssert } from './runner';
 
 const METRICS_INTERVAL_MS = 500;
+const AUTO_STOP_CHECK_INTERVAL_MS = 500;
 
 export class LoadEngine {
   private config: TestConfig | null = null;
   private collector = new MetricsCollector();
   private abortFlag = false;
+  private autoStopReason: AutoStopReason | null = null;
   private running = false;
   private startedAt = 0;
   private metricsTimer: ReturnType<typeof setInterval> | null = null;
@@ -38,6 +40,7 @@ export class LoadEngine {
     if (this.running) return;
     this.config = config;
     this.abortFlag = false;
+    this.autoStopReason = null;
     this.running = true;
     this.startedAt = Date.now();
     this.collector.reset(this.startedAt);
@@ -63,7 +66,7 @@ export class LoadEngine {
     }
     this.running = false;
     const finalState: EngineState = this.abortFlag ? 'aborted' : 'finished';
-    this.onState(finalState);
+    this.onState(finalState, this.autoStopReason ? `auto-stop: ${this.autoStopReason}` : undefined);
     this.onMetrics(this.collector.snapshot(Date.now()));
   }
 
@@ -80,12 +83,29 @@ export class LoadEngine {
     const vars = Object.fromEntries(this.config?.variables ?? []);
     const bucket = new TokenBucket(model.rps, performance.now());
     let inFlight = 0;
+    let lastCheck = 0;
 
     const shouldStop = (): boolean => this.abortFlag || Date.now() >= deadline;
 
     while (!shouldStop()) {
-      const elapsedSec = (Date.now() - this.startedAt) / 1000;
+      const now = Date.now();
+      const elapsedSec = (now - this.startedAt) / 1000;
       const target = targetConcurrency(model, elapsedSec);
+
+      // Auto-stop guard: check error rate / P95 periodically.
+      if (now - lastCheck >= AUTO_STOP_CHECK_INTERVAL_MS) {
+        lastCheck = now;
+        const snap = this.collector.snapshot(now);
+        const reason = evaluateAutoStop(
+          { maxErrorRate: this.config?.maxErrorRate ?? 0, maxP95: this.config?.maxP95 ?? 0 },
+          { errorRate: 100 - snap.successRate, p95: snap.p95, requests: snap.requests },
+        );
+        if (reason) {
+          this.autoStopReason = reason;
+          this.abortFlag = true;
+          break;
+        }
+      }
 
       // Scale up: start requests until we hit the concurrency target,
       // respecting the RPS token bucket.

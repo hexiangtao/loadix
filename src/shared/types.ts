@@ -22,6 +22,10 @@ export interface TestConfig {
   rps: number;
   duration: number;
   ramp: number;
+  /** Auto-stop when error rate exceeds this % (0 = disabled). */
+  maxErrorRate: number;
+  /** Auto-stop when P95 exceeds this ms (0 = disabled). */
+  maxP95: number;
   assertions: Assertion[];
   variables: [string, string][];
 }

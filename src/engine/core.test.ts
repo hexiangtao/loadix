@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { assertionsPass, interpolate, percentile } from './core';
-import { TokenBucket, targetConcurrency } from './load-model';
+import { TokenBucket, evaluateAutoStop, targetConcurrency } from './load-model';
 
 describe('interpolate', () => {
   it('replaces known variables', () => {
@@ -96,5 +96,27 @@ describe('TokenBucket', () => {
     expect(b.waitForToken(0)).toBe(0);
     b.take(0); // consume the pre-filled token
     expect(b.waitForToken(0)).toBeGreaterThan(0);
+  });
+});
+
+describe('evaluateAutoStop', () => {
+  it('returns null when no guards set', () => {
+    expect(evaluateAutoStop({ maxErrorRate: 0, maxP95: 0 }, { errorRate: 50, p95: 5000, requests: 100 })).toBeNull();
+  });
+
+  it('returns null before minimum sample size', () => {
+    expect(evaluateAutoStop({ maxErrorRate: 5, maxP95: 0 }, { errorRate: 50, p95: 0, requests: 5 })).toBeNull();
+  });
+
+  it('triggers errorRate when exceeded', () => {
+    expect(evaluateAutoStop({ maxErrorRate: 10, maxP95: 0 }, { errorRate: 15, p95: 0, requests: 100 })).toBe('errorRate');
+  });
+
+  it('triggers p95 when exceeded', () => {
+    expect(evaluateAutoStop({ maxErrorRate: 0, maxP95: 500 }, { errorRate: 0, p95: 800, requests: 100 })).toBe('p95');
+  });
+
+  it('does not trigger when within limits', () => {
+    expect(evaluateAutoStop({ maxErrorRate: 10, maxP95: 500 }, { errorRate: 3, p95: 400, requests: 100 })).toBeNull();
   });
 });

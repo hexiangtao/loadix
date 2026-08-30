@@ -33,13 +33,12 @@ Goal: make the results dashboard genuinely professional, add safety guards.
 - [x] Slowest requests (Top-N by latency)
 - [x] Assertion failure breakdown (which rule + count)
 - [x] P50 / P90 / Max latency percentiles
-- [ ] Max error rate → auto-stop
-- [ ] P95 over threshold → auto-stop
+- [x] Max error rate → auto-stop
+- [x] P95 over threshold → auto-stop
 - [ ] Error detail aggregation (group by error message)
 
-> Status: metrics panels done. Auto-stop guards and error aggregation are
-> deferred to Phase 2, since they hook into the engine's control loop which is
-> being rewritten there.
+> Status: metrics panels and auto-stop guards are done. Only error detail
+> aggregation remains (group errors by message, not just status code).
 
 ---
 

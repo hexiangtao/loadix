@@ -80,3 +80,28 @@ export class TokenBucket {
     this.lastRefill = now;
   }
 }
+
+export interface AutoStopConfig {
+  /** Stop when error rate (%) exceeds this value. 0 = disabled. */
+  maxErrorRate: number;
+  /** Stop when P95 (ms) exceeds this value. 0 = disabled. */
+  maxP95: number;
+}
+
+/** Reason the run auto-stopped, or null if it should continue. */
+export type AutoStopReason = 'errorRate' | 'p95';
+
+/**
+ * Evaluate auto-stop guards against a metrics snapshot. Returns the first
+ * violated condition, or null if none.
+ */
+export function evaluateAutoStop(
+  cfg: AutoStopConfig,
+  metrics: { errorRate: number; p95: number; requests: number },
+): AutoStopReason | null {
+  // Require a minimal sample to avoid tripping on the first request.
+  if (metrics.requests < 10) return null;
+  if (cfg.maxErrorRate > 0 && metrics.errorRate > cfg.maxErrorRate) return 'errorRate';
+  if (cfg.maxP95 > 0 && metrics.p95 > cfg.maxP95) return 'p95';
+  return null;
+}

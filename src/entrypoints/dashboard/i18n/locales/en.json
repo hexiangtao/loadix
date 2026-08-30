@@ -53,6 +53,9 @@
     "rps": "Target RPS",
     "duration": "Duration (sec)",
     "ramp": "Ramp-up (sec)",
+    "autoStop": "Auto-stop",
+    "maxErrorRate": "Max error rate (%)",
+    "maxP95": "Max P95 (ms)",
     "hint": "Browser-based load testing is ideal for API development, regression and light stress testing. Use a dedicated load-testing cluster for large-scale tests."
   },
   "assertions": {
