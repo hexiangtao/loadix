@@ -14,6 +14,7 @@ import {
   TextQuote,
   Search,
   Globe,
+  GitCompareArrows,
   type LucideIcon,
 } from 'lucide-react';
 import { Base64Tool } from './tools/Base64Tool';
@@ -31,6 +32,7 @@ import { ColorTool } from './tools/ColorTool';
 import { MarkdownTool } from './tools/MarkdownTool';
 import { JsonPathTool } from './tools/JsonPathTool';
 import { UrlParserTool } from './tools/UrlParserTool';
+import { DiffTool } from './tools/DiffTool';
 
 export type ToolGroup = 'encode' | 'format' | 'auth' | 'text' | 'generate' | 'query';
 
@@ -86,6 +88,15 @@ export const TOOLS: Tool[] = [
     group: 'encode',
     icon: Globe,
     component: UrlParserTool,
+  },
+  {
+    id: 'diff',
+    nameKey: 'tools.diff.name',
+    descKey: 'tools.diff.desc',
+    keywords: ['diff', 'compare', 'text', '对比', '差异', '差别', 'compare text'],
+    group: 'format',
+    icon: GitCompareArrows,
+    component: DiffTool,
   },
   {
     id: 'htmlentity',

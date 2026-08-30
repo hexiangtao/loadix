@@ -277,6 +277,16 @@
       "preview": "渲染结果",
       "empty": "在左侧开始输入 Markdown…"
     },
+    "diff": {
+      "name": "文本对比",
+      "desc": "对比两段文本的差异",
+      "samples": "示例",
+      "original": "原文本",
+      "changed": "新文本",
+      "unified": "合并视图",
+      "split": "双栏视图",
+      "empty": "两侧完全一致"
+    },
     "jsonpath": {
       "name": "JSONPath",
       "desc": "用路径表达式从 JSON 提取数据",

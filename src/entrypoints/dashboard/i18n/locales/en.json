@@ -277,6 +277,16 @@
       "preview": "Rendered preview",
       "empty": "Start typing markdown on the left…"
     },
+    "diff": {
+      "name": "Diff",
+      "desc": "Compare two texts and see the changes",
+      "samples": "Samples",
+      "original": "Original",
+      "changed": "Changed",
+      "unified": "Unified",
+      "split": "Side by side",
+      "empty": "Both sides are identical"
+    },
     "jsonpath": {
       "name": "JSONPath",
       "desc": "Extract data from JSON with a path expression",
