@@ -1,3 +1,10 @@
+## [1.26.1](https://github.com/hexiangtao/loadix/compare/v1.26.0...v1.26.1) (2026-08-31)
+
+
+### Bug Fixes
+
+* **capture:** guard chrome.runtime access for the web build ([1cc3bd4](https://github.com/hexiangtao/loadix/commit/1cc3bd45399d43b30469efb029f3b7e2d74b45ff))
+
 # [1.26.0](https://github.com/hexiangtao/loadix/compare/v1.25.0...v1.26.0) (2026-08-31)
 
 
