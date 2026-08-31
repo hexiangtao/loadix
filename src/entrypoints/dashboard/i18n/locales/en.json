@@ -233,6 +233,19 @@
       "encode": "Escape",
       "decode": "Unescape"
     },
+    "unicode": {
+      "name": "Unicode",
+      "desc": "Escape & unescape \\uXXXX sequences, inspect codepoints",
+      "encode": "Escape",
+      "decode": "Unescape",
+      "scope_nonAscii": "Non-ASCII",
+      "scope_control": "Control only",
+      "scope_all": "All",
+      "scope_nonAscii_hint": "Escape anything outside printable ASCII (default)",
+      "scope_control_hint": "Only escape control characters (Cc) and non-ASCII",
+      "scope_all_hint": "Escape every character (fully portable string literal)",
+      "codepoints": "Code points"
+    },
     "uuid": {
       "name": "UUID Generator",
       "desc": "Generate UUID v1 / v3 / v4 / v5 / v7",

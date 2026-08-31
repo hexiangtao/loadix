@@ -156,6 +156,19 @@
       "desc": "경로 표현식으로 JSON에서 값 추출",
       "presets": "빠른 선택:",
       "matches": "일치"
+    },
+    "unicode": {
+      "name": "Unicode",
+      "desc": "\\uXXXX 시퀀스 이스케이프 및 복원, 코드 포인트 정보 표시",
+      "encode": "이스케이프",
+      "decode": "복원",
+      "scope_nonAscii": "비-ASCII",
+      "scope_control": "제어 문자만",
+      "scope_all": "모두",
+      "scope_nonAscii_hint": "출력 가능한 ASCII 외 모든 문자 이스케이프(기본값)",
+      "scope_control_hint": "제어 문자 (Cc) 및 비-ASCII만 이스케이프",
+      "scope_all_hint": "모든 문자 이스케이프(완전히 이식 가능한 리터럴)",
+      "codepoints": "코드 포인트"
     }
   }
 }

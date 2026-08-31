@@ -33,5 +33,10 @@ export function detectContent(text: string): Detection | null {
     return { toolId: 'base64', label: 'Base64' };
   }
 
+  // Unicode \uXXXX escape sequences.
+  if (/\\u(?:\{[0-9a-fA-F]{1,5}\}|[0-9a-fA-F]{4})/.test(t)) {
+    return { toolId: 'unicode', label: 'Unicode' };
+  }
+
   return null;
 }

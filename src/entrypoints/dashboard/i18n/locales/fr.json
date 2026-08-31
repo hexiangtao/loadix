@@ -156,6 +156,19 @@
       "desc": "Extraire des données JSON par expression",
       "presets": "Exemples :",
       "matches": "Résultats"
+    },
+    "unicode": {
+      "name": "Unicode",
+      "desc": "Échapper et restaurer les séquences \\uXXXX, inspecter les points de code",
+      "encode": "Échapper",
+      "decode": "Restaurer",
+      "scope_nonAscii": "Non-ASCII",
+      "scope_control": "Contrôle seul",
+      "scope_all": "Tout",
+      "scope_nonAscii_hint": "Échapper tout ce qui est hors ASCII imprimable (défaut)",
+      "scope_control_hint": "Échapper uniquement les caractères de contrôle (Cc) et non-ASCII",
+      "scope_all_hint": "Échapper tous les caractères (littéral totalement portable)",
+      "codepoints": "Points de code"
     }
   }
 }

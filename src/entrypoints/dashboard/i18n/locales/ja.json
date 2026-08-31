@@ -156,6 +156,19 @@
       "desc": "パス式で JSON から値を抽出",
       "presets": "プリセット:",
       "matches": "一致"
+    },
+    "unicode": {
+      "name": "Unicode",
+      "desc": "\\uXXXX エスケープのエンコード/デコード、コードポイントを表示",
+      "encode": "エスケープ",
+      "decode": "復元",
+      "scope_nonAscii": "非ASCII",
+      "scope_control": "制御文字のみ",
+      "scope_all": "すべて",
+      "scope_nonAscii_hint": "表示可能な ASCII 以外をエスケープ(既定)",
+      "scope_control_hint": "制御文字 (Cc) と非 ASCII のみエスケープ",
+      "scope_all_hint": "全文字をエスケープ(完全に可搬なリテラル)",
+      "codepoints": "コードポイント"
     }
   }
 }

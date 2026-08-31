@@ -233,6 +233,19 @@
       "encode": "转义",
       "decode": "还原"
     },
+    "unicode": {
+      "name": "Unicode",
+      "desc": "\\uXXXX 转义与还原,查看码点信息",
+      "encode": "转义",
+      "decode": "还原",
+      "scope_nonAscii": "非 ASCII",
+      "scope_control": "仅控制字符",
+      "scope_all": "全部",
+      "scope_nonAscii_hint": "转义可打印 ASCII 之外的所有字符(默认)",
+      "scope_control_hint": "只转义控制字符 (Cc) 与非 ASCII",
+      "scope_all_hint": "转义所有字符(完全可移植的字面量)",
+      "codepoints": "码点"
+    },
     "uuid": {
       "name": "UUID 生成器",
       "desc": "生成 UUID v1 / v3 / v4 / v5 / v7",

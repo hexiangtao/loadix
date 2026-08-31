@@ -17,6 +17,7 @@ import {
   GitCompareArrows,
   Sigma,
   Paintbrush,
+  Type,
   type LucideIcon,
 } from 'lucide-react';
 import { Base64Tool } from './tools/Base64Tool';
@@ -37,6 +38,7 @@ import { UrlParserTool } from './tools/UrlParserTool';
 import { DiffTool } from './tools/DiffTool';
 import { BaseConverterTool } from './tools/BaseConverterTool';
 import { GradientTool } from './tools/GradientTool';
+import { UnicodeTool } from './tools/UnicodeTool';
 
 export type ToolGroup = 'encode' | 'format' | 'auth' | 'text' | 'generate' | 'query';
 
@@ -128,6 +130,15 @@ export const TOOLS: Tool[] = [
     group: 'encode',
     icon: Code,
     component: HtmlEntityTool,
+  },
+  {
+    id: 'unicode',
+    nameKey: 'tools.unicode.name',
+    descKey: 'tools.unicode.desc',
+    keywords: ['unicode', 'escape', 'unescape', 'codepoint', 'utf', 'surrogate', 'utf-16', 'u转义', '码点', '字符编码'],
+    group: 'encode',
+    icon: Type,
+    component: UnicodeTool,
   },
   {
     id: 'json',

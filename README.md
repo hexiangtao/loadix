@@ -10,7 +10,7 @@ Built with [WXT](https://wxt.dev) + React + TypeScript, with i18n (English / 简
 
 ## What you get
 
-- **17 everyday developer tools** — JWT, Base64, URL Parser, URL Encode, JSON Formatter, SQL Formatter, HTML Entities, Markdown, Regex Tester, Hash, UUID Generator, Timestamp, Cron Parser, Color Picker, JSONPath, Base Converter, CSS Gradient, plus the Diff Checker.
+- **18 everyday developer tools** — JWT, Base64, URL Parser, URL Encode, JSON Formatter, SQL Formatter, HTML Entities, Unicode, Markdown, Regex Tester, Hash, UUID Generator, Timestamp, Cron Parser, Color Picker, JSONPath, Base Converter, CSS Gradient, plus the Diff Checker.
 - **No account, no telemetry, no backend.** Your URLs, headers, payloads and test runs never leave the browser. Works offline once installed.
 - **Browser-based HTTP load tester** — concurrent virtual users, target RPS, ramp-up, duration. Run from the background service worker, so closing the tab doesn't stop the test.
 - **Open source, MIT licensed.** Audit anything you don't trust.
