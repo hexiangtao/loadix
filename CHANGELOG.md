@@ -1,3 +1,10 @@
+# [1.24.0](https://github.com/hexiangtao/loadix/compare/v1.23.0...v1.24.0) (2026-08-31)
+
+
+### Features
+
+* **tools:** add Unicode escape / unescape tool ([a3c409e](https://github.com/hexiangtao/loadix/commit/a3c409eb805dc7806a517ed511324921ad36aa06))
+
 # [1.23.0](https://github.com/hexiangtao/loadix/compare/v1.22.0...v1.23.0) (2026-08-30)
 
 
