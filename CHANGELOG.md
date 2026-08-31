@@ -1,3 +1,10 @@
+# [1.26.0](https://github.com/hexiangtao/loadix/compare/v1.25.0...v1.26.0) (2026-08-31)
+
+
+### Features
+
+* **capture:** global screenshot launcher in the toolbar ([df15acb](https://github.com/hexiangtao/loadix/commit/df15acbd211628eba43d5a923ca09739f1e93b36))
+
 # [1.25.0](https://github.com/hexiangtao/loadix/compare/v1.24.0...v1.25.0) (2026-08-31)
 
 
