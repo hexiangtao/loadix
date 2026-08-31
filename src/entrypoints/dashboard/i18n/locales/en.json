@@ -141,7 +141,8 @@
       "title": "By CSS selector (any page)",
       "run": "Capture",
       "hint": "Targets the active tab — works for any http(s) page, not just Loadix."
-    }
+    },
+    "web_only": "Capture is only available when Loadix is installed as a Chrome extension. In the web preview the toolbar capture button is inert."
   },
   "tools": {
     "title": "Tools",

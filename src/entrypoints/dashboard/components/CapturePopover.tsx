@@ -80,7 +80,10 @@ export function CapturePopover() {
   }, [open]);
 
   // Single response listener (registered once, handshakes on every capture).
+  // Only available in the extension build; the web build is opened directly
+  // in a tab and has no chrome.runtime to listen on.
   useEffect(() => {
+    if (typeof chrome === 'undefined' || !chrome.runtime?.onMessage) return;
     const listener = (msg: unknown) => {
       const m = msg as CaptureResult | undefined;
       if (!m || m.type !== 'CAPTURE_RESULT') return;
@@ -92,6 +95,15 @@ export function CapturePopover() {
   }, []);
 
   const request = useCallback(async (mode: CaptureMode, selector?: string) => {
+    if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) {
+      setResult({
+        type: 'CAPTURE_RESULT',
+        ok: false,
+        filename: 'loadix.png',
+        error: t('capture.web_only'),
+      });
+      return;
+    }
     setResult(null);
     setPhase(mode === 'selection' || mode === 'element' && !selector ? 'picking' : 'capturing');
     const req: CaptureRequest = {
@@ -101,13 +113,6 @@ export function CapturePopover() {
       ...(selector ? { selector } : {}),
     };
     try {
-      // For picker modes, the dashboard must hand focus back to the user so
-      // they can see the page. We do that by minimising the popover for a
-      // moment, then restoring it after the picker resolves.
-      if (phase === 'picking' || mode === 'selection' || (mode === 'element' && !selector)) {
-        // No-op — the popover stays where it is. The user clicks back into
-        // the page to start picking; the dashboard won't steal focus.
-      }
       await chrome.runtime.sendMessage(req);
     } catch (e) {
       setResult({
@@ -118,7 +123,7 @@ export function CapturePopover() {
       });
       setPhase('idle');
     }
-  }, [phase]);
+  }, [t]);
 
   // Mode tiles: icon + label + sub-label.
   const modes: Array<{ id: CaptureMode; icon: typeof Eye; key: string }> = [
