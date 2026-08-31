@@ -1,3 +1,10 @@
+## [1.26.2](https://github.com/hexiangtao/loadix/compare/v1.26.1...v1.26.2) (2026-08-31)
+
+
+### Bug Fixes
+
+* **build:** include public/ assets in the build output ([09618bd](https://github.com/hexiangtao/loadix/commit/09618bd5039c47532e4720c4cbfd26ba0f983f7e))
+
 ## [1.26.1](https://github.com/hexiangtao/loadix/compare/v1.26.0...v1.26.1) (2026-08-31)
 
 
