@@ -85,7 +85,7 @@ export function ToolsWorkspace({ activeTool, onSelect, children }: ToolsWorkspac
       </aside>
 
       {/* ——— Detail: active tool ——— */}
-      <div className="min-w-0">
+      <div className="min-w-0" data-screenshot-target="panel">
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={activeTool}

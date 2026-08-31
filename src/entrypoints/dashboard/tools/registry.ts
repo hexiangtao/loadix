@@ -18,6 +18,7 @@ import {
   Sigma,
   Paintbrush,
   Type,
+  Camera,
   type LucideIcon,
 } from 'lucide-react';
 import { Base64Tool } from './tools/Base64Tool';
@@ -39,6 +40,7 @@ import { DiffTool } from './tools/DiffTool';
 import { BaseConverterTool } from './tools/BaseConverterTool';
 import { GradientTool } from './tools/GradientTool';
 import { UnicodeTool } from './tools/UnicodeTool';
+import { ScreenshotTool } from './tools/ScreenshotTool';
 
 export type ToolGroup = 'encode' | 'format' | 'auth' | 'text' | 'generate' | 'query';
 
@@ -238,6 +240,15 @@ export const TOOLS: Tool[] = [
     group: 'query',
     icon: Search,
     component: JsonPathTool,
+  },
+  {
+    id: 'screenshot',
+    nameKey: 'tools.screenshot.name',
+    descKey: 'tools.screenshot.desc',
+    keywords: ['screenshot', 'capture', 'snapshot', 'image', 'png', 'jpeg', 'html2image', 'export', '截图', '截屏', '抓图', '导出图片'],
+    group: 'generate',
+    icon: Camera,
+    component: ScreenshotTool,
   },
 ];
 

@@ -401,7 +401,7 @@ export default function App({ host }: { host: EngineHost }) {
           </aside>
 
           {/* ——— Right: config + results ——— */}
-          <section className="min-w-0 p-7">
+          <section className="min-w-0 p-7" data-screenshot-target="loadtest">
             <div className="mb-4 flex items-start justify-between">
               <div>
                 <h1 className="mb-1 text-xl font-bold">{t(titleKey)}</h1>
