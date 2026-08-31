@@ -18,6 +18,7 @@ import { VariablesPanel } from './panels/VariablesPanel';
 import { useUiStore } from './store/ui-store';
 import { storageGet, storageSet } from './storage';
 import { CommandPalette } from './tools/CommandPalette';
+import { CapturePopover } from './components/CapturePopover';
 import { ToolsWorkspace } from './tools/ToolsWorkspace';
 import { ToolsMenu } from './tools/ToolsMenu';
 import { findTool } from './tools/registry';
@@ -353,6 +354,7 @@ export default function App({ host }: { host: EngineHost }) {
               </option>
             ))}
           </select>
+          <CapturePopover />
           {view === 'loadtest' && (
             <>
               <button className="nav-btn" onClick={handleNew}>

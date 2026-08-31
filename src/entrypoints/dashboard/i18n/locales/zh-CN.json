@@ -122,6 +122,27 @@
     "loadtest": "压测",
     "tools": "工具"
   },
+  "capture": {
+    "button": "截图",
+    "title": "截图",
+    "shortcut_hint": "区域截图（Alt+Shift+S）",
+    "picking": "在页面上拖一个矩形框，松开即完成。Esc 取消。",
+    "capturing": "截图中…",
+    "hint": "提示：Alt+Shift+S 随时触发区域截图，即使仪表盘没开也能用。",
+    "copy": "复制",
+    "download": "下载",
+    "mode": {
+      "visible":   { "label": "当前视口",       "desc": "截下当前看到的画面。" },
+      "fullpage":  { "label": "整页",           "desc": "拼接整张可滚动文档。" },
+      "selection": { "label": "区域",           "desc": "在页面上拖一个矩形。" },
+      "element":   { "label": "元素",           "desc": "点击页面上的某个元素。" }
+    },
+    "advanced": {
+      "title": "按 CSS 选择器（任意页面）",
+      "run": "截图",
+      "hint": "作用于当前激活的标签页，不限于 Loadix 本身。"
+    }
+  },
   "tools": {
     "title": "工具",
     "subtitle": "开发者日常工具集——全部在浏览器本地运行。",
@@ -296,13 +317,8 @@
       "preview": "实时预览"
     },
     "screenshot": {
-      "name": "网页截图",
-      "desc": "把页面任意节点截成 PNG 或 JPEG",
-      "target": "目标",
-      "target_page": "整页（整个可滚动文档）",
-      "target_app": "应用（Loadix 仪表盘根节点）",
-      "target_panel": "当前面板（当前工具或压测列）",
-      "target_selector": "按 CSS 选择器…",
+      "name": "元素截图",
+      "desc": "把当前页某个元素截成 PNG 或 JPEG",
       "selector": "CSS 选择器",
       "selectorNotFound": "找不到匹配 \"{{selector}}\" 的元素",
       "format": "格式",
@@ -318,12 +334,8 @@
       "copyJpegHint": "复制到剪贴板仅支持 PNG",
       "preview": "预览",
       "empty": "暂无截图",
-      "emptyHint": "选择目标后点击「截图」，渲染好的图片会出现在这里。可以下载、复制到剪贴板或直接拿走 URL。",
-      "clear": "清空",
-      "tips_title": "小贴士",
-      "tip_dpr": "商店截图建议选 2×，更清晰。",
-      "tip_full": "「整页」会截到整张可滚动文档，而不仅仅是视口。",
-      "tip_selector": "按选择器：支持任意 CSS 选择器，比如 `#root`、`.panel`、`[data-screenshot-target=\"panel\"]`。"
+      "emptyHint": "输入 CSS 选择器（如 `#root`、`.panel`、`[data-screenshot-target]`），点「截图」。",
+      "workbench_only": "只截当前 Loadix 仪表盘里的元素。整页 / 区域 / 任意网页截图请用工具栏上的相机按钮。"
     },
     "gradient": {
       "name": "CSS 渐变",

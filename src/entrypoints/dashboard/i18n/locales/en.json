@@ -122,6 +122,27 @@
     "loadtest": "Load Test",
     "tools": "Tools"
   },
+  "capture": {
+    "button": "Capture",
+    "title": "Capture",
+    "shortcut_hint": "Capture a region (Alt+Shift+S)",
+    "picking": "Pick a region on the page, then release. Press Esc to cancel.",
+    "capturing": "Capturing…",
+    "hint": "Tip: Alt+Shift+S captures a region from anywhere, even when the dashboard is hidden.",
+    "copy": "Copy",
+    "download": "Download",
+    "mode": {
+      "visible":   { "label": "Visible tab",   "desc": "Snapshot of the current viewport." },
+      "fullpage":  { "label": "Full page",     "desc": "Stitch together every scrolled tile." },
+      "selection": { "label": "Region",        "desc": "Drag a rectangle on the page." },
+      "element":   { "label": "Element",       "desc": "Click an element to snap it." }
+    },
+    "advanced": {
+      "title": "By CSS selector (any page)",
+      "run": "Capture",
+      "hint": "Targets the active tab — works for any http(s) page, not just Loadix."
+    }
+  },
   "tools": {
     "title": "Tools",
     "subtitle": "A local toolbox for everyday developer tasks — everything runs in your browser.",
@@ -296,13 +317,8 @@
       "preview": "Live preview"
     },
     "screenshot": {
-      "name": "Screenshot",
-      "desc": "Capture any element on the page as PNG or JPEG",
-      "target": "Target",
-      "target_page": "Full page (entire scrollable document)",
-      "target_app": "App (the Loadix dashboard root)",
-      "target_panel": "Current panel (active tool or load-test column)",
-      "target_selector": "By CSS selector…",
+      "name": "Element Snapshot",
+      "desc": "Capture a single element on the current page as PNG or JPEG",
       "selector": "CSS selector",
       "selectorNotFound": "No element matches \"{{selector}}\"",
       "format": "Format",
@@ -318,12 +334,8 @@
       "copyJpegHint": "Copy to clipboard is only available for PNG",
       "preview": "Preview",
       "empty": "No capture yet",
-      "emptyHint": "Pick a target, hit Capture, and the rendered image will appear here. From here you can download it, copy it to the clipboard, or grab the URL.",
-      "clear": "Clear",
-      "tips_title": "Tips",
-      "tip_dpr": "Use 2× for high-DPI store screenshots.",
-      "tip_full": "Full page captures the entire scroll height, not just the viewport.",
-      "tip_selector": "By selector: any CSS selector — try `#root`, `.panel`, `[data-screenshot-target=\"panel\"]`."
+      "emptyHint": "Type a CSS selector (try `#root`, `.panel`, `[data-screenshot-target]`) and hit Capture.",
+      "workbench_only": "Snaps the element inside the Loadix dashboard. For full-page / region / arbitrary-page captures, use the camera button in the toolbar."
     },
     "gradient": {
       "name": "CSS Gradient",
