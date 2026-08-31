@@ -1,3 +1,10 @@
+# [1.25.0](https://github.com/hexiangtao/loadix/compare/v1.24.0...v1.25.0) (2026-08-31)
+
+
+### Features
+
+* **tools:** add Screenshot tool ([0bc8dd1](https://github.com/hexiangtao/loadix/commit/0bc8dd14c89637c0afd920d332048082f7e8e085))
+
 # [1.24.0](https://github.com/hexiangtao/loadix/compare/v1.23.0...v1.24.0) (2026-08-31)
 
 
