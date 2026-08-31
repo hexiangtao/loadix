@@ -4,6 +4,11 @@ import tailwindcss from '@tailwindcss/vite';
 export default defineConfig({
   modules: ['@wxt-dev/module-react'],
   srcDir: 'src',
+  // WXT resolves `publicDir` relative to `srcDir`, so the default would
+  // land on `<root>/src/public`. Step up one level so the icons, SVG and
+  // any future static asset at `<root>/public/*` are picked up by the
+  // build (and copied into `.output/chrome-mv3/`).
+  publicDir: '../public',
   vite: () => ({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     plugins: [tailwindcss() as any],
