@@ -5,218 +5,284 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Loadix</title>
     <style>
+      /* Loadix design tokens — dark theme, aligned with src/entrypoints/dashboard/app.css
+         (macOS graphite neutrals + system blue; no invented palette). */
       :root {
         color-scheme: dark;
+        --surface: #1c1c1e;
+        --panel: #2c2c2e;
+        --hover: #3a3a3c;
+        --line: #3a3a3c;
+        --muted: #98989d;
+        --ink: #f5f5f7;
+        --primary: #0a84ff;
+        --primary-ink: #ffffff;
+        --danger: #ff453a;
+        --success: #30d158;
+        --font:
+          -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', ui-sans-serif, system-ui, sans-serif;
       }
       * {
         margin: 0;
         padding: 0;
         box-sizing: border-box;
       }
+      html {
+        background: var(--surface);
+      }
       body {
-        width: 288px;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-        background: #16161a;
-        color: #ececf1;
+        width: 284px;
+        font-family: var(--font);
         font-size: 13px;
+        letter-spacing: -0.011em;
+        color: var(--ink);
+        background: var(--surface);
         -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
         user-select: none;
+        padding: 8px;
       }
-      .brand {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 10px 14px 6px;
+      button {
+        font: inherit;
+        color: inherit;
+        border: none;
+        background: none;
+        cursor: pointer;
       }
-      .logo {
-        font-weight: 800;
-        font-size: 14px;
-        letter-spacing: -0.01em;
+      button:focus-visible {
+        outline: 2px solid rgba(10, 132, 255, 0.45);
+        outline-offset: 1px;
       }
-      .kbd {
-        padding: 1px 6px;
-        border-radius: 5px;
-        border: 1px solid rgba(255, 255, 255, 0.22);
-        background: rgba(255, 255, 255, 0.05);
-        font-size: 10px;
-        color: rgba(255, 255, 255, 0.65);
+      svg {
+        display: block;
+        flex-shrink: 0;
       }
 
-      .main {
-        padding: 6px 14px 4px;
-      }
+      /* Hero --------------------------------------------------------------- */
+      /* Primary but quiet: a faint blue tint + hairline accent, never a solid
+         fill. The accent colour appears only as the icon and the border, so
+         the row reads "important" without shouting. Same single-line anatomy
+         as the other capture options. */
       .hero {
         width: 100%;
         display: flex;
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 2px;
-        padding: 11px 14px;
-        border: none;
-        border-radius: 10px;
-        background: linear-gradient(135deg, #0a84ff, #0a5fd9);
-        color: #fff;
+        align-items: center;
+        gap: 9px;
+        padding: 9px 11px;
+        border-radius: 8px;
+        border: 1px solid rgba(10, 132, 255, 0.28);
+        background: rgba(10, 132, 255, 0.09);
+        color: var(--ink);
         text-align: left;
-        cursor: pointer;
-        transition: filter 120ms ease;
+        transition: background 120ms ease, border-color 120ms ease, transform 80ms ease;
       }
       .hero:hover {
-        filter: brightness(1.12);
+        background: rgba(10, 132, 255, 0.14);
+        border-color: rgba(10, 132, 255, 0.45);
       }
       .hero:active {
-        filter: brightness(0.95);
+        transform: translateY(0.5px);
       }
       .hero b {
-        font-size: 14px;
-        font-weight: 750;
-        letter-spacing: 0.01em;
+        flex: 1;
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
-      .hero span {
+      #heroDesc {
         font-size: 11px;
-        opacity: 0.85;
+        color: var(--muted);
+        white-space: nowrap;
+      }
+      .hero svg {
+        color: var(--primary);
       }
 
+      /* Disclosure ---------------------------------------------------------- */
       .more {
         width: 100%;
         display: flex;
         align-items: center;
         justify-content: space-between;
+        gap: 6px;
         margin-top: 4px;
-        padding: 7px 10px;
-        border: none;
-        border-radius: 8px;
-        background: transparent;
-        color: rgba(255, 255, 255, 0.55);
-        font: inherit;
+        padding: 5px 8px;
+        border-radius: 6px;
+        color: var(--muted);
         font-size: 11.5px;
-        cursor: pointer;
+        transition: background 100ms ease, color 100ms ease;
       }
       .more:hover {
-        color: #fff;
-        background: rgba(255, 255, 255, 0.06);
+        color: var(--ink);
+        background: var(--hover);
       }
-      .chev {
-        font-size: 9px;
+      .more svg {
         transition: transform 120ms ease;
       }
-      .more.open .chev {
+      .more.open svg {
         transform: rotate(180deg);
       }
 
       .extra {
         display: none;
-        flex-direction: column;
-        gap: 2px;
-        padding-top: 4px;
+        margin-top: 2px;
       }
       .extra.open {
-        display: flex;
+        display: block;
       }
       .opt {
+        width: 100%;
         display: flex;
-        align-items: baseline;
-        justify-content: space-between;
-        gap: 10px;
-        padding: 7px 10px;
-        border: none;
-        border-radius: 8px;
-        background: transparent;
-        color: inherit;
+        align-items: center;
+        gap: 9px;
+        padding: 6px 8px;
+        border-radius: 6px;
         text-align: left;
-        cursor: pointer;
+        transition: background 100ms ease;
       }
       .opt:hover {
-        background: rgba(255, 255, 255, 0.07);
+        background: var(--hover);
+      }
+      .opt svg {
+        color: var(--muted);
+        transition: color 100ms ease;
+      }
+      .opt:hover svg {
+        color: var(--ink);
       }
       .opt b {
-        font-size: 12.5px;
-        font-weight: 650;
+        flex: 1;
+        font-size: 13px;
+        font-weight: 500;
       }
       .opt span {
-        font-size: 10.5px;
-        color: rgba(255, 255, 255, 0.42);
-        text-align: right;
+        font-size: 11px;
+        color: var(--muted);
       }
 
+      /* Status -------------------------------------------------------------- */
       .status {
         display: none;
-        margin: 6px 14px 0;
-        padding: 7px 10px;
-        border-radius: 8px;
+        align-items: center;
+        gap: 7px;
+        margin: 4px 2px 0;
+        padding: 6px 9px;
+        border-radius: 6px;
+        border: 1px solid var(--line);
+        background: var(--panel);
         font-size: 11.5px;
-        line-height: 1.45;
+        line-height: 1.4;
+        color: var(--ink);
       }
       .status.busy {
-        display: block;
-        background: rgba(10, 132, 255, 0.1);
-        color: #6fb7ff;
+        display: flex;
+        color: var(--primary);
+        border-color: rgba(10, 132, 255, 0.35);
+      }
+      .status.done {
+        display: flex;
+        color: var(--success);
+        border-color: rgba(48, 209, 88, 0.35);
       }
       .status.error {
-        display: block;
-        background: rgba(255, 69, 58, 0.12);
-        color: #ff8a80;
+        display: flex;
+        color: var(--danger);
+        border-color: rgba(255, 69, 58, 0.4);
         white-space: pre-wrap;
         word-break: break-word;
       }
+      .spin {
+        animation: spin 900ms linear infinite;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
 
+      /* Footer --------------------------------------------------------------- */
       .foot {
-        padding: 8px 14px 10px;
+        margin-top: 5px;
+        padding-top: 5px;
+        border-top: 1px solid var(--line);
       }
       .dash {
         width: 100%;
-        padding: 7px 10px;
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        border-radius: 8px;
-        background: transparent;
-        color: rgba(255, 255, 255, 0.75);
-        font: inherit;
-        font-size: 12px;
-        cursor: pointer;
-        transition: background 120ms ease, border-color 120ms ease;
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 6px 8px;
+        border-radius: 6px;
+        text-align: left;
+        transition: background 100ms ease;
       }
       .dash:hover {
-        background: rgba(255, 255, 255, 0.06);
-        border-color: rgba(255, 255, 255, 0.3);
+        background: var(--hover);
+      }
+      .dash svg:first-child {
+        color: var(--muted);
+      }
+      .dash b {
+        flex: 1;
+        font-size: 13px;
+        font-weight: 500;
+      }
+      .dash .arrow {
+        color: var(--muted);
+        opacity: 0;
+        transform: translateX(-2px);
+        transition: opacity 100ms ease, transform 100ms ease;
+      }
+      .dash:hover .arrow {
+        opacity: 1;
+        transform: translateX(0);
       }
     </style>
   </head>
   <body>
-    <div class="brand">
-      <span class="logo">Loadix</span>
-      <span class="kbd">Alt+Shift+S</span>
+    <button class="hero" id="heroRegion" data-mode="selection">
+      <span id="heroIcon"></span>
+      <b id="heroTitle"></b>
+      <span id="heroDesc"></span>
+    </button>
+
+    <button class="more" id="moreBtn" aria-expanded="false">
+      <span id="moreLabel"></span>
+      <span id="moreChevron"></span>
+    </button>
+
+    <div class="extra" id="extra">
+      <button class="opt" data-mode="fullpage">
+        <span data-icon="fullpage"></span>
+        <b id="optFull"></b>
+        <span id="optFullDesc"></span>
+      </button>
+      <button class="opt" data-mode="visible">
+        <span data-icon="visible"></span>
+        <b id="optVisible"></b>
+        <span id="optVisibleDesc"></span>
+      </button>
+      <button class="opt" data-mode="element">
+        <span data-icon="element"></span>
+        <b id="optElement"></b>
+        <span id="optElementDesc"></span>
+      </button>
     </div>
 
-    <div class="main">
-      <button class="hero" id="heroRegion" data-mode="selection">
-        <b id="heroTitle"></b>
-        <span id="heroDesc"></span>
-      </button>
-
-      <button class="more" id="moreBtn">
-        <span id="moreLabel"></span>
-        <span class="chev" id="moreChev">▾</span>
-      </button>
-
-      <div class="extra" id="extra">
-        <button class="opt" data-mode="fullpage">
-          <b id="optFull"></b>
-          <span id="optFullDesc"></span>
-        </button>
-        <button class="opt" data-mode="visible">
-          <b id="optVisible"></b>
-          <span id="optVisibleDesc"></span>
-        </button>
-        <button class="opt" data-mode="element">
-          <b id="optElement"></b>
-          <span id="optElementDesc"></span>
-        </button>
-      </div>
+    <div class="status" id="status" role="status">
+      <span id="statusIcon"></span>
+      <span id="statusText"></span>
     </div>
-
-    <div class="status" id="status"></div>
 
     <div class="foot">
-      <button class="dash" id="openDash"></button>
+      <button class="dash" id="openDash">
+        <span data-icon="dash"></span>
+        <b id="dashLabel"></b>
+        <span data-icon="arrow"></span>
+      </button>
     </div>
 
     <script type="module" src="./main.ts"></script>
