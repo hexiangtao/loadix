@@ -1,3 +1,10 @@
+# [1.27.0](https://github.com/hexiangtao/loadix/compare/v1.26.3...v1.27.0) (2026-09-03)
+
+
+### Features
+
+* **capture:** move capture into an action popup with a minimal UI ([81d05f0](https://github.com/hexiangtao/loadix/commit/81d05f0948ec6c427ce0f14988772d58ee9a6aa5))
+
 ## [1.26.3](https://github.com/hexiangtao/loadix/compare/v1.26.2...v1.26.3) (2026-09-03)
 
 
