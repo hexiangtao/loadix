@@ -428,10 +428,11 @@ async function captureFullPage(tabId: number, windowId: number | undefined): Pro
   }
 }
 
-/** Run a capture requested by the dashboard. Region / element results are
- *  shown as an on-page card; viewport-style results return to the caller, who
- *  decides whether to hand focus back to the dashboard. */
-async function runCapture(req: CaptureRequest): Promise<CaptureResult> {
+/** Run a capture requested by the dashboard or the action popup.
+ *  `deliverOnPage` is true for popup-launched captures: the result is shown
+ *  as a floating card in the captured tab (there is no dashboard popover to
+ *  host a preview, and the user never leaves the page they are capturing). */
+async function runCapture(req: CaptureRequest, deliverOnPage = false): Promise<CaptureResult> {
   const filename = `${safeFilename(req.filename || 'capture')}-${timestamp()}.png`;
   try {
     const tab = await resolveTargetTab();
@@ -443,11 +444,19 @@ async function runCapture(req: CaptureRequest): Promise<CaptureResult> {
       case 'visible': {
         await focusTab(tab);
         const shot = await captureActiveTab(windowId);
+        if (deliverOnPage) {
+          await showResultCardOnPage(tabId, shot, filename);
+          return onPageResult(filename, shot);
+        }
         return ok(filename, shot.dataUrl, shot.width, shot.height);
       }
       case 'fullpage': {
         await focusTab(tab);
         const shot = await captureFullPage(tabId, windowId);
+        if (deliverOnPage) {
+          await showResultCardOnPage(tabId, shot, filename);
+          return onPageResult(filename, shot);
+        }
         return ok(filename, shot.dataUrl, shot.width, shot.height);
       }
       case 'selection': {
@@ -503,19 +512,22 @@ function onPageResult(filename: string, cropped: { dataUrl: string; width: numbe
 /* Wire-up                                                              */
 /* ------------------------------------------------------------------ */
 
+/** Open (or focus) the Loadix workbench dashboard tab. */
+async function openDashboard(): Promise<void> {
+  const url = chrome.runtime.getURL('/dashboard.html');
+  const tabs = await chrome.tabs.query({ url });
+  const existing = tabs[0];
+  if (existing) {
+    await chrome.tabs.update(existing.id ?? 0, { active: true });
+    await chrome.windows.update(existing.windowId, { focused: true });
+  } else {
+    await chrome.tabs.create({ url });
+  }
+}
+
 export default defineBackground(() => {
-  // Open (or focus) the dashboard when the toolbar icon is clicked.
-  chrome.action.onClicked.addListener(async () => {
-    const url = chrome.runtime.getURL('/dashboard.html');
-    const tabs = await chrome.tabs.query({ url });
-    const existing = tabs[0];
-    if (existing) {
-      await chrome.tabs.update(existing.id ?? 0, { active: true });
-      await chrome.windows.update(existing.windowId, { focused: true });
-    } else {
-      await chrome.tabs.create({ url });
-    }
-  });
+  // The toolbar icon opens the action popup (capture + open-workbench);
+  // requests from that popup are handled below.
 
   // Engine port: dashboard ↔ service worker.
   chrome.runtime.onConnect.addListener((port) => {
@@ -526,18 +538,28 @@ export default defineBackground(() => {
   // Capture: dashboard requests a snapshot. Region / element results are shown
   // as an on-page card in the captured tab; viewport-style results come back to
   // the dashboard popover, so hand focus back to the dashboard afterwards.
-  chrome.runtime.onMessage.addListener((msg: CaptureRequest, sender, sendResponse) => {
-    if (!msg || typeof msg !== 'object' || msg.type !== 'CAPTURE_REQUEST') return false;
-    const fromDashboard = !!sender.tab?.id;
-    runCapture(msg).then(async (res) => {
+  chrome.runtime.onMessage.addListener((msg: { type?: string } | CaptureRequest, sender, sendResponse) => {
+    if (!msg || typeof msg !== 'object') return false;
+    if (msg.type === 'OPEN_DASHBOARD') {
+      void openDashboard().then(() => sendResponse({ ok: true }));
+      return true;
+    }
+    if (msg.type !== 'CAPTURE_REQUEST') return false;
+
+    // Sender is the dashboard only when the message comes from the Loadix
+    // extension page itself. The action popup has no dashboard tab behind it —
+    // the active tab is the page the user is looking at — so its results are
+    // delivered as an on-page floating card, never by tab-juggling.
+    const req = msg as CaptureRequest;
+    const senderIsDashboard = !!sender.tab?.url && isLoadixUrl(sender.tab.url);
+    runCapture(req, !senderIsDashboard).then(async (res) => {
       sendResponse(res);
-      // The SW focuses the target page while capturing. Hand control back to
-      // the dashboard when the result is presented there (viewport captures
-      // and any failure/cancel), but leave the user on the captured page when
-      // a region/element result card was shown there.
-      const staysOnPage = res.ok && (msg.mode === 'selection' || msg.mode === 'element');
-      if (fromDashboard && !staysOnPage) {
-        await focusSenderTab(sender);
+      // When launched from the dashboard, hand control back to it for
+      // viewport captures and for any failure/cancel; region/element picks
+      // leave the user on the captured page with the result card.
+      if (senderIsDashboard) {
+        const staysOnPage = res.ok && (req.mode === 'selection' || req.mode === 'element');
+        if (!staysOnPage) await focusSenderTab(sender);
       }
     });
     return true; // tell Chrome we'll respond asynchronously

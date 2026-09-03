@@ -18,7 +18,6 @@ import { VariablesPanel } from './panels/VariablesPanel';
 import { useUiStore } from './store/ui-store';
 import { storageGet, storageSet } from './storage';
 import { CommandPalette } from './tools/CommandPalette';
-import { CapturePopover } from './components/CapturePopover';
 import { ToolsWorkspace } from './tools/ToolsWorkspace';
 import { ToolsMenu } from './tools/ToolsMenu';
 import { findTool } from './tools/registry';
@@ -53,11 +52,6 @@ const DEFAULT_ASSERTIONS: Assertion[] = [
   { type: 'status', value: '200' },
   { type: 'latency', value: '1000' },
 ];
-
-/** True when running inside the installed extension (chrome.runtime is only
- *  exposed to extension pages). The web build cannot snapshot arbitrary pages,
- *  so extension-only UI (the capture launcher) is hidden there. */
-const IS_EXTENSION = typeof chrome !== 'undefined' && !!chrome.runtime?.id;
 
 const SECTION_META = {
   request: ['sections.request.title', 'sections.request.desc'],
@@ -359,7 +353,6 @@ export default function App({ host }: { host: EngineHost }) {
               </option>
             ))}
           </select>
-          {IS_EXTENSION && <CapturePopover />}
           {view === 'loadtest' && (
             <>
               <button className="nav-btn" onClick={handleNew}>

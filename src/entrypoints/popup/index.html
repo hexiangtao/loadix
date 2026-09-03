@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Loadix</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        width: 288px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        background: #16161a;
+        color: #ececf1;
+        font-size: 13px;
+        -webkit-font-smoothing: antialiased;
+        user-select: none;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 14px 6px;
+      }
+      .logo {
+        font-weight: 800;
+        font-size: 14px;
+        letter-spacing: -0.01em;
+      }
+      .kbd {
+        padding: 1px 6px;
+        border-radius: 5px;
+        border: 1px solid rgba(255, 255, 255, 0.22);
+        background: rgba(255, 255, 255, 0.05);
+        font-size: 10px;
+        color: rgba(255, 255, 255, 0.65);
+      }
+
+      .main {
+        padding: 6px 14px 4px;
+      }
+      .hero {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 2px;
+        padding: 11px 14px;
+        border: none;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #0a84ff, #0a5fd9);
+        color: #fff;
+        text-align: left;
+        cursor: pointer;
+        transition: filter 120ms ease;
+      }
+      .hero:hover {
+        filter: brightness(1.12);
+      }
+      .hero:active {
+        filter: brightness(0.95);
+      }
+      .hero b {
+        font-size: 14px;
+        font-weight: 750;
+        letter-spacing: 0.01em;
+      }
+      .hero span {
+        font-size: 11px;
+        opacity: 0.85;
+      }
+
+      .more {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-top: 4px;
+        padding: 7px 10px;
+        border: none;
+        border-radius: 8px;
+        background: transparent;
+        color: rgba(255, 255, 255, 0.55);
+        font: inherit;
+        font-size: 11.5px;
+        cursor: pointer;
+      }
+      .more:hover {
+        color: #fff;
+        background: rgba(255, 255, 255, 0.06);
+      }
+      .chev {
+        font-size: 9px;
+        transition: transform 120ms ease;
+      }
+      .more.open .chev {
+        transform: rotate(180deg);
+      }
+
+      .extra {
+        display: none;
+        flex-direction: column;
+        gap: 2px;
+        padding-top: 4px;
+      }
+      .extra.open {
+        display: flex;
+      }
+      .opt {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 7px 10px;
+        border: none;
+        border-radius: 8px;
+        background: transparent;
+        color: inherit;
+        text-align: left;
+        cursor: pointer;
+      }
+      .opt:hover {
+        background: rgba(255, 255, 255, 0.07);
+      }
+      .opt b {
+        font-size: 12.5px;
+        font-weight: 650;
+      }
+      .opt span {
+        font-size: 10.5px;
+        color: rgba(255, 255, 255, 0.42);
+        text-align: right;
+      }
+
+      .status {
+        display: none;
+        margin: 6px 14px 0;
+        padding: 7px 10px;
+        border-radius: 8px;
+        font-size: 11.5px;
+        line-height: 1.45;
+      }
+      .status.busy {
+        display: block;
+        background: rgba(10, 132, 255, 0.1);
+        color: #6fb7ff;
+      }
+      .status.error {
+        display: block;
+        background: rgba(255, 69, 58, 0.12);
+        color: #ff8a80;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+
+      .foot {
+        padding: 8px 14px 10px;
+      }
+      .dash {
+        width: 100%;
+        padding: 7px 10px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 8px;
+        background: transparent;
+        color: rgba(255, 255, 255, 0.75);
+        font: inherit;
+        font-size: 12px;
+        cursor: pointer;
+        transition: background 120ms ease, border-color 120ms ease;
+      }
+      .dash:hover {
+        background: rgba(255, 255, 255, 0.06);
+        border-color: rgba(255, 255, 255, 0.3);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="brand">
+      <span class="logo">Loadix</span>
+      <span class="kbd">Alt+Shift+S</span>
+    </div>
+
+    <div class="main">
+      <button class="hero" id="heroRegion" data-mode="selection">
+        <b id="heroTitle"></b>
+        <span id="heroDesc"></span>
+      </button>
+
+      <button class="more" id="moreBtn">
+        <span id="moreLabel"></span>
+        <span class="chev" id="moreChev">▾</span>
+      </button>
+
+      <div class="extra" id="extra">
+        <button class="opt" data-mode="fullpage">
+          <b id="optFull"></b>
+          <span id="optFullDesc"></span>
+        </button>
+        <button class="opt" data-mode="visible">
+          <b id="optVisible"></b>
+          <span id="optVisibleDesc"></span>
+        </button>
+        <button class="opt" data-mode="element">
+          <b id="optElement"></b>
+          <span id="optElementDesc"></span>
+        </button>
+      </div>
+    </div>
+
+    <div class="status" id="status"></div>
+
+    <div class="foot">
+      <button class="dash" id="openDash"></button>
+    </div>
+
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

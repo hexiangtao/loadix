@@ -11,10 +11,10 @@ type Scale = 1 | 2;
 
 /**
  * Capture a specific DOM element on the *current* Loadix dashboard as PNG
- * or JPEG. The toolbar's <CapturePopover> handles the broader cases
- * (visible tab, full page, region, element on any page) — this tool is
- * the ergonomic "snap a tool result" entry: pick a CSS selector, get the
- * rendered image.
+ * or JPEG. Capturing pages other than the dashboard is handled by the
+ * action popup (click the Loadix toolbar icon) and the Alt+Shift+S
+ * shortcut — this tool is the ergonomic "snap a tool result" entry: pick
+ * a CSS selector, get the rendered image.
  *
  * Useful for: saving a single tool's output (a gradient, a JSON tree,
  * a regex match), embedding a panel in a doc, or getting a tight crop

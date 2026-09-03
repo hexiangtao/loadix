@@ -122,30 +122,6 @@
     "loadtest": "压测",
     "tools": "工具"
   },
-  "capture": {
-    "button": "截图",
-    "title": "截图",
-    "shortcut_hint": "区域截图（Alt+Shift+S）",
-    "picking": "在页面上拖一个矩形框，松开即完成。Esc 取消。",
-    "capturing": "截图中…",
-    "hint": "提示：Alt+Shift+S 随时触发区域截图，即使仪表盘没开也能用。",
-    "copy": "复制",
-    "copied": "已复制 ✓",
-    "on_page": "截图完成 — 结果已显示在你浏览的页面上，可直接复制或保存。",
-    "download": "下载",
-    "mode": {
-      "visible":   { "label": "当前视口",       "desc": "截下当前看到的画面。" },
-      "fullpage":  { "label": "整页",           "desc": "拼接整张可滚动文档。" },
-      "selection": { "label": "区域",           "desc": "在页面上拖一个矩形。" },
-      "element":   { "label": "元素",           "desc": "点击页面上的某个元素。" }
-    },
-    "advanced": {
-      "title": "按 CSS 选择器（任意页面）",
-      "run": "截图",
-      "hint": "作用于当前激活的标签页，不限于 Loadix 本身。"
-    },
-    "web_only": "截图功能仅在以 Chrome 扩展形式安装时可用。在 Web 预览中，工具栏的截图按钮无效。"
-  },
   "tools": {
     "title": "工具",
     "subtitle": "开发者日常工具集——全部在浏览器本地运行。",
@@ -338,7 +314,7 @@
       "preview": "预览",
       "empty": "暂无截图",
       "emptyHint": "输入 CSS 选择器（如 `#root`、`.panel`、`[data-screenshot-target]`），点「截图」。",
-      "workbench_only": "只截当前 Loadix 仪表盘里的元素。整页 / 区域 / 任意网页截图请用工具栏上的相机按钮。"
+      "workbench_only": "只截 Loadix 仪表盘里的元素。要截取正在浏览的网页，请点击浏览器工具栏的 Loadix 图标（或按 Alt+Shift+S）。"
     },
     "gradient": {
       "name": "CSS 渐变",
