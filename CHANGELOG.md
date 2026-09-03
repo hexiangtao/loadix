@@ -1,3 +1,10 @@
+## [1.26.3](https://github.com/hexiangtao/loadix/compare/v1.26.2...v1.26.3) (2026-09-03)
+
+
+### Bug Fixes
+
+* **capture:** make the screenshot pipeline work in the MV3 extension ([aeef047](https://github.com/hexiangtao/loadix/commit/aeef0475248427eb5d394d9d9ed1e8d1412b3054))
+
 ## [1.26.2](https://github.com/hexiangtao/loadix/compare/v1.26.1...v1.26.2) (2026-08-31)
 
 
