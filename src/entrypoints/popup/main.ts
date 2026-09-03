@@ -27,13 +27,12 @@ const UI = zh
   ? {
       heroTitle: '框选截图',
       heroDesc: '在页面上拖一个矩形',
-      moreLabel: '更多方式',
       optFull: '整页',
-      optFullDesc: '拼接整个页面',
-      optVisible: '当前视口',
-      optVisibleDesc: '屏幕当前内容',
+      optFullTip: '拼接整个页面',
+      optVisible: '视口',
+      optVisibleTip: '截取屏幕当前内容',
       optElement: '元素',
-      optElementDesc: '点击页面元素',
+      optElementTip: '点击页面上的元素',
       dashLabel: '打开 Loadix 工具箱',
       busyVisible: '截图中…',
       busyFull: '正在拼接整页，页面会自动滚动…',
@@ -46,13 +45,12 @@ const UI = zh
   : {
       heroTitle: 'Capture region',
       heroDesc: 'Drag a rectangle on the page',
-      moreLabel: 'More options',
       optFull: 'Full page',
-      optFullDesc: 'Stitch the whole page',
-      optVisible: 'Visible tab',
-      optVisibleDesc: 'What is on screen',
+      optFullTip: 'Stitch the whole scrollable page',
+      optVisible: 'Visible',
+      optVisibleTip: 'Capture what is on screen now',
       optElement: 'Element',
-      optElementDesc: 'Click an element',
+      optElementTip: 'Click an element on the page',
       dashLabel: 'Open the Loadix toolbox',
       busyVisible: 'Capturing…',
       busyFull: 'Stitching the full page — it will auto-scroll…',
@@ -91,7 +89,6 @@ const ICONS: Record<string, string> = {
   dash: svg(
     '<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>', // activity (pulse)
   ),
-  chevron: svg('<polyline points="6 9 12 15 18 9"/>', 12),
   arrow: svg('<line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>', 14),
   spinner: svg(
     '<path d="M21 12a9 9 0 1 1-6.219-8.56"/>',
@@ -106,6 +103,31 @@ const ICONS: Record<string, string> = {
 
 /* ------------------------------------------------------------------ */
 
+/** Light is the default; flip to dark only when the dashboard explicitly
+ *  stores a dark theme (chrome.storage in the extension, localStorage in the
+ *  standalone web preview). Extension pages share the same origin, so the
+ *  dashboard's preference is visible here. */
+function applyStoredTheme() {
+  try {
+    if (typeof chrome !== 'undefined' && chrome.storage?.local) {
+      void chrome.storage.local.get('api-pressure-theme').then((data) => {
+        if (data['api-pressure-theme'] === 'dark') {
+          document.documentElement.dataset.theme = 'dark';
+        }
+      });
+      return;
+    }
+    const raw = localStorage.getItem('api-pressure-theme');
+    if (raw !== null && (JSON.parse(raw) as unknown) === 'dark') {
+      document.documentElement.dataset.theme = 'dark';
+    }
+  } catch {
+    /* storage unavailable — keep the light default */
+  }
+}
+
+applyStoredTheme();
+
 const $ = (id: string) => document.getElementById(id) as HTMLElement;
 const $$ = <T extends Element>(sel: string) => Array.from(document.querySelectorAll<T>(sel));
 
@@ -116,21 +138,21 @@ function setText(id: string, text: string) {
 function applyCopy() {
   setText('heroTitle', UI.heroTitle);
   setText('heroDesc', UI.heroDesc);
-  setText('moreLabel', UI.moreLabel);
   setText('optFull', UI.optFull);
-  setText('optFullDesc', UI.optFullDesc);
   setText('optVisible', UI.optVisible);
-  setText('optVisibleDesc', UI.optVisibleDesc);
   setText('optElement', UI.optElement);
-  setText('optElementDesc', UI.optElementDesc);
   setText('dashLabel', UI.dashLabel);
 
   $('heroIcon').innerHTML = ICONS.region!;
-  $('moreChevron').innerHTML = ICONS.chevron!;
   $$<HTMLSpanElement>('[data-icon]').forEach((el) => {
     const name = el.dataset.icon;
     if (name && ICONS[name]) el.innerHTML = ICONS[name];
   });
+
+  // Native tooltips explain each variant without adding visual noise.
+  $('modeFull').title = UI.optFullTip;
+  $('modeVisible').title = UI.optVisibleTip;
+  $('modeElement').title = UI.optElementTip;
 }
 
 function setStatus(kind: 'busy' | 'done' | 'error', text: string) {
@@ -193,14 +215,6 @@ $$<HTMLButtonElement>('[data-mode]').forEach((btn) => {
     const mode = btn.dataset.mode as CaptureMode;
     void runMode(mode);
   });
-});
-
-const moreBtn = $('moreBtn');
-const extra = $('extra');
-moreBtn.addEventListener('click', () => {
-  const open = extra.classList.toggle('open');
-  moreBtn.classList.toggle('open', open);
-  moreBtn.setAttribute('aria-expanded', String(open));
 });
 
 $('openDash').addEventListener('click', async () => {
