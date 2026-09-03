@@ -1,3 +1,10 @@
+## [1.27.1](https://github.com/hexiangtao/loadix/compare/v1.27.0...v1.27.1) (2026-09-03)
+
+
+### Bug Fixes
+
+* **release:** treat style commits as patch releases ([5c168fe](https://github.com/hexiangtao/loadix/commit/5c168fe6ea67aa15f5d83ae214fc3dff7826828f))
+
 # [1.27.0](https://github.com/hexiangtao/loadix/compare/v1.26.3...v1.27.0) (2026-09-03)
 
 
