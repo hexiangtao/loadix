@@ -19,7 +19,7 @@
 import { defineBackground } from 'wxt/sandbox';
 import { LoadEngine } from '@/engine/load-engine';
 import type { EngineCommand, EngineEvent, EngineState, MetricsSnapshot } from '@/shared/types';
-import type { CaptureRequest, CaptureResult, PickedElement, PickedRegion } from '@/shared/capture';
+import type { CaptureRequest, CaptureResult, PickedElement, PickedRegion, PickerResult } from '@/shared/capture';
 
 class EngineHost {
   private ports = new Set<chrome.runtime.Port>();
@@ -76,7 +76,14 @@ const host = new EngineHost();
 /* ------------------------------------------------------------------ */
 
 const PICK_TIMEOUT_MS = 60_000;
-const CONTENT_SCRIPT_ID = 'area-selector';
+/** Path (relative to the extension root) of the compiled area-selector content
+ *  script. WXT emits runtime-registered content scripts under
+ *  content-scripts/<name>.js; keep in sync with web_accessible_resources. */
+const AREA_SELECTOR_FILE = 'content-scripts/area-selector.js';
+
+const EXTENSION_ORIGIN = (() => {
+  try { return chrome.runtime.getURL(''); } catch { return ''; }
+})();
 
 interface PendingPick {
   resolve: (msg: PickedRegion | PickedElement) => void;
@@ -84,6 +91,17 @@ interface PendingPick {
   timer: ReturnType<typeof setTimeout>;
 }
 const pendingPicks = new Map<number, PendingPick>();
+
+/** windowId → the last tab the user actually browsed in that window (i.e. any
+ *  tab that is not the Loadix dashboard). Used so the dashboard's capture
+ *  launcher screenshots the page the user was looking at, not Loadix itself. */
+const lastBrowsedTab = new Map<number, number>();
+
+function isLoadixUrl(url: string | undefined): boolean {
+  return !!url && !!EXTENSION_ORIGIN && url.startsWith(EXTENSION_ORIGIN);
+}
+
+const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 function watchPicksForTab(tabId: number, onResolve: PendingPick['resolve'], onReject: PendingPick['reject']) {
   const timer = setTimeout(() => {
@@ -95,13 +113,13 @@ function watchPicksForTab(tabId: number, onResolve: PendingPick['resolve'], onRe
 
 async function ensureContentScript(tabId: number): Promise<void> {
   try {
-    // executeScript is idempotent-ish: it always re-injects, but injecting the
-    // same file is cheap and the script self-deduplicates by host id.
+    // Re-injecting is cheap and the script self-deduplicates its message
+    // listener (see area-selector.content.ts), so repeated calls are safe.
     await chrome.scripting.executeScript({
       target: { tabId },
-      files: [CONTENT_SCRIPT_ID],
+      files: [AREA_SELECTOR_FILE],
     });
-  } catch (e) {
+  } catch {
     // Chrome refuses to inject into chrome:// pages, the Web Store itself,
     // and PDF viewers. Surface a friendly error.
     throw new Error(
@@ -114,6 +132,62 @@ async function queryActiveTab(): Promise<chrome.tabs.Tab> {
   const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
   if (!tab || tab.id == null) throw new Error('No active tab');
   return tab;
+}
+
+/**
+ * Decide which tab a capture should run against. When the active tab is the
+ * Loadix dashboard (or any extension page), fall back to the last real page
+ * the user browsed in that window — that is the page a screenshot button is
+ * expected to capture.
+ */
+async function resolveTargetTab(active?: chrome.tabs.Tab): Promise<chrome.tabs.Tab> {
+  const tab = active ?? (await queryActiveTab());
+  if (tab.id != null && !isLoadixUrl(tab.url)) return tab;
+
+  const candidates: Array<{ windowId: number; tabId: number }> = [];
+  if (tab.windowId != null) {
+    const rememberedId = lastBrowsedTab.get(tab.windowId);
+    if (rememberedId != null) candidates.push({ windowId: tab.windowId, tabId: rememberedId });
+  }
+  for (const [windowId, tabId] of lastBrowsedTab) candidates.push({ windowId, tabId });
+
+  for (const candidate of candidates) {
+    try {
+      const t = await chrome.tabs.get(candidate.tabId);
+      if (t.id != null && !isLoadixUrl(t.url)) return t;
+    } catch {
+      lastBrowsedTab.delete(candidate.windowId);
+    }
+  }
+
+  // Nothing browsed yet — capture the active tab anyway (self-capture), or
+  // fail with guidance.
+  if (tab.id != null) return tab;
+  throw new Error('Open the web page you want to capture first, then retry.');
+}
+
+/** Bring a window to the front and make the tab active so captureVisibleTab
+ *  reflects it, and give the compositor a frame to settle. */
+async function focusTab(tab: chrome.tabs.Tab): Promise<void> {
+  try {
+    if (tab.windowId != null) await chrome.windows.update(tab.windowId, { focused: true });
+    if (tab.id != null) await chrome.tabs.update(tab.id, { active: true });
+    await sleep(200);
+  } catch {
+    /* tab closed mid-flight; the caller will surface an error */
+  }
+}
+
+/** Bring the caller's own tab (the dashboard) back to the front. */
+async function focusSenderTab(sender: chrome.runtime.MessageSender | undefined): Promise<void> {
+  const tab = sender?.tab;
+  if (!tab) return;
+  try {
+    if (tab.windowId != null) await chrome.windows.update(tab.windowId, { focused: true });
+    if (tab.id != null) await chrome.tabs.update(tab.id, { active: true });
+  } catch {
+    /* the dashboard tab may have been closed; ignore */
+  }
 }
 
 function safeFilename(s: string): string {
@@ -133,44 +207,62 @@ function dataUrlToBlobSize(dataUrl: string): number {
   return Math.floor((b64.length * 3) / 4);
 }
 
-async function captureTab(_tabId: number, format: 'png' | 'jpeg' = 'png'): Promise<{ dataUrl: string; width: number; height: number }> {
-  // In MV3 the no-arg overload returns a promise; we don't need a windowId
-  // because captureVisibleTab defaults to the current window.
-  const dataUrl = await chrome.tabs.captureVisibleTab({ format });
-  const img = await loadImage(dataUrl);
-  return { dataUrl, width: img.naturalWidth, height: img.naturalHeight };
+/** Decode a data URL without touching the DOM. The background is an MV3
+ *  service worker: no <img>, no document, no FileReader. */
+async function decodeDataUrl(dataUrl: string): Promise<ImageBitmap> {
+  const resp = await fetch(dataUrl);
+  if (!resp.ok) throw new Error('Failed to decode captured bitmap');
+  return createImageBitmap(await resp.blob());
 }
 
-function loadImage(src: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error('Failed to decode captured bitmap'));
-    img.src = src;
-  });
+/** Encode a blob as a PNG data URL (FileReader is unavailable in workers). */
+async function blobToDataUrl(blob: Blob): Promise<string> {
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  let binary = '';
+  const CHUNK = 0x8000;
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+  }
+  return `data:image/png;base64,${btoa(binary)}`;
 }
 
-function cropDataUrl(
+/** Capture the *visible* area of the active tab of the given window (or the
+ *  current window when omitted). */
+async function captureActiveTab(windowId?: number): Promise<{ dataUrl: string; width: number; height: number }> {
+  const dataUrl = await chrome.tabs.captureVisibleTab(windowId ?? chrome.windows.WINDOW_ID_CURRENT, { format: 'png' });
+  const bmp = await decodeDataUrl(dataUrl);
+  return { dataUrl, width: bmp.width, height: bmp.height };
+}
+
+/** Crop a decoded bitmap to a CSS-pixel rectangle, scaled by `dpr`. */
+async function cropBitmap(
+  bitmap: ImageBitmap,
+  crop: { x: number; y: number; width: number; height: number },
+  dpr: number,
+): Promise<{ dataUrl: string; width: number; height: number }> {
+  const outW = Math.max(1, Math.round(crop.width * dpr));
+  const outH = Math.max(1, Math.round(crop.height * dpr));
+  const canvas = new OffscreenCanvas(outW, outH);
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('Canvas 2D unavailable');
+  // Clamp the source rect to the captured bitmap so partially-offscreen picks
+  // still produce something instead of transparent garbage.
+  const sx = Math.min(bitmap.width, Math.max(0, Math.round(crop.x * dpr)));
+  const sy = Math.min(bitmap.height, Math.max(0, Math.round(crop.y * dpr)));
+  const sw = Math.max(1, Math.min(bitmap.width - sx, Math.round(crop.width * dpr)));
+  const sh = Math.max(1, Math.min(bitmap.height - sy, Math.round(crop.height * dpr)));
+  ctx.drawImage(bitmap, sx, sy, sw, sh, 0, 0, outW, outH);
+  const blob = await canvas.convertToBlob({ type: 'image/png' });
+  const dataUrl = await blobToDataUrl(blob);
+  return { dataUrl, width: outW, height: outH };
+}
+
+async function cropDataUrl(
   dataUrl: string,
   crop: { x: number; y: number; width: number; height: number },
   dpr: number,
 ): Promise<{ dataUrl: string; width: number; height: number }> {
-  return loadImage(dataUrl).then((img) => {
-    const c = document.createElement('canvas');
-    c.width = Math.max(1, Math.round(crop.width * dpr));
-    c.height = Math.max(1, Math.round(crop.height * dpr));
-    const ctx = c.getContext('2d');
-    if (!ctx) throw new Error('Canvas 2D unavailable');
-    ctx.drawImage(
-      img,
-      Math.round(crop.x * dpr),
-      Math.round(crop.y * dpr),
-      Math.round(crop.width * dpr),
-      Math.round(crop.height * dpr),
-      0, 0, c.width, c.height,
-    );
-    return { dataUrl: c.toDataURL('image/png'), width: c.width, height: c.height };
-  });
+  return cropBitmap(await decodeDataUrl(dataUrl), crop, dpr);
 }
 
 async function pickRegionInTab(tabId: number): Promise<PickedRegion> {
@@ -195,14 +287,86 @@ async function pickElementInTab(tabId: number): Promise<PickedElement> {
   });
 }
 
+/** Region pick → crop. The extra delay lets the dim/box overlay leave the
+ *  compositor so it is not baked into the capture. */
+async function capturePickedRegion(tabId: number, windowId: number | undefined): Promise<{ dataUrl: string; width: number; height: number }> {
+  const region = await pickRegionInTab(tabId);
+  await sleep(240);
+  const shot = await captureActiveTab(windowId);
+  return cropDataUrl(shot.dataUrl, region, region.devicePixelRatio);
+}
+
+/** Element pick → crop (same overlay-settle delay as regions). */
+async function capturePickedElement(tabId: number, windowId: number | undefined): Promise<{ dataUrl: string; width: number; height: number }> {
+  const picked = await pickElementInTab(tabId);
+  await sleep(240);
+  const shot = await captureActiveTab(windowId);
+  return cropDataUrl(shot.dataUrl, picked.rect, picked.devicePixelRatio);
+}
+
+/** Element by direct CSS selector: resolve + scroll it into the top-left of
+ *  the viewport, then capture & crop from the origin. */
+async function captureSelectorElement(
+  tabId: number,
+  windowId: number | undefined,
+  selector: string,
+): Promise<{ dataUrl: string; width: number; height: number }> {
+  const elInfo = await chrome.scripting.executeScript({
+    target: { tabId },
+    func: (sel: string) => {
+      const el = document.querySelector(sel);
+      if (!el) return null;
+      const r = el.getBoundingClientRect();
+      return {
+        x: r.left, y: r.top, width: r.width, height: r.height,
+        dpr: window.devicePixelRatio,
+        sx: window.scrollX, sy: window.scrollY,
+      };
+    },
+    args: [selector],
+  });
+  const info = elInfo[0]?.result as
+    | { x: number; y: number; width: number; height: number; dpr: number; sx: number; sy: number }
+    | null
+    | undefined;
+  if (!info) throw new Error(`No element matches "${selector}"`);
+  await chrome.scripting.executeScript({
+    target: { tabId },
+    func: (sx: number, sy: number) => window.scrollTo(sx, sy),
+    args: [info.sx + info.x, info.sy + info.y],
+  });
+  await sleep(160);
+  const shot = await captureActiveTab(windowId);
+  return cropDataUrl(shot.dataUrl, { x: 0, y: 0, width: info.width, height: info.height }, info.dpr);
+}
+
+/** Ask the content script in `tabId` to render the floating result card. */
+async function showResultCardOnPage(
+  tabId: number,
+  result: { dataUrl: string; width: number; height: number },
+  filename: string,
+): Promise<void> {
+  await ensureContentScript(tabId);
+  const message: PickerResult = {
+    type: 'PICKER_RESULT',
+    ok: true,
+    dataUrl: result.dataUrl,
+    filename,
+    width: result.width,
+    height: result.height,
+  };
+  await chrome.tabs
+    .sendMessage(tabId, message)
+    .catch(() => { /* tab navigated or closed — nothing to show */ });
+}
+
 /**
  * Capture the full scrollable page by stitching together several
  * captureVisibleTab snapshots while scrolling. Works for any same-origin page;
- * cross-origin iframes may show as empty.
+ * cross-origin iframes may show as empty. The window must be focused and its
+ * active tab set to `tabId` before calling.
  */
-async function captureFullPage(tabId: number, origin: string): Promise<{ dataUrl: string; width: number; height: number }> {
-  // Get the page's full dimensions from the content side.
-  await ensureContentScript(tabId);
+async function captureFullPage(tabId: number, windowId: number | undefined): Promise<{ dataUrl: string; width: number; height: number }> {
   const dims = await chrome.scripting.executeScript({
     target: { tabId },
     func: () => ({
@@ -217,7 +381,6 @@ async function captureFullPage(tabId: number, origin: string): Promise<{ dataUrl
   if (!m) throw new Error('Failed to read page dimensions');
   const { sw, sh, vw, vh, dpr } = m;
 
-  // Save original scroll position so we can restore it.
   const orig = await chrome.scripting.executeScript({
     target: { tabId },
     func: () => ({ x: window.scrollX, y: window.scrollY }),
@@ -228,8 +391,6 @@ async function captureFullPage(tabId: number, origin: string): Promise<{ dataUrl
     const canvas = new OffscreenCanvas(Math.round(sw * dpr), Math.round(sh * dpr));
     const ctx = canvas.getContext('2d');
     if (!ctx) throw new Error('OffscreenCanvas 2D unavailable');
-    // Fill with the page background (best-effort; we use #ffffff so transparent
-    // areas are visible in the result).
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -239,26 +400,22 @@ async function captureFullPage(tabId: number, origin: string): Promise<{ dataUrl
       for (let c = 0; c < cols; c++) {
         const x = c * vw;
         const y = r * vh;
-        // Scroll to the tile's top-left.
         await chrome.scripting.executeScript({
           target: { tabId },
-          func: (sx: number, sy: number) => {
-            window.scrollTo(sx, sy);
-          },
+          func: (sx: number, sy: number) => window.scrollTo(sx, sy),
           args: [x, y],
         });
-        // Give the browser a tick to paint the new viewport.
-        await new Promise((res) => setTimeout(res, 60));
-        const tile = await chrome.tabs.captureVisibleTab({ format: 'png' });
-        const img = await loadImage(tile);
-        ctx.drawImage(img, x * dpr, y * dpr, img.naturalWidth, img.naturalHeight);
+        await sleep(60);
+        const tile = await chrome.tabs.captureVisibleTab(windowId ?? chrome.windows.WINDOW_ID_CURRENT, { format: 'png' });
+        const bmp = await decodeDataUrl(tile);
+        ctx.drawImage(bmp, Math.round(x * dpr), Math.round(y * dpr));
+        bmp.close();
       }
     }
     const blob = await canvas.convertToBlob({ type: 'image/png' });
     const dataUrl = await blobToDataUrl(blob);
     return { dataUrl, width: canvas.width, height: canvas.height };
   } finally {
-    // Restore the original scroll position so the user isn't left at the bottom.
     try {
       await chrome.scripting.executeScript({
         target: { tabId },
@@ -268,89 +425,44 @@ async function captureFullPage(tabId: number, origin: string): Promise<{ dataUrl
     } catch {
       /* tab might have been closed; ignore */
     }
-    void origin; // referenced for symmetry
   }
 }
 
-function blobToDataUrl(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const r = new FileReader();
-    r.onload = () => resolve(r.result as string);
-    r.onerror = () => reject(new Error('Failed to read blob'));
-    r.readAsDataURL(blob);
-  });
-}
-
+/** Run a capture requested by the dashboard. Region / element results are
+ *  shown as an on-page card; viewport-style results return to the caller, who
+ *  decides whether to hand focus back to the dashboard. */
 async function runCapture(req: CaptureRequest): Promise<CaptureResult> {
   const filename = `${safeFilename(req.filename || 'capture')}-${timestamp()}.png`;
   try {
-    const tab = await queryActiveTab();
+    const tab = await resolveTargetTab();
     if (tab.id == null) throw new Error('Active tab has no id');
     const tabId = tab.id;
-    const origin = (() => {
-      try { return new URL(tab.url ?? '').hostname; } catch { return 'tab'; }
-    })();
+    const windowId = tab.windowId;
 
     switch (req.mode) {
       case 'visible': {
-        const { dataUrl, width, height } = await captureTab(tabId);
-        return ok(filename, dataUrl, width, height);
+        await focusTab(tab);
+        const shot = await captureActiveTab(windowId);
+        return ok(filename, shot.dataUrl, shot.width, shot.height);
       }
       case 'fullpage': {
-        const { dataUrl, width, height } = await captureFullPage(tabId, origin);
-        return ok(filename, dataUrl, width, height);
+        await focusTab(tab);
+        const shot = await captureFullPage(tabId, windowId);
+        return ok(filename, shot.dataUrl, shot.width, shot.height);
       }
       case 'selection': {
-        const region = await pickRegionInTab(tabId);
-        const { dataUrl } = await captureTab(tabId);
-        const cropped = await cropDataUrl(dataUrl, region, region.devicePixelRatio);
-        return ok(filename, cropped.dataUrl, cropped.width, cropped.height);
+        await focusTab(tab);
+        const cropped = await capturePickedRegion(tabId, windowId);
+        await showResultCardOnPage(tabId, cropped, filename);
+        return onPageResult(filename, cropped);
       }
       case 'element': {
-        if (req.selector) {
-          // Direct selector — skip the picker UI.
-          const elInfo = await chrome.scripting.executeScript({
-            target: { tabId },
-            func: (sel: string) => {
-              const el = document.querySelector(sel);
-              if (!el) return null;
-              const r = el.getBoundingClientRect();
-              return {
-                x: r.left, y: r.top, width: r.width, height: r.height,
-                dpr: window.devicePixelRatio,
-                sx: window.scrollX, sy: window.scrollY,
-              };
-            },
-            args: [req.selector],
-          });
-          const info = elInfo[0]?.result as
-            | { x: number; y: number; width: number; height: number; dpr: number; sx: number; sy: number }
-            | null
-            | undefined;
-          if (!info) throw new Error(`No element matches "${req.selector}"`);
-          // Scroll the element to the top-left so it is fully inside the visible viewport.
-          await chrome.scripting.executeScript({
-            target: { tabId },
-            func: (sx: number, sy: number) => window.scrollTo(sx, sy),
-            args: [info.sx + info.x, info.sy + info.y],
-          });
-          await new Promise((r) => setTimeout(r, 60));
-          const tab2 = await captureTab(tabId);
-          const cropped = await cropDataUrl(
-            tab2.dataUrl,
-            { x: 0, y: 0, width: info.width, height: info.height },
-            info.dpr,
-          );
-          return ok(filename, cropped.dataUrl, cropped.width, cropped.height);
-        }
-        const picked = await pickElementInTab(tabId);
-        const tab2 = await captureTab(tabId);
-        const cropped = await cropDataUrl(
-          tab2.dataUrl,
-          { x: picked.rect.x, y: picked.rect.y, width: picked.rect.width, height: picked.rect.height },
-          picked.devicePixelRatio,
-        );
-        return ok(filename, cropped.dataUrl, cropped.width, cropped.height);
+        await focusTab(tab);
+        const cropped = req.selector
+          ? await captureSelectorElement(tabId, windowId, req.selector)
+          : await capturePickedElement(tabId, windowId);
+        await showResultCardOnPage(tabId, cropped, filename);
+        return onPageResult(filename, cropped);
       }
     }
   } catch (e) {
@@ -372,6 +484,18 @@ function ok(filename: string, dataUrl: string, width: number, height: number): C
     width,
     height,
     bytes: dataUrlToBlobSize(dataUrl),
+  };
+}
+
+function onPageResult(filename: string, cropped: { dataUrl: string; width: number; height: number }): CaptureResult {
+  return {
+    type: 'CAPTURE_RESULT',
+    ok: true,
+    onPage: true,
+    filename,
+    width: cropped.width,
+    height: cropped.height,
+    bytes: dataUrlToBlobSize(cropped.dataUrl),
   };
 }
 
@@ -399,10 +523,23 @@ export default defineBackground(() => {
     port.onMessage.addListener((msg: EngineCommand) => host.handleCommand(msg));
   });
 
-  // Capture: dashboard requests a snapshot, we respond with a CAPTURE_RESULT.
-  chrome.runtime.onMessage.addListener((msg: CaptureRequest, _sender, sendResponse) => {
+  // Capture: dashboard requests a snapshot. Region / element results are shown
+  // as an on-page card in the captured tab; viewport-style results come back to
+  // the dashboard popover, so hand focus back to the dashboard afterwards.
+  chrome.runtime.onMessage.addListener((msg: CaptureRequest, sender, sendResponse) => {
     if (!msg || typeof msg !== 'object' || msg.type !== 'CAPTURE_REQUEST') return false;
-    runCapture(msg).then(sendResponse);
+    const fromDashboard = !!sender.tab?.id;
+    runCapture(msg).then(async (res) => {
+      sendResponse(res);
+      // The SW focuses the target page while capturing. Hand control back to
+      // the dashboard when the result is presented there (viewport captures
+      // and any failure/cancel), but leave the user on the captured page when
+      // a region/element result card was shown there.
+      const staysOnPage = res.ok && (msg.mode === 'selection' || msg.mode === 'element');
+      if (fromDashboard && !staysOnPage) {
+        await focusSenderTab(sender);
+      }
+    });
     return true; // tell Chrome we'll respond asynchronously
   });
 
@@ -425,8 +562,22 @@ export default defineBackground(() => {
     }
   });
 
-  // Clean up pending picks when a tab is closed.
+  // Remember the last real page the user browsed in each window so capture can
+  // target it when the dashboard (an extension tab) is the one in front.
+  chrome.tabs.onActivated.addListener((info) => {
+    void chrome.tabs
+      .get(info.tabId)
+      .then((tab) => {
+        if (tab.id != null && !isLoadixUrl(tab.url)) lastBrowsedTab.set(info.windowId, tab.id);
+      })
+      .catch(() => {});
+  });
+
+  // Clean up pending picks and remembered tabs when a tab is closed.
   chrome.tabs.onRemoved.addListener((tabId) => {
+    for (const [windowId, id] of lastBrowsedTab) {
+      if (id === tabId) lastBrowsedTab.delete(windowId);
+    }
     const pending = pendingPicks.get(tabId);
     if (pending) {
       clearTimeout(pending.timer);
@@ -435,27 +586,18 @@ export default defineBackground(() => {
     }
   });
 
-  // Keyboard shortcut: Alt+Shift+S opens the area-selector on the active tab.
-  // We don't auto-download — the dashboard popover handles that, and the user
-  // has to opt in to a download. Fall back to captureVisibleTab so the
-  // shortcut "just works" even when the dashboard isn't open.
+  // Keyboard shortcut: Alt+Shift+S dims the page the user is on and captures a
+  // region. The crop is handed back to that page as a floating card with
+  // copy / save actions (service workers have no DOM, so no auto-download).
   chrome.commands?.onCommand.addListener(async (command) => {
     if (command !== 'capture-region') return;
     try {
-      const tab = await queryActiveTab();
+      const tab = await resolveTargetTab();
       if (tab.id == null) return;
-      const region = await pickRegionInTab(tab.id);
-      const shot = await captureTab(tab.id);
-      const cropped = await cropDataUrl(
-        shot.dataUrl,
-        { x: region.x, y: region.y, width: region.width, height: region.height },
-        region.devicePixelRatio,
-      );
-      const a = document.createElement('a');
-      a.href = cropped.dataUrl;
-      a.download = `loadix-region-${timestamp()}.png`;
-      // The download attribute is honoured even when the data URL is in-memory.
-      a.click();
+      await focusTab(tab);
+      const cropped = await capturePickedRegion(tab.id, tab.windowId);
+      const filename = `loadix-region-${timestamp()}.png`;
+      await showResultCardOnPage(tab.id, cropped, filename);
     } catch (e) {
       console.warn('[loadix] capture-region failed', e);
     }

@@ -60,6 +60,20 @@ export interface CaptureResult {
   height?: number;
   bytes?: number;
   error?: string;
+  /** True when the cropped image was handed to the on-page floating card
+   *  (region / element picks) instead of being returned to the dashboard. */
+  onPage?: boolean;
+}
+
+/** SW → content script: the crop is done, show the floating result card. */
+export interface PickerResult {
+  type: 'PICKER_RESULT';
+  ok: boolean;
+  dataUrl?: string;
+  filename?: string;
+  width?: number;
+  height?: number;
+  error?: string;
 }
 
 export type CaptureMessage =
@@ -68,4 +82,5 @@ export type CaptureMessage =
   | PickedRegion
   | PickedElement
   | PickedCancelled
-  | CaptureResult;
+  | CaptureResult
+  | PickerResult;

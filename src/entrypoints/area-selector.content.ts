@@ -1,22 +1,46 @@
 /**
- * Area / element picker — content script injected into the target tab on demand.
+ * Area / element picker + floating result card — content script injected into
+ * the target tab on demand.
  *
- * Lives at document.body so its UI overlays the actual page. Two modes:
- *
+ * Modes (started by the SW with PICK_REGION / PICK_ELEMENT):
  *  - "region": user drags a rectangle; we send the geometry back to the SW
  *              and dismiss the overlay.
  *  - "element": user hovers, an outline tracks the element under the cursor;
  *              click picks it. We resolve a unique CSS selector for it.
  *
- * The overlay is closed on Escape, on successful pick, and on a `PICK_CANCELLED`
- * reply.
+ * After the SW has cropped the capture it sends PICKER_RESULT, which renders a
+ * small floating card (thumbnail + copy / save) over the captured page — the
+ * WeChat/Snipaste-style "result right where you took it" experience.
+ *
+ * The overlay is closed on Escape, on successful pick, and on PICK_CANCELLED.
+ *
+ * Note on re-injection: the SW re-executes this file before every pick (it has
+ * no reliable "is it already there?" check), so main() installs its message
+ * listener exactly once per document via a window flag.
  */
 import { defineContentScript } from 'wxt/sandbox';
-import type { PickedElement, PickedRegion, PickedCancelled } from '@/shared/capture';
+import type { PickedElement, PickedRegion, PickedCancelled, PickerResult } from '@/shared/capture';
 
 type Mode = 'region' | 'element';
 
 const HOST_ID = '__loadix_capture_overlay__';
+const CARD_ID = '__loadix_capture_result__';
+
+/** Minimal UI copy; picks Chinese when the page is, otherwise English. */
+const zh = navigator.language.toLowerCase().startsWith('zh');
+const UI = {
+  regionHint: zh ? '拖拽框选要截取的区域 · Esc 取消' : 'Drag to select a region · Esc to cancel',
+  elementHint: zh ? '点击任意元素进行截图 · Esc 取消' : 'Click any element to capture it · Esc to cancel',
+  copy: zh ? '复制' : 'Copy',
+  copied: zh ? '✓ 已复制' : '✓ Copied',
+  save: zh ? '保存' : 'Save',
+  close: zh ? '关闭' : 'Done',
+};
+
+/** Document-level listeners registered by the active mode, so dismiss() can
+ *  always remove every trace of the overlay (fixes stale click/mousemove
+ *  handlers hijacking the page after an Esc cancel). */
+const cleanupFns: Array<() => void> = [];
 
 function ensureOverlay(): HTMLDivElement {
   let host = document.getElementById(HOST_ID) as HTMLDivElement | null;
@@ -36,10 +60,20 @@ function ensureOverlay(): HTMLDivElement {
   return host;
 }
 
+function clearModeListeners() {
+  while (cleanupFns.length) cleanupFns.pop()?.();
+}
+
 function dismiss() {
+  clearModeListeners();
   document.getElementById(HOST_ID)?.remove();
-  document.removeEventListener('keydown', onKey, true);
   document.documentElement.style.cursor = '';
+}
+
+function send(msg: unknown) {
+  chrome.runtime.sendMessage(msg).catch(() => {
+    /* service worker may have gone away — ignore */
+  });
 }
 
 function onKey(e: KeyboardEvent) {
@@ -50,22 +84,7 @@ function onKey(e: KeyboardEvent) {
   }
 }
 
-function send(msg: unknown) {
-  chrome.runtime.sendMessage(msg).catch(() => {
-    /* service worker may have gone away — ignore */
-  });
-}
-
-/* ------------------------------------------------------------------ */
-/* Region mode                                                         */
-/* ------------------------------------------------------------------ */
-
-function startRegionMode() {
-  const host = ensureOverlay();
-  document.documentElement.style.cursor = 'crosshair';
-  document.addEventListener('keydown', onKey, true);
-
-  // The hint badge (top centre).
+function makeHint(text: string): HTMLDivElement {
   const hint = document.createElement('div');
   Object.assign(hint.style, {
     position: 'fixed',
@@ -82,8 +101,23 @@ function startRegionMode() {
     pointerEvents: 'none',
     boxShadow: '0 4px 16px rgba(0,0,0,0.25)',
   });
-  hint.textContent = 'Drag to select a region · Esc to cancel';
-  host.appendChild(hint);
+  hint.textContent = text;
+  return hint;
+}
+
+/* ------------------------------------------------------------------ */
+/* Region mode                                                         */
+/* ------------------------------------------------------------------ */
+
+function startRegionMode() {
+  dismiss();
+  const host = ensureOverlay();
+  document.documentElement.style.cursor = 'crosshair';
+
+  const onKeyCleanup = () => document.removeEventListener('keydown', onKey, true);
+  cleanupFns.push(onKeyCleanup);
+  document.addEventListener('keydown', onKey, true);
+  host.appendChild(makeHint(UI.regionHint));
 
   // Backdrop dimmer.
   const dim = document.createElement('div');
@@ -143,9 +177,7 @@ function startRegionMode() {
     sizeLabel.style.display = 'block';
   };
 
-  const onUp = (e: MouseEvent) => {
-    document.removeEventListener('mousemove', onMove);
-    document.removeEventListener('mouseup', onUp, true);
+  const finish = (e: MouseEvent) => {
     const x = Math.min(e.clientX, startX);
     const y = Math.min(e.clientY, startY);
     const w = Math.abs(e.clientX - startX);
@@ -153,19 +185,22 @@ function startRegionMode() {
     if (w < 4 || h < 4) {
       // Treat as a click — cancel the selection.
       send({ type: 'PICK_CANCELLED' } satisfies PickedCancelled);
-      dismiss();
-      return;
+    } else {
+      const payload: PickedRegion = {
+        type: 'PICKED_REGION',
+        x: Math.round(x),
+        y: Math.round(y),
+        width: Math.round(w),
+        height: Math.round(h),
+        devicePixelRatio: window.devicePixelRatio,
+      };
+      send(payload);
     }
-    const payload: PickedRegion = {
-      type: 'PICKED_REGION',
-      x: Math.round(x),
-      y: Math.round(y),
-      width: Math.round(w),
-      height: Math.round(h),
-      devicePixelRatio: window.devicePixelRatio,
-    };
-    send(payload);
     dismiss();
+  };
+
+  const onUp = (e: MouseEvent) => {
+    finish(e);
   };
 
   const onDown = (e: MouseEvent) => {
@@ -175,12 +210,18 @@ function startRegionMode() {
     e.stopPropagation();
     startX = e.clientX;
     startY = e.clientY;
+    // mousemove is not captured on purpose so we track the pointer freely.
     document.addEventListener('mousemove', onMove);
     document.addEventListener('mouseup', onUp, true);
+    cleanupFns.push(() => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp, true);
+    });
   };
 
   // Use capture so the page's own handlers don't get the events first.
   dim.addEventListener('mousedown', onDown, true);
+  cleanupFns.push(() => dim.removeEventListener('mousedown', onDown, true));
 }
 
 /* ------------------------------------------------------------------ */
@@ -188,27 +229,14 @@ function startRegionMode() {
 /* ------------------------------------------------------------------ */
 
 function startElementMode() {
+  dismiss();
   const host = ensureOverlay();
   document.documentElement.style.cursor = 'crosshair';
-  document.addEventListener('keydown', onKey, true);
 
-  const hint = document.createElement('div');
-  Object.assign(hint.style, {
-    position: 'fixed',
-    top: '16px',
-    left: '50%',
-    transform: 'translateX(-50%)',
-    padding: '6px 12px',
-    background: 'rgba(20,20,22,0.92)',
-    color: '#fff',
-    borderRadius: '999px',
-    fontSize: '12px',
-    fontWeight: '600',
-    pointerEvents: 'none',
-    boxShadow: '0 4px 16px rgba(0,0,0,0.25)',
-  });
-  hint.textContent = 'Click any element to capture it · Esc to cancel';
-  host.appendChild(hint);
+  const onKeyCleanup = () => document.removeEventListener('keydown', onKey, true);
+  cleanupFns.push(onKeyCleanup);
+  document.addEventListener('keydown', onKey, true);
+  host.appendChild(makeHint(UI.elementHint));
 
   const outline = document.createElement('div');
   Object.assign(outline.style, {
@@ -311,10 +339,152 @@ function startElementMode() {
 
   document.addEventListener('mousemove', onMove, true);
   document.addEventListener('click', onClick, true);
+  cleanupFns.push(() => {
+    document.removeEventListener('mousemove', onMove, true);
+    document.removeEventListener('click', onClick, true);
+  });
 }
 
 /* ------------------------------------------------------------------ */
-/* Wire-up: listen for PICK_REGION / PICK_ELEMENT from the SW.         */
+/* Result card                                                         */
+/* ------------------------------------------------------------------ */
+
+/** Best-effort image copy straight to the clipboard; falls back silently so
+ *  the explicit Copy button on the card always remains available. */
+async function copyImage(dataUrl: string): Promise<boolean> {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const Ctor = (window as any).ClipboardItem as undefined | typeof ClipboardItem;
+    if (!Ctor) return false;
+    const blob = await fetch(dataUrl).then((r) => r.blob());
+    await navigator.clipboard.write([new Ctor({ 'image/png': blob })]);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function downloadImage(dataUrl: string, filename: string) {
+  const a = document.createElement('a');
+  a.href = dataUrl;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
+function showResultCard(result: PickerResult) {
+  if (!result.ok || !result.dataUrl) return;
+  document.getElementById(CARD_ID)?.remove();
+
+  const host = ensureOverlay();
+  const card = document.createElement('div');
+  card.id = CARD_ID;
+  Object.assign(card.style, {
+    position: 'fixed',
+    right: '20px',
+    bottom: '20px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px',
+    width: '240px',
+    padding: '10px',
+    background: 'rgba(24,24,28,0.96)',
+    color: '#fff',
+    borderRadius: '12px',
+    boxShadow: '0 8px 32px rgba(0,0,0,0.35)',
+    pointerEvents: 'auto',
+    fontSize: '12px',
+  });
+  host.appendChild(card);
+
+  const img = document.createElement('img');
+  img.src = result.dataUrl;
+  img.alt = 'captured region';
+  Object.assign(img.style, {
+    width: '100%',
+    maxHeight: '180px',
+    objectFit: 'contain',
+    borderRadius: '6px',
+    background: '#fff',
+    display: 'block',
+  });
+  card.appendChild(img);
+
+  const meta = document.createElement('div');
+  meta.textContent = `${result.width ?? 0} × ${result.height ?? 0}px`;
+  Object.assign(meta.style, {
+    color: 'rgba(255,255,255,0.65)',
+    fontSize: '11px',
+  });
+  card.appendChild(meta);
+
+  const actions = document.createElement('div');
+  Object.assign(actions.style, {
+    display: 'flex',
+    gap: '6px',
+  });
+
+  const btnBase: Partial<CSSStyleDeclaration> = {
+    flex: '1',
+    padding: '5px 0',
+    border: 'none',
+    borderRadius: '6px',
+    fontSize: '12px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    color: '#fff',
+  };
+
+  const copyBtn = document.createElement('button');
+  Object.assign(copyBtn.style, btnBase, { background: '#0a84ff' });
+  copyBtn.textContent = UI.copy;
+  copyBtn.addEventListener('click', async () => {
+    const ok = await copyImage(result.dataUrl!);
+    copyBtn.textContent = ok ? UI.copied : UI.copy;
+    copyBtn.style.background = ok ? '#1e8e3e' : '#0a84ff';
+  });
+
+  const saveBtn = document.createElement('button');
+  Object.assign(saveBtn.style, btnBase, { background: 'rgba(255,255,255,0.16)' });
+  saveBtn.textContent = UI.save;
+  saveBtn.addEventListener('click', () => {
+    downloadImage(result.dataUrl!, result.filename || 'loadix-capture.png');
+  });
+
+  const closeBtn = document.createElement('button');
+  closeBtn.textContent = UI.close;
+  Object.assign(closeBtn.style, {
+    padding: '5px 8px',
+    border: 'none',
+    borderRadius: '6px',
+    background: 'rgba(255,255,255,0.12)',
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: '12px',
+    cursor: 'pointer',
+  });
+  closeBtn.addEventListener('click', () => card.remove());
+
+  actions.appendChild(copyBtn);
+  actions.appendChild(saveBtn);
+  actions.appendChild(closeBtn);
+  card.appendChild(actions);
+
+  // Auto-copy on arrival — most screenshot tools put the image on the
+  // clipboard the instant you finish selecting. Content scripts need a user
+  // gesture for this; when it is denied the Copy button above is the path.
+  if (document.hasFocus()) {
+    void copyImage(result.dataUrl).then((ok) => {
+      if (ok) {
+        copyBtn.textContent = UI.copied;
+        copyBtn.style.background = '#1e8e3e';
+      }
+    });
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Wire-up: listen for pick requests + results from the SW.            */
 /* ------------------------------------------------------------------ */
 
 export default defineContentScript({
@@ -327,12 +497,19 @@ export default defineContentScript({
   // the service worker, so a runtime registration is enough.
   registration: 'runtime',
   main() {
-    chrome.runtime.onMessage.addListener((msg: { type: string }) => {
+    // The SW may execute this file several times against the same document
+    // (once per pick). Only the first execution should bind the listener.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const w = window as any;
+    if (w.__loadixCaptureBound) return;
+    w.__loadixCaptureBound = true;
+
+    chrome.runtime.onMessage.addListener((msg: { type?: string }) => {
       if (!msg || typeof msg !== 'object') return;
       if (msg.type === 'PICK_REGION') startRegionMode();
-      if (msg.type === 'PICK_ELEMENT') startElementMode();
-      // Always clean up any stale overlay if we get a generic ping.
-      if (msg.type === 'PICK_CANCELLED') dismiss();
+      else if (msg.type === 'PICK_ELEMENT') startElementMode();
+      else if (msg.type === 'PICKER_RESULT') showResultCard(msg as PickerResult);
+      else if (msg.type === 'PICK_CANCELLED') dismiss();
     });
   },
 });

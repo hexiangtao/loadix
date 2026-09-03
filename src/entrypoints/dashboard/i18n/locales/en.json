@@ -130,6 +130,8 @@
     "capturing": "Capturing…",
     "hint": "Tip: Alt+Shift+S captures a region from anywhere, even when the dashboard is hidden.",
     "copy": "Copy",
+    "copied": "Copied ✓",
+    "on_page": "Capture done — the result is on the page you were browsing. Copy or save it there.",
     "download": "Download",
     "mode": {
       "visible":   { "label": "Visible tab",   "desc": "Snapshot of the current viewport." },

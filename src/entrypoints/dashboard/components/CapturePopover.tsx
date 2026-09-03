@@ -5,22 +5,22 @@
  * A dedicated button in the global header (next to the theme switcher) is
  * far more discoverable than burying it inside the 19-tool workbench.
  *
- * Modes (click on the button to expand):
- *   - Visible   → grab the current viewport, exactly what the user sees.
- *   - Full page → stitch together every scrolled tile to capture the entire
- *                 scrollable document.
- *   - Region    → inject the area-selector overlay; the user drags a
- *                 rectangle; we crop & save.
- *   - Element   → inject the element picker; the user hovers / clicks an
- *                 element; we save just that element.
+ * All modes capture the page the user was browsing before opening Loadix (the
+ * SW remembers the last non-Loadix tab):
+ *   - Visible   → the viewport of that page, exactly as the user saw it.
+ *   - Full page → stitch together every scrolled tile of that page.
+ *   - Region    → dim that page and drag a rectangle; we crop it.
+ *   - Element   → hover/click an element on that page; we crop to it.
  *
- * Result preview: a thumbnail appears in the popover, with copy-to-clipboard
- * and download. Errors are surfaced inline (no alert()).
+ * Results: viewport captures return a thumbnail preview into this popover
+ * (with auto-copy to the clipboard); region/element picks leave a floating
+ * card with copy/save actions on the captured page itself — the WeChat/
+ * Snipaste-style flow. Errors are surfaced inline (no alert()).
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { Camera, Copy, Download, Loader2, AlertTriangle, Eye, FileImage, Crop, MousePointer2, X } from 'lucide-react';
+import { Camera, Check, Copy, Download, Loader2, AlertTriangle, Eye, FileImage, Crop, MousePointer2, X } from 'lucide-react';
 import type { CaptureMode, CaptureRequest, CaptureResult } from '@/shared/capture';
 
 type Phase = 'idle' | 'picking' | 'capturing';
@@ -53,6 +53,7 @@ export function CapturePopover() {
   const [open, setOpen] = useState(false);
   const [phase, setPhase] = useState<Phase>('idle');
   const [result, setResult] = useState<CaptureResult | null>(null);
+  const [copied, setCopied] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
 
   // Close on outside click / Escape.
@@ -76,22 +77,20 @@ export function CapturePopover() {
   useEffect(() => {
     if (open) return;
     setResult(null);
+    setCopied(false);
     setPhase('idle');
   }, [open]);
 
-  // Single response listener (registered once, handshakes on every capture).
-  // Only available in the extension build; the web build is opened directly
-  // in a tab and has no chrome.runtime to listen on.
-  useEffect(() => {
-    if (typeof chrome === 'undefined' || !chrome.runtime?.onMessage) return;
-    const listener = (msg: unknown) => {
-      const m = msg as CaptureResult | undefined;
-      if (!m || m.type !== 'CAPTURE_RESULT') return;
-      setResult(m);
-      setPhase('idle');
-    };
-    chrome.runtime.onMessage.addListener(listener);
-    return () => chrome.runtime.onMessage.removeListener(listener);
+  // Best-effort copy: most screenshot tools put the image on the clipboard
+  // as soon as the capture lands. Falls back silently — the Copy button stays.
+  const autoCopy = useCallback(async (dataUrl: string) => {
+    try {
+      const blob = await dataUrlToBlob(dataUrl);
+      await copyBlobToClipboard(blob);
+      setCopied(true);
+    } catch {
+      setCopied(false);
+    }
   }, []);
 
   const request = useCallback(async (mode: CaptureMode, selector?: string) => {
@@ -105,7 +104,8 @@ export function CapturePopover() {
       return;
     }
     setResult(null);
-    setPhase(mode === 'selection' || mode === 'element' && !selector ? 'picking' : 'capturing');
+    setCopied(false);
+    setPhase(mode === 'selection' || (mode === 'element' && !selector) ? 'picking' : 'capturing');
     const req: CaptureRequest = {
       type: 'CAPTURE_REQUEST',
       mode,
@@ -113,7 +113,12 @@ export function CapturePopover() {
       ...(selector ? { selector } : {}),
     };
     try {
-      await chrome.runtime.sendMessage(req);
+      // The SW answers through sendResponse: the resolved value IS the result.
+      // (It never broadcasts CAPTURE_RESULT over onMessage.)
+      const res = (await chrome.runtime.sendMessage(req)) as CaptureResult | undefined;
+      if (!res) throw new Error('The extension did not respond. Reload the dashboard and retry.');
+      setResult(res);
+      if (res.ok && res.dataUrl && !res.onPage) void autoCopy(res.dataUrl);
     } catch (e) {
       setResult({
         type: 'CAPTURE_RESULT',
@@ -121,9 +126,10 @@ export function CapturePopover() {
         filename: 'loadix.png',
         error: e instanceof Error ? e.message : String(e),
       });
+    } finally {
       setPhase('idle');
     }
-  }, [t]);
+  }, [autoCopy, t]);
 
   // Mode tiles: icon + label + sub-label.
   const modes: Array<{ id: CaptureMode; icon: typeof Eye; key: string }> = [
@@ -134,7 +140,9 @@ export function CapturePopover() {
   ];
 
   const error = result && !result.ok ? result.error : null;
-  const previewUrl = result?.ok ? result.dataUrl : null;
+  // Region / element picks show their result as a card on the captured page,
+  // so there is nothing to preview here.
+  const previewUrl = result?.ok && !result.onPage ? result.dataUrl : null;
 
   return (
     <div ref={popoverRef} className="relative">
@@ -228,6 +236,7 @@ export function CapturePopover() {
                         try {
                           const blob = await dataUrlToBlob(previewUrl);
                           await copyBlobToClipboard(blob);
+                          setCopied(true);
                         } catch (e) {
                           // Fallback: at least let the user copy the data URL.
                           await navigator.clipboard.writeText(previewUrl).catch(() => {});
@@ -236,8 +245,8 @@ export function CapturePopover() {
                       }}
                       className="ghost-btn flex flex-1 items-center justify-center gap-1.5"
                     >
-                      <Copy size={13} />
-                      {t('capture.copy')}
+                      {copied ? <Check size={13} /> : <Copy size={13} />}
+                      {copied ? t('capture.copied') : t('capture.copy')}
                     </button>
                     <button
                       onClick={() => downloadDataUrl(previewUrl, result.filename)}
@@ -247,6 +256,12 @@ export function CapturePopover() {
                       {t('capture.download')}
                     </button>
                   </div>
+                </div>
+              )}
+              {phase === 'idle' && result?.ok && result.onPage && (
+                <div className="flex items-center gap-2 rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-[12px] text-primary">
+                  <Check size={14} className="shrink-0" />
+                  {t('capture.on_page')}
                 </div>
               )}
               {phase === 'idle' && !result && (

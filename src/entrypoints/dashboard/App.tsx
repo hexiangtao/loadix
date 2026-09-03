@@ -54,6 +54,11 @@ const DEFAULT_ASSERTIONS: Assertion[] = [
   { type: 'latency', value: '1000' },
 ];
 
+/** True when running inside the installed extension (chrome.runtime is only
+ *  exposed to extension pages). The web build cannot snapshot arbitrary pages,
+ *  so extension-only UI (the capture launcher) is hidden there. */
+const IS_EXTENSION = typeof chrome !== 'undefined' && !!chrome.runtime?.id;
+
 const SECTION_META = {
   request: ['sections.request.title', 'sections.request.desc'],
   load: ['sections.load.title', 'sections.load.desc'],
@@ -354,7 +359,7 @@ export default function App({ host }: { host: EngineHost }) {
               </option>
             ))}
           </select>
-          <CapturePopover />
+          {IS_EXTENSION && <CapturePopover />}
           {view === 'loadtest' && (
             <>
               <button className="nav-btn" onClick={handleNew}>
