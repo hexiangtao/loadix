@@ -304,7 +304,7 @@ export function MarkdownTool({ initialPayload }: MarkdownToolProps) {
         ) : mode === 'preview' ? (
           <div className="flex min-h-0 flex-1 flex-col">
             <label className="mb-1.5 text-xs font-semibold text-muted">{t('tools.markdown.preview')}</label>
-            <div className="min-h-[320px] flex-1 overflow-auto rounded-lg border border-line bg-panel px-6 py-4">
+            <div className="min-h-[320px] flex-1 overflow-auto rounded-lg border border-line bg-panel px-6 py-4 sm:px-8 sm:py-6 md:px-10 md:py-8">
               {preview}
             </div>
           </div>
@@ -322,7 +322,7 @@ export function MarkdownTool({ initialPayload }: MarkdownToolProps) {
             </div>
             <div className="flex min-h-0 flex-col">
               <label className="mb-1.5 text-xs font-semibold text-muted">{t('tools.markdown.preview')}</label>
-              <div className="min-h-[260px] flex-1 overflow-auto rounded-lg border border-line bg-panel px-4 py-3">
+              <div className="min-h-[260px] flex-1 overflow-auto rounded-lg border border-line bg-panel px-6 py-4">
                 {preview}
               </div>
             </div>

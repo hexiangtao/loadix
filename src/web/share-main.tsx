@@ -142,7 +142,7 @@ function ShareApp() {
                 bordered canvas (like the workbench preview pane) that still
                 fills the column fluidly on wide monitors. */}
             {(state.status === 'loading' || state.status === 'ready') && (
-              <div className="rounded-xl border border-line bg-panel px-5 py-5 shadow-sm sm:px-8 sm:py-6 md:px-10 md:py-8">
+              <div className="rounded-xl border border-line bg-panel px-6 py-4 shadow-sm sm:px-8 sm:py-6 md:px-10 md:py-8">
                 {state.status === 'loading' && (
                   <div aria-label={t('share.loading')} className="space-y-3" role="status">
                     <div className="h-6 w-1/2 animate-pulse rounded-md bg-hover" />
