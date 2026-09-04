@@ -6,10 +6,23 @@
   font-size: 13.5px;
   line-height: 1.7;
   color: var(--color-ink);
-  /* The renderer is fluid: the surrounding layout (tool pane, share viewer,
-     export host) decides the column width, so the document uses the available
-     space instead of leaving dead gutters on wide displays. Narrow panes
-     (split mode, laptops) simply flow at their natural width. */
+  /* Fluid by default: the surrounding layout (tool pane, share viewer, export
+     host) decides the column width, so content uses the available space
+     instead of leaving dead gutters on wide displays. Narrow panes (split
+     mode, laptops) simply flow at their natural width. This is also an
+     inline-size container so running text can take a readable measure only
+     once the pane is wide enough (see below). */
+  container-type: inline-size;
+}
+
+/* Running text keeps a readable measure on wide panes while content blocks —
+   mermaid diagrams, tables, code, rules — break out to the full column width.
+   Below the threshold the pane is narrow enough that paragraphs flow
+   naturally, and capping them would only add ragged whitespace. */
+@container (min-width: 75rem) {
+  .md-prose :is(h1, h2, h3, h4, h5, h6, p, li, blockquote) {
+    max-width: 42em;
+  }
 }
 
 /* Full-bleed contexts (the share viewer) — explicit marker so a future
