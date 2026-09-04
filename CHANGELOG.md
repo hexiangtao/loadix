@@ -1,3 +1,10 @@
+# [1.32.0](https://github.com/hexiangtao/loadix/compare/v1.31.0...v1.32.0) (2026-09-04)
+
+
+### Features
+
+* **markdown:** share rendered documents via link ([5b972b1](https://github.com/hexiangtao/loadix/commit/5b972b1ea942ccbdf0997c0db27016045f0cca6e))
+
 # [1.31.0](https://github.com/hexiangtao/loadix/compare/v1.30.0...v1.31.0) (2026-09-04)
 
 
