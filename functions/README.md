@@ -23,20 +23,23 @@ design** (unguessable id, no auth) — the share dialog tells the user this.
 
 ## One-time Cloudflare setup (required before first deploy)
 
-1. **Create the Pages project** (or connect the repo). Project name used by
-   CI: `loadix-lab` (change `.github/workflows/ci.yml` if you pick another).
+1. **Connect the GitHub repo to Cloudflare Pages** (Workers & Pages →
+   *Create → Pages → Connect to Git* → this repo). Build settings:
+   framework preset **None**, build command `npm run build:web`, output
+   directory `dist/web`. Project name `loadix-lab`. Every push to `main`
+   then auto-builds and deploys the app **and** the `functions/` routes —
+   no CI job or repo secrets involved.
 2. **Create the KV namespace**:
    `npx wrangler kv namespace create SHARE_KV`
 3. **Bind it to the Pages project** — Cloudflare dashboard → the Pages
    project → *Settings → Functions → KV namespace bindings* → add
    `SHARE_KV`. Pages Functions read `env.SHARE_KV` from this binding;
    without it `/api/share` 500s.
-4. **Add repo secrets** (GitHub → repo → Settings → Secrets → Actions):
-   `CLOUDFLARE_API_TOKEN` (token with `cloudflare_pages:edit` +
-   `workers_kv:edit` permissions) and `CLOUDFLARE_ACCOUNT_ID`.
 
-After that, every push to `main` deploys the web app + functions via the
-`deploy-web` job.
+Deploys without a Git connection are possible too:
+`npx wrangler pages deploy dist/web --project-name=loadix-lab --branch=main`
+(requires a Cloudflare API token with `cloudflare_pages:edit` +
+`workers_kv:edit`).
 
 ## Local development
 
