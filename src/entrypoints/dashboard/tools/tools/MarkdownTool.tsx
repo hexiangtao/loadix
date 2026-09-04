@@ -3,13 +3,18 @@ import { createRoot, type Root } from 'react-dom/client';
 import { useTranslation } from 'react-i18next';
 import { toPng } from 'html-to-image';
 import {
+  Check,
   Columns2,
+  Copy,
+  ExternalLink,
   Eye,
   ImageDown,
   Loader2,
   PencilLine,
+  Share2,
   Sparkles,
   TextQuote,
+  X,
   type LucideIcon,
 } from 'lucide-react';
 import { ToolShell } from '../ToolShell';
@@ -63,12 +68,18 @@ export function MarkdownTool({ initialPayload }: MarkdownToolProps) {
   const [scale, setScale] = useState(2);
   const [exporting, setExporting] = useState(false);
   const [exportFailed, setExportFailed] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const [shareDialog, setShareDialog] = useState<ShareDialogState | null>(null);
   const areaRef = useRef<HTMLDivElement>(null);
   const failTimerRef = useRef<number | undefined>(undefined);
 
   useEffect(() => () => window.clearTimeout(failTimerRef.current), []);
 
   const showPreview = input.trim().length > 0;
+
+  // The share API is hosted on the web build (lab.loadix.dev); the extension
+  // dashboard has no backend, so the button only appears in http(s) contexts.
+  const canShare = /^https?:$/.test(window.location.protocol);
 
   const preview = showPreview ? (
     <MarkdownPreview source={input} />
@@ -163,6 +174,42 @@ export function MarkdownTool({ initialPayload }: MarkdownToolProps) {
     }
   };
 
+  /**
+   * POSTs the current source to the share API and opens the result dialog
+   * with the link. Failures map to a friendly, retryable message.
+   */
+  const shareDoc = async () => {
+    if (sharing || !showPreview) return;
+    setSharing(true);
+    try {
+      const res = await fetch('/api/share', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ source: input }),
+      });
+      const data = (await res.json().catch(() => null)) as { id?: string; error?: string } | null;
+      if (!res.ok) {
+        setShareDialog({
+          status: 'error',
+          reason: data?.error === 'source_too_large' ? 'too-large' : 'generic',
+        });
+        return;
+      }
+      if (!data?.id) throw new Error('Share response missing id');
+      const url = `${window.location.origin}/s/${data.id}`;
+      // Copy immediately — still inside the click's user-activation window, so
+      // no extra permission prompt is needed on first use. If the clipboard is
+      // denied the dialog falls back to the pre-selected URL + manual button.
+      const autoCopied = await copyToClipboard(url);
+      setShareDialog({ status: 'ready', url, autoCopied });
+    } catch (e) {
+      console.error('[markdown] share failed:', e);
+      setShareDialog({ status: 'error', reason: 'generic' });
+    } finally {
+      setSharing(false);
+    }
+  };
+
   return (
     <ToolShell icon={TextQuote} title={t('tools.markdown.name')}>
       <div ref={areaRef} className="flex min-h-0 flex-1 flex-col">
@@ -226,6 +273,17 @@ export function MarkdownTool({ initialPayload }: MarkdownToolProps) {
                 {exportFailed ? t('tools.markdown.exportFailed') : t('tools.markdown.exportFull')}
               </button>
             </div>
+            {canShare && (
+              <button
+                onClick={() => void shareDoc()}
+                disabled={sharing || !showPreview}
+                title={t('tools.markdown.shareHint')}
+                className="flex items-center gap-1.5 rounded-lg border border-line bg-panel px-3 py-1.5 text-xs font-semibold text-muted transition-colors duration-150 hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-45"
+              >
+                {sharing ? <Loader2 size={13} className="animate-spin" /> : <Share2 size={13} />}
+                {sharing ? t('tools.markdown.sharing') : t('tools.markdown.share')}
+              </button>
+            )}
           </div>
         </div>
 
@@ -268,8 +326,179 @@ export function MarkdownTool({ initialPayload }: MarkdownToolProps) {
           </div>
         )}
       </div>
+
+      {shareDialog && (
+        <ShareDialog
+          dialog={shareDialog}
+          onClose={() => setShareDialog(null)}
+          onRetry={() => {
+            setShareDialog(null);
+            void shareDoc();
+          }}
+        />
+      )}
     </ToolShell>
   );
+}
+
+/** State of the share-action dialog. */
+type ShareDialogState =
+  | { status: 'ready'; url: string; autoCopied: boolean }
+  | { status: 'error'; reason: 'generic' | 'too-large' };
+
+/**
+ * Share result sheet. The link was copied as soon as it was created (see
+ * shareDoc), so by the time the sheet opens the job is already done — it
+ * confirms with ✓ 已复制 and keeps the URL handy for a re-copy or preview.
+ * When the clipboard was denied, the URL is pre-selected so ⌘/Ctrl+C still
+ * works, and the manual button remains.
+ */
+function ShareDialog({
+  dialog,
+  onClose,
+  onRetry,
+}: {
+  dialog: ShareDialogState;
+  onClose: () => void;
+  onRetry: () => void;
+}) {
+  const { t } = useTranslation();
+  const [copied, setCopied] = useState(() => dialog.status === 'ready' && dialog.autoCopied);
+  const linkRef = useRef<HTMLInputElement>(null);
+  const revertTimerRef = useRef<number | undefined>(undefined);
+
+  useEffect(() => () => window.clearTimeout(revertTimerRef.current), []);
+
+  // Select the whole link the moment it appears.
+  useEffect(() => {
+    if (dialog.status === 'ready') {
+      const id = window.setTimeout(() => {
+        linkRef.current?.focus();
+        linkRef.current?.select();
+      }, 40);
+      return () => window.clearTimeout(id);
+    }
+  }, [dialog]);
+
+  // Escape closes.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  const handleCopy = async () => {
+    if (dialog.status !== 'ready') return;
+    const ok = await copyToClipboard(dialog.url);
+    if (!ok) return; // link stays selected — Ctrl/Cmd+C still works
+    setCopied(true);
+    window.clearTimeout(revertTimerRef.current);
+    revertTimerRef.current = window.setTimeout(() => setCopied(false), 1500);
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-[2px]"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        className="w-[min(420px,92vw)] rounded-xl border border-line bg-panel p-4 shadow-2xl"
+      >
+        <div className="mb-3.5 flex items-center justify-between">
+          <h3 className="text-[14px] font-bold">{t('tools.markdown.shareDialogTitle')}</h3>
+          <button
+            onClick={onClose}
+            aria-label={t('tools.markdown.shareDone')}
+            className="cursor-pointer rounded-md p-1 text-muted transition-colors duration-150 hover:bg-hover hover:text-ink"
+          >
+            <X size={15} />
+          </button>
+        </div>
+
+        {dialog.status === 'ready' ? (
+          <div className="flex items-center rounded-lg border border-line bg-panel pl-3 transition-colors duration-150 focus-within:border-primary">
+            <input
+              ref={linkRef}
+              readOnly
+              value={dialog.url}
+              aria-label={t('tools.markdown.shareUrlLabel')}
+              onFocus={(e) => e.currentTarget.select()}
+              className="w-full min-w-0 bg-transparent font-mono text-[12.5px] text-ink outline-none"
+            />
+            <button
+              onClick={() => window.open(dialog.url, '_blank', 'noopener')}
+              aria-label={t('tools.markdown.shareOpen')}
+              title={t('tools.markdown.shareOpen')}
+              className="shrink-0 cursor-pointer rounded-md p-2 text-muted transition-colors duration-150 hover:bg-hover hover:text-ink"
+            >
+              <ExternalLink size={14} />
+            </button>
+            <button
+              onClick={() => void handleCopy()}
+              className={`flex shrink-0 cursor-pointer items-center gap-1 rounded-md px-2.5 py-2 text-xs font-semibold transition-colors duration-150 ${
+                copied ? 'text-success' : 'text-primary hover:bg-primary/10'
+              }`}
+            >
+              {copied ? <Check size={13} /> : <Copy size={13} />}
+              {copied ? t('tools.copied') : t('tools.copy')}
+            </button>
+          </div>
+        ) : (
+          <>
+            <p className="text-[13px] leading-relaxed text-muted">
+              {dialog.reason === 'too-large'
+                ? t('tools.markdown.shareTooLarge')
+                : t('tools.markdown.shareFailed')}
+            </p>
+            <div className="mt-4 flex justify-end">
+              <button className="ghost-btn" onClick={onRetry}>
+                {t('tools.markdown.shareRetry')}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Writes text to the clipboard: Async Clipboard API first, then the legacy
+ * textarea + execCommand path (covers insecure contexts and browsers without
+ * the API). Never throws — resolves false when every path is denied so the
+ * caller can fall back to its own affordance.
+ */
+async function copyToClipboard(text: string): Promise<boolean> {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {
+    // Fall through to the legacy path below.
+  }
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.top = '0';
+    ta.style.left = '-9999px';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand('copy');
+    ta.remove();
+    return ok;
+  } catch {
+    return false;
+  }
 }
 
 /* ——— Full-document export helpers ——— */

@@ -1,0 +1,3 @@
+# Cloudflare Pages rewrites: any share link serves the read-only viewer page;
+# the browser keeps /s/<id> in the path so the viewer can read the id.
+/s/*  /share.html  200

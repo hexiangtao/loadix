@@ -348,7 +348,17 @@
       "exportFailed": "导出失败",
       "exportFull": "导出长图",
       "exportFullHint": "将整篇文档渲染为 PNG 长图",
-      "exportScale": "导出缩放比例"
+      "exportScale": "导出缩放比例",
+      "share": "分享链接",
+      "shareHint": "生成一个渲染文档的分享链接",
+      "sharing": "分享中…",
+      "shareDialogTitle": "分享链接",
+      "shareUrlLabel": "链接",
+      "shareOpen": "在新标签页中打开",
+      "shareDone": "关闭",
+      "shareFailed": "分享失败。",
+      "shareRetry": "重试",
+      "shareTooLarge": "文档过大，无法生成分享链接。"
     },
     "diff": {
       "name": "文本对比",
@@ -366,5 +376,14 @@
       "presets": "快速:",
       "matches": "匹配"
     }
+  },
+  "share": {
+    "loading": "正在加载分享的文档…",
+    "loadError": "无法加载分享的文档。",
+    "notFound": "该分享文档不存在或已失效。",
+    "retry": "重试",
+    "badge": "分享",
+    "home": "loadix.dev",
+    "renderedBy": "由 Loadix 渲染"
   }
 }

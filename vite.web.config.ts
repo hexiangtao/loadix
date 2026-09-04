@@ -4,6 +4,8 @@ import tailwindcss from '@tailwindcss/vite';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+const resolve = (p: string) => path.resolve(__dirname, p);
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Standalone Vite build for the web (non-extension) version of Loadix.
@@ -20,5 +22,13 @@ export default defineConfig({
   build: {
     outDir: path.resolve(__dirname, 'dist/web'),
     emptyOutDir: true,
+    // Multi-page: the workbench (index.html) plus the lean read-only viewer
+    // (share.html) that renders shared markdown documents at /s/<id>.
+    rollupOptions: {
+      input: {
+        'index.html': resolve('src/web/index.html'),
+        'share.html': resolve('src/web/share.html'),
+      },
+    },
   },
 });

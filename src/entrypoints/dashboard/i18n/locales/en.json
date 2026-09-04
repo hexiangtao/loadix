@@ -348,7 +348,17 @@
       "exportFailed": "Export failed",
       "exportFull": "Export image",
       "exportFullHint": "Render the whole document to a PNG long image",
-      "exportScale": "Export scale"
+      "exportScale": "Export scale",
+      "share": "Share link",
+      "shareHint": "Create a shareable link to the rendered document",
+      "sharing": "Sharing…",
+      "shareDialogTitle": "Share link",
+      "shareUrlLabel": "Link",
+      "shareOpen": "Open in a new tab",
+      "shareDone": "Close",
+      "shareFailed": "Could not share this document.",
+      "shareRetry": "Try again",
+      "shareTooLarge": "The document is too large to share as a link."
     },
     "diff": {
       "name": "Diff",
@@ -366,5 +376,14 @@
       "presets": "Quick:",
       "matches": "Matches"
     }
+  },
+  "share": {
+    "loading": "Loading shared document…",
+    "loadError": "Could not load the shared document.",
+    "notFound": "This shared document does not exist or is no longer available.",
+    "retry": "Try again",
+    "badge": "Shared",
+    "home": "loadix.dev",
+    "renderedBy": "Rendered by Loadix"
   }
 }
