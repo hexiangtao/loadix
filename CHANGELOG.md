@@ -1,3 +1,10 @@
+## [1.33.1](https://github.com/hexiangtao/loadix/compare/v1.33.0...v1.33.1) (2026-09-04)
+
+
+### Bug Fixes
+
+* **markdown:** share links survive hosts that redirect /s/* to a clean path ([5388a8f](https://github.com/hexiangtao/loadix/commit/5388a8fbb8fdf1f4a3e3417cb9ad8f6ce6fec10f))
+
 # [1.33.0](https://github.com/hexiangtao/loadix/compare/v1.32.0...v1.33.0) (2026-09-04)
 
 
