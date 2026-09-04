@@ -343,7 +343,12 @@
       "diagramError": "图表渲染失败",
       "modeSplit": "分栏",
       "modeEdit": "编辑",
-      "modePreview": "预览"
+      "modePreview": "预览",
+      "exportImage": "导出 PNG",
+      "exportFailed": "导出失败",
+      "exportFull": "导出长图",
+      "exportFullHint": "将整篇文档渲染为 PNG 长图",
+      "exportScale": "导出缩放比例"
     },
     "diff": {
       "name": "文本对比",

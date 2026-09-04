@@ -170,6 +170,63 @@
   overflow: auto;
 }
 .md-mermaid svg { max-width: 100%; height: auto; }
+.md-mermaid-svg { display: contents; } /* keep the svg itself as the centered flex item */
+
+/* Export button — hover-revealed ghost in the diagram corner */
+.md-mermaid-wrap { position: relative; }
+.md-mermaid-export {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 9px;
+  border: 1px solid var(--color-line);
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--color-panel) 88%, transparent);
+  backdrop-filter: blur(6px);
+  color: var(--color-muted);
+  font-size: 11.5px;
+  font-weight: 500;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(-2px);
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.md-mermaid-wrap:hover .md-mermaid-export,
+.md-mermaid-export:focus-visible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+.md-mermaid-export:hover {
+  color: var(--color-primary);
+  border-color: color-mix(in srgb, var(--color-primary) 45%, var(--color-line));
+}
+.md-mermaid-export:disabled {
+  cursor: default;
+  opacity: 0.55;
+  pointer-events: none;
+}
+.md-mermaid-export.failed {
+  color: var(--color-danger);
+  border-color: color-mix(in srgb, var(--color-danger) 45%, var(--color-line));
+}
+.md-mermaid-export-spin {
+  width: 11px;
+  height: 11px;
+  border: 1.5px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: md-export-rotate 0.7s linear infinite;
+}
+@keyframes md-export-rotate {
+  to { transform: rotate(360deg); }
+}
 .md-mermaid-skeleton {
   height: 110px;
   display: flex;

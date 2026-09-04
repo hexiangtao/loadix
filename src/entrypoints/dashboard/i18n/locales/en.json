@@ -343,7 +343,12 @@
       "diagramError": "Could not render this diagram",
       "modeSplit": "Split",
       "modeEdit": "Edit",
-      "modePreview": "Preview"
+      "modePreview": "Preview",
+      "exportImage": "Export PNG",
+      "exportFailed": "Export failed",
+      "exportFull": "Export image",
+      "exportFullHint": "Render the whole document to a PNG long image",
+      "exportScale": "Export scale"
     },
     "diff": {
       "name": "Diff",
