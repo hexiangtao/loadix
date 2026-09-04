@@ -196,7 +196,10 @@ export function MarkdownTool({ initialPayload }: MarkdownToolProps) {
         return;
       }
       if (!data?.id) throw new Error('Share response missing id');
-      const url = `${window.location.origin}/s/${data.id}`;
+      // The id rides in both the path and the query: hosts that redirect /s/*
+      // to a clean path keep the query (but drop the path id), so the viewer
+      // can recover the document either way.
+      const url = `${window.location.origin}/s/${data.id}?id=${data.id}`;
       // Copy immediately — still inside the click's user-activation window, so
       // no extra permission prompt is needed on first use. If the clipboard is
       // denied the dialog falls back to the pre-selected URL + manual button.

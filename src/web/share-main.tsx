@@ -35,10 +35,19 @@ type ViewState =
   | { status: 'not-found' }
   | { status: 'error' };
 
-/** Pulls the share id out of a /s/<id> path (the browser keeps the URL during the Pages rewrite). */
-function shareIdFromPath(): string | null {
-  const m = /\/s\/([A-Za-z0-9_-]{4,64})(?:\/|$)/.exec(window.location.pathname);
-  return m?.[1] ?? null;
+/**
+ * Pulls the share id out of the URL. Two carriers, because hosts differ:
+ *  - path /s/<id>: the Pages rewrite keeps the URL, so the id lives in the path;
+ *  - query ?id=<id> (or ?share=<id>): some deployments redirect /s/* to a
+ *    clean path, dropping the path id but preserving the query string — links
+ *    carry the id redundantly so they survive both kinds of host.
+ */
+function shareIdFromUrl(): string | null {
+  const fromPath = /\/s\/([A-Za-z0-9_-]{4,64})(?:\/|$)/.exec(window.location.pathname);
+  if (fromPath) return fromPath[1] ?? null;
+  const search = new URLSearchParams(window.location.search);
+  const fromQuery = search.get('id') || search.get('share');
+  return fromQuery && /^[A-Za-z0-9_-]{4,64}$/.test(fromQuery) ? fromQuery : null;
 }
 
 /** Follows the OS theme by toggling `.dark` — the app's CSS tokens are var-based, so both themes work. */
@@ -55,7 +64,7 @@ function useSystemTheme() {
 function ShareApp() {
   useSystemTheme();
   const { t } = useTranslation();
-  const [id] = useState(shareIdFromPath);
+  const [id] = useState(shareIdFromUrl);
   const [state, setState] = useState<ViewState>(() =>
     id ? { status: 'loading' } : { status: 'not-found' },
   );
