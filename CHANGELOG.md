@@ -1,3 +1,10 @@
+# [1.33.0](https://github.com/hexiangtao/loadix/compare/v1.32.0...v1.33.0) (2026-09-04)
+
+
+### Features
+
+* **tools:** funnel the share viewer to the toolbox and use full width ([add75ec](https://github.com/hexiangtao/loadix/commit/add75ecc77403b3dc5615b5bd598ace07b7cba3a))
+
 # [1.32.0](https://github.com/hexiangtao/loadix/compare/v1.31.0...v1.32.0) (2026-09-04)
 
 
