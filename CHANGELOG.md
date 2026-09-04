@@ -1,3 +1,10 @@
+# [1.31.0](https://github.com/hexiangtao/loadix/compare/v1.30.0...v1.31.0) (2026-09-04)
+
+
+### Features
+
+* **markdown:** export diagrams and full document as PNG ([ee26321](https://github.com/hexiangtao/loadix/commit/ee263216e30d4e5f1912e1bc11d219e480c0327e))
+
 # [1.30.0](https://github.com/hexiangtao/loadix/compare/v1.29.0...v1.30.0) (2026-09-04)
 
 
