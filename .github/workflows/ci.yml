@@ -6,6 +6,13 @@ on:
   pull_request:
     branches: [main]
 
+# A new push to the same branch supersedes any still-running pipeline: quick
+# follow-up commits cancel the previous run instead of stacking several full
+# npm-ci + build pipelines (each run reinstalls the tree three times).
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -20,7 +27,11 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        # Cold installs are slow and npm prints nothing until the end, so the
+        # step can look hung. Fail loudly past 15 min; audits off to cut the
+        # extra registry chatter that stalls installs.
+        timeout-minutes: 15
+        run: npm ci --no-audit --no-fund
 
       - name: Type check
         run: npm run compile
@@ -66,7 +77,11 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        # Cold installs are slow and npm prints nothing until the end, so the
+        # step can look hung. Fail loudly past 15 min; audits off to cut the
+        # extra registry chatter that stalls installs.
+        timeout-minutes: 15
+        run: npm ci --no-audit --no-fund
 
       - name: Download extension artifact
         uses: actions/download-artifact@v4
@@ -99,7 +114,11 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        # Cold installs are slow and npm prints nothing until the end, so the
+        # step can look hung. Fail loudly past 15 min; audits off to cut the
+        # extra registry chatter that stalls installs.
+        timeout-minutes: 15
+        run: npm ci --no-audit --no-fund
 
       - name: Build web app
         run: npm run build:web
