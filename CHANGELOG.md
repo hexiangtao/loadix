@@ -1,3 +1,10 @@
+# [1.28.0](https://github.com/hexiangtao/loadix/compare/v1.27.1...v1.28.0) (2026-09-04)
+
+
+### Features
+
+* **markdown:** professional rendering with mermaid, katex and highlighting ([19514c7](https://github.com/hexiangtao/loadix/commit/19514c75e35b9e13d02b6209fb6fdd8f0b52da25))
+
 ## [1.27.1](https://github.com/hexiangtao/loadix/compare/v1.27.0...v1.27.1) (2026-09-03)
 
 
