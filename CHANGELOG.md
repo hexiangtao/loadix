@@ -1,3 +1,10 @@
+# [1.30.0](https://github.com/hexiangtao/loadix/compare/v1.29.0...v1.30.0) (2026-09-04)
+
+
+### Features
+
+* **tools:** collapsible sidebar with icon-only strip ([b23c204](https://github.com/hexiangtao/loadix/commit/b23c2045da33ba0c53e7aa8ed29fce25e67702cd))
+
 # [1.29.0](https://github.com/hexiangtao/loadix/compare/v1.28.0...v1.29.0) (2026-09-04)
 
 
