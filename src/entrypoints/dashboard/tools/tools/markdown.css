@@ -6,6 +6,11 @@
   font-size: 13.5px;
   line-height: 1.7;
   color: var(--color-ink);
+  /* Wide panes (preview-only mode on large displays) stay readable: cap the
+     rendered column at a comfortable measure and centre it. Below the cap
+     (split mode) this has no visible effect. */
+  max-width: 80rem;
+  margin-inline: auto;
 }
 
 .md-prose > :first-child { margin-top: 0 !important; }

@@ -479,7 +479,7 @@ export default function App({ host }: { host: EngineHost }) {
           </section>
         </main>
       ) : (
-        <main className="mx-auto max-w-[1500px] px-7 py-7">
+        <main className="mx-auto w-full px-7 py-7">
           <ToolsWorkspace activeTool={activeTool ?? 'base64'} onSelect={openTool}>
             <ToolView id={activeTool ?? 'base64'} payload={toolPayload} />
           </ToolsWorkspace>

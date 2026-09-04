@@ -128,6 +128,10 @@
     "more": "More",
     "allTools": "All tools…",
     "palettePlaceholder": "Search tools (JWT, Base64, Regex, JSON…)",
+    "filter": "Filter tools…",
+    "smartPaste": "Paste anything — JSON, JWT, Markdown…",
+    "openWith": "Open with {{label}}",
+    "pickTool": "Pick a tool:",
     "noResults": "No matching tools",
     "local": "Local",
     "localHint": "Runs entirely in your browser — your data never leaves this device.",
@@ -334,7 +338,10 @@
       "empty": "Start typing markdown on the left…",
       "sample": "Insert sample",
       "sampleHint": "Load a sample document: tables, code, math and Mermaid diagrams",
-      "diagramError": "Could not render this diagram"
+      "diagramError": "Could not render this diagram",
+      "modeSplit": "Split",
+      "modeEdit": "Edit",
+      "modePreview": "Preview"
     },
     "diff": {
       "name": "Diff",
