@@ -71,6 +71,15 @@ export const GROUPS: { id: ToolGroup; labelKey: string }[] = [
 
 export const TOOLS: Tool[] = [
   {
+    id: 'markdown',
+    nameKey: 'tools.markdown.name',
+    descKey: 'tools.markdown.desc',
+    keywords: ['markdown', 'md', 'preview', 'readme', '预览', '文档'],
+    group: 'format',
+    icon: TextQuote,
+    component: MarkdownTool,
+  },
+  {
     id: 'base64',
     nameKey: 'tools.base64.name',
     descKey: 'tools.base64.desc',
@@ -213,15 +222,6 @@ export const TOOLS: Tool[] = [
     group: 'encode',
     icon: Binary,
     component: HashTool,
-  },
-  {
-    id: 'markdown',
-    nameKey: 'tools.markdown.name',
-    descKey: 'tools.markdown.desc',
-    keywords: ['markdown', 'md', 'preview', 'readme', '预览', '文档'],
-    group: 'format',
-    icon: TextQuote,
-    component: MarkdownTool,
   },
   {
     id: 'color',

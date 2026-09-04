@@ -382,7 +382,7 @@
     "loadError": "无法加载分享的文档。",
     "notFound": "该分享文档不存在或已失效。",
     "retry": "重试",
-    "badge": "分享",
+    "openToolbox": "打开工具箱",
     "home": "loadix.dev",
     "renderedBy": "由 Loadix 渲染"
   }

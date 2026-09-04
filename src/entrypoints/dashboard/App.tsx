@@ -71,19 +71,32 @@ const LANGUAGE_LABELS: Record<SupportedLanguage, string> = {
   fr: 'Français',
 };
 
+/**
+ * Deep link: /?tool=<id> (used by the share viewer's tool rail) opens the
+ * tools workspace with that tool active on first load.
+ */
+function toolFromUrl(): string | null {
+  try {
+    const id = new URLSearchParams(window.location.search).get('tool');
+    return id && findTool(id) ? id : null;
+  } catch {
+    return null;
+  }
+}
+
 export default function App({ host }: { host: EngineHost }) {
   const { t, i18n } = useTranslation();
   const { activeSection, engineState, resultMessage, metrics, setActiveSection, setEngineState, setMetrics, theme, setTheme } =
     useUiStore();
 
   const [view, setView] = useState<'loadtest' | 'tools'>(() =>
-    localStorage.getItem('loadix-view') === 'tools' ? 'tools' : 'loadtest',
+    toolFromUrl() ? 'tools' : localStorage.getItem('loadix-view') === 'tools' ? 'tools' : 'loadtest',
   );
   const [request, setRequest] = useState<RequestFormValue>(DEFAULT_REQUEST);
   const [load, setLoad] = useState<LoadFormValue>(DEFAULT_LOAD);
   const [assertions, setAssertions] = useState<Assertion[]>(DEFAULT_ASSERTIONS);
   const [variables, setVariables] = useState<[string, string][]>([['token', '']]);
-  const [activeTool, setActiveTool] = useState<string | null>('base64');
+  const [activeTool, setActiveTool] = useState<string | null>(() => toolFromUrl() ?? 'base64');
   const [toolPayload, setToolPayload] = useState<string | undefined>(undefined);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const clientRef = useRef<EngineHost | null>(null);

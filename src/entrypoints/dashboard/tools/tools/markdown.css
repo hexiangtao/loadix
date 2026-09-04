@@ -6,11 +6,17 @@
   font-size: 13.5px;
   line-height: 1.7;
   color: var(--color-ink);
-  /* Wide panes (preview-only mode on large displays) stay readable: cap the
-     rendered column at a comfortable measure and centre it. Below the cap
-     (split mode) this has no visible effect. */
-  max-width: 80rem;
-  margin-inline: auto;
+  /* The renderer is fluid: the surrounding layout (tool pane, share viewer,
+     export host) decides the column width, so the document uses the available
+     space instead of leaving dead gutters on wide displays. Narrow panes
+     (split mode, laptops) simply flow at their natural width. */
+}
+
+/* Full-bleed contexts (the share viewer) — explicit marker so a future
+   measure cap can never silently reapply to link-shared documents. */
+.md-prose-wide .md-prose {
+  max-width: none;
+  margin-inline: 0;
 }
 
 .md-prose > :first-child { margin-top: 0 !important; }
