@@ -1,3 +1,10 @@
+# [1.29.0](https://github.com/hexiangtao/loadix/compare/v1.28.0...v1.29.0) (2026-09-04)
+
+
+### Features
+
+* **markdown:** full-width layout with split/edit/preview modes ([023b2d0](https://github.com/hexiangtao/loadix/commit/023b2d0ad7553b37a14c51fdb92682d63c47d645))
+
 # [1.28.0](https://github.com/hexiangtao/loadix/compare/v1.27.1...v1.28.0) (2026-09-04)
 
 
