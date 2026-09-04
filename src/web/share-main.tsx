@@ -138,23 +138,26 @@ function ShareApp() {
           {/* Fluid document column: fills the space right of the tool rail so
               wide diagrams/tables/code actually use the monitor. */}
           <div className="w-full md-prose-wide">
-            {state.status === 'loading' && (
-              <div aria-label={t('share.loading')} className="space-y-3 pt-4" role="status">
-                <div className="h-6 w-1/2 animate-pulse rounded-md bg-hover" />
-                <div className="h-3 w-full animate-pulse rounded bg-hover" />
-                <div className="h-3 w-5/6 animate-pulse rounded bg-hover" />
-                <div className="h-3 w-4/6 animate-pulse rounded bg-hover" />
-                <div className="flex items-center gap-2 pt-2 text-xs text-muted">
-                  <Loader2 size={13} className="animate-spin" />
-                  {t('share.loading')}
-                </div>
-              </div>
-            )}
+            {/* The document reads as a composed page, not a wall of text: a
+                bordered canvas (like the workbench preview pane) that still
+                fills the column fluidly on wide monitors. */}
+            {(state.status === 'loading' || state.status === 'ready') && (
+              <div className="rounded-xl border border-line bg-panel px-5 py-5 shadow-sm sm:px-8 sm:py-6 md:px-10 md:py-8">
+                {state.status === 'loading' && (
+                  <div aria-label={t('share.loading')} className="space-y-3" role="status">
+                    <div className="h-6 w-1/2 animate-pulse rounded-md bg-hover" />
+                    <div className="h-3 w-full animate-pulse rounded bg-hover" />
+                    <div className="h-3 w-5/6 animate-pulse rounded bg-hover" />
+                    <div className="h-3 w-4/6 animate-pulse rounded bg-hover" />
+                    <div className="flex items-center gap-2 pt-2 text-xs text-muted">
+                      <Loader2 size={13} className="animate-spin" />
+                      {t('share.loading')}
+                    </div>
+                  </div>
+                )}
 
-            {state.status === 'ready' && (
-              <article className="pb-10">
-                <MarkdownPreview source={state.source} />
-              </article>
+                {state.status === 'ready' && <MarkdownPreview source={state.source} />}
+              </div>
             )}
 
             {(state.status === 'not-found' || state.status === 'error') && (
