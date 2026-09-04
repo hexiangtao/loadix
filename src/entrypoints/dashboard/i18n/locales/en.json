@@ -129,6 +129,8 @@
     "allTools": "All tools…",
     "palettePlaceholder": "Search tools (JWT, Base64, Regex, JSON…)",
     "filter": "Filter tools…",
+    "collapseSidebar": "Collapse sidebar",
+    "expandSidebar": "Expand sidebar",
     "smartPaste": "Paste anything — JSON, JWT, Markdown…",
     "openWith": "Open with {{label}}",
     "pickTool": "Pick a tool:",

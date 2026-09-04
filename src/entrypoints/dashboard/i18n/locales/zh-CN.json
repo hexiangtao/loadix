@@ -129,6 +129,8 @@
     "allTools": "全部工具…",
     "palettePlaceholder": "搜索工具（JWT、Base64、正则、JSON…）",
     "filter": "筛选工具…",
+    "collapseSidebar": "收起侧栏",
+    "expandSidebar": "展开侧栏",
     "smartPaste": "粘贴任意内容 — JSON、JWT、Markdown…",
     "openWith": "用 {{label}} 打开",
     "pickTool": "选择一个工具：",
