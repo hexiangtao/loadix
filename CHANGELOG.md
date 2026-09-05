@@ -1,3 +1,10 @@
+# [1.44.0](https://github.com/hexiangtao/loadix/compare/v1.43.0...v1.44.0) (2026-09-05)
+
+
+### Features
+
+* **markdown:** outline on the left, collapsed by default (Lark-style) ([8043330](https://github.com/hexiangtao/loadix/commit/80433301978841bb6ea7e4fce3a2010e51c61c4e))
+
 # [1.43.0](https://github.com/hexiangtao/loadix/compare/v1.42.0...v1.43.0) (2026-09-05)
 
 
