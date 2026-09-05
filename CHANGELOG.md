@@ -1,3 +1,10 @@
+# [1.36.0](https://github.com/hexiangtao/loadix/compare/v1.35.0...v1.36.0) (2026-09-05)
+
+
+### Features
+
+* **loadix:** promote URL to TargetBar, slim i18n copy ([b81c5b3](https://github.com/hexiangtao/loadix/commit/b81c5b33b11f54bf6d58fccbc141ae7e421aaff2))
+
 # [1.35.0](https://github.com/hexiangtao/loadix/compare/v1.34.0...v1.35.0) (2026-09-05)
 
 
