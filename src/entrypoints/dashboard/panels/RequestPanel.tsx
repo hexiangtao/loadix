@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ClipboardPaste, Copy, Check, X } from 'lucide-react';
 import type { ContentType, HttpMethod, TestConfig } from '@/shared/types';
 import type { EngineHost } from '@/engine/engine-host';
+import type { ProbeResult } from '@/engine/runner';
 import { parseCurl, toCurl } from '@/shared/curl';
-import { ConnectionProbe } from '../components/ConnectionProbe';
+import { ConnectionProbe, ProbeCard } from '../components/ConnectionProbe';
 
 export interface RequestFormValue {
   method: HttpMethod;
@@ -29,9 +30,21 @@ interface RequestPanelProps {
   busy?: boolean;
 }
 
-const METHODS: HttpMethod[] = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD'];
 const CONTENT_TYPES: ContentType[] = ['application/json', 'application/x-www-form-urlencoded', 'text/plain'];
 
+/**
+ * Request *details* panel — Method, URL, Timeout and the primary Start
+ * action live in <TargetBar /> above the live results. This panel keeps
+ * the things that configure the actual request payload:
+ *
+ *   - HTTP headers (Key / Value rows)
+ *   - Content-Type select
+ *   - Request body (with JSON / form validation, Format JSON button)
+ *   - Paste cURL  → import a curl command into the whole form
+ *   - Copy as cURL → export the current form as a curl command
+ *   - Test Connection → single-shot probe (verifies URL + headers + body
+ *     reach the server before kicking off a real run)
+ */
 export function RequestPanel({ value, onChange, host, variables, busy }: RequestPanelProps) {
   const { t } = useTranslation();
   const patch = (partial: Partial<RequestFormValue>) => onChange({ ...value, ...partial });
@@ -39,10 +52,36 @@ export function RequestPanel({ value, onChange, host, variables, busy }: Request
   const [curlText, setCurlText] = useState('');
   const [curlError, setCurlError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  // Probe result is owned by the parent so <ProbeCard /> can render at
+  // panel width (not at the half-width of the trigger button row).
+  const [probeResult, setProbeResult] = useState<ProbeResult | null>(null);
 
-  // Close on Escape; the modal is overlay-only so we don't need to manage
-  // focus traps — there's exactly one textarea to focus and the user can
-  // dismiss with Esc or the cancel button.
+  // Build a TestConfig shell from the current form. The same shell is
+  // reused by the Copy-as-cURL button, the Test Connection probe, and
+  // any future "share" action, so the field set stays consistent.
+  const buildConfig = useCallback((): TestConfig => ({
+    method: value.method,
+    url: value.url,
+    timeout: value.timeout,
+    headers: value.headers,
+    body: value.body,
+    contentType: value.contentType,
+    loadModel: 'constant',
+    users: 1,
+    rps: 0,
+    duration: 1,
+    ramp: 0,
+    stepUsers: 0,
+    stepDuration: 0,
+    spikeUsers: 0,
+    spikeDuration: 0,
+    maxErrorRate: 0,
+    maxP95: 0,
+    assertions: [],
+    variables,
+  }), [value, variables]);
+
+  // Close the cURL modal on Escape.
   useEffect(() => {
     if (!curlOpen) return;
     const onKey = (e: KeyboardEvent) => {
@@ -64,7 +103,8 @@ export function RequestPanel({ value, onChange, host, variables, busy }: Request
         headers: parsed.headers.length > 0 ? parsed.headers : value.headers,
         body: parsed.body,
         contentType: parsed.contentType,
-        // timeout intentionally left to whatever the user already has
+        // timeout intentionally left to whatever the user already has;
+        // cURL's `--max-time` isn't surfaced by the parser today.
         timeout: value.timeout,
       });
       setCurlOpen(false);
@@ -97,56 +137,36 @@ export function RequestPanel({ value, onChange, host, variables, busy }: Request
         </button>
       </div>
 
-      <div className="mb-3.5 flex flex-wrap gap-3">
-        <label className="flex flex-col gap-1.5 text-xs font-semibold text-muted">
-          {t('request.method')}
-          <select className="field" value={value.method} onChange={(e) => patch({ method: e.target.value as HttpMethod })}>
-            {METHODS.map((m) => (
-              <option key={m}>{m}</option>
-            ))}
-          </select>
-        </label>
-        <label className="flex min-w-64 flex-1 flex-col gap-1.5 text-xs font-semibold text-muted">
-          {t('request.url')}
-          <input
-            className="field"
-            value={value.url}
-            placeholder={t('request.urlPlaceholder')}
-            onChange={(e) => patch({ url: e.target.value })}
-          />
-        </label>
-        <label className="flex flex-col gap-1.5 text-xs font-semibold text-muted">
-          {t('request.timeout')}
-          <input
-            className="field w-28"
-            type="number"
-            min={100}
-            value={value.timeout}
-            onChange={(e) => patch({ timeout: +e.target.value || 10000 })}
-          />
-        </label>
-      </div>
-
-      <div className="mb-1.5 mt-3.5 grid grid-cols-[1fr_1.5fr_36px] gap-2 text-[11px] font-bold text-muted">
+      {/* Header rows. The grid uses `1fr 1.8fr 28px` so the Value column
+          can fit `application/json` and `Bearer {{token}}` at the 296px
+          panel width without wrapping. `min-w-0` on each input lets the
+          Value column clip long content with overflow rather than
+          stretching the row into a horizontal scroll. */}
+      <div className="mb-1.5 grid grid-cols-[1fr_1.8fr_28px] gap-1.5 text-[11px] font-bold text-muted">
         <span>Key</span>
         <span>Value</span>
         <span />
       </div>
       {value.headers.map(([k, v], i) => (
-        <div className="mb-2 grid grid-cols-[1fr_1.5fr_36px] items-center gap-2" key={i}>
+        <div className="mb-1.5 grid grid-cols-[1fr_1.8fr_28px] items-center gap-1.5" key={i}>
           <input
-            className="field"
+            className="field min-w-0 text-[12px]"
             placeholder={t('request.headerKey')}
             value={k}
             onChange={(e) => updateHeader(i, 0, e.target.value)}
           />
           <input
-            className="field"
+            className="field min-w-0 text-[12px]"
             placeholder={t('request.headerValue')}
             value={v}
             onChange={(e) => updateHeader(i, 1, e.target.value)}
           />
-          <button className="icon-btn" onClick={() => patch({ headers: value.headers.filter((_, j) => j !== i) })}>
+          <button
+            className="icon-btn"
+            onClick={() => patch({ headers: value.headers.filter((_, j) => j !== i) })}
+            title="Remove"
+            aria-label="Remove header"
+          >
             ×
           </button>
         </div>
@@ -157,7 +177,11 @@ export function RequestPanel({ value, onChange, host, variables, busy }: Request
 
       <label className="mt-3 flex max-w-80 flex-col gap-1.5 text-xs font-semibold text-muted">
         {t('request.contentType')}
-        <select className="field" value={value.contentType} onChange={(e) => patch({ contentType: e.target.value as ContentType })}>
+        <select
+          className="field"
+          value={value.contentType}
+          onChange={(e) => patch({ contentType: e.target.value as ContentType })}
+        >
           {CONTENT_TYPES.map((ct) => (
             <option key={ct}>{ct}</option>
           ))}
@@ -216,7 +240,9 @@ export function RequestPanel({ value, onChange, host, variables, busy }: Request
               )}
             </div>
             <textarea
-              className={`field min-h-28 w-full font-mono ${validationError ? 'border-danger focus:border-danger focus:ring-danger/25' : ''}`}
+              className={`field min-h-28 w-full font-mono ${
+                validationError ? 'border-danger focus:border-danger focus:ring-danger/25' : ''
+              }`}
               value={value.body}
               spellCheck={false}
               onChange={(e) => patch({ body: e.target.value })}
@@ -229,6 +255,46 @@ export function RequestPanel({ value, onChange, host, variables, busy }: Request
           </div>
         );
       })()}
+
+      {/* Action row: Copy as cURL · Test Connection.
+          The grid keeps the two triggers on a single line at every
+          panel width. The ProbeCard is rendered *outside* the grid so
+          it can stretch to the panel's full width instead of being
+          squeezed into a half-width column. */}
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <button
+          type="button"
+          disabled={!value.url.trim()}
+          onClick={async () => {
+            try {
+              await navigator.clipboard.writeText(toCurl(buildConfig()));
+              setCopied(true);
+              window.setTimeout(() => setCopied(false), 1200);
+            } catch {
+              /* clipboard unavailable — silently ignore. */
+            }
+          }}
+          className="ghost-btn inline-flex min-w-0 items-center justify-center gap-1.5 whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-60"
+          title={t('request.copyCurlHint')}
+        >
+          {copied ? <Check size={13} /> : <Copy size={13} />}
+          {copied ? t('request.copyCurlCopied') : t('request.copyCurl')}
+        </button>
+        <ConnectionProbe
+          disabled={busy || !value.url.trim().startsWith('http')}
+          run={() => host.probe(buildConfig())}
+          onResult={(s) => setProbeResult(s.status === 'done' ? s.result : null)}
+        />
+      </div>
+
+      {/* Probe result card at full panel width, below the trigger row.
+          A hairline separator + extra top padding makes the card feel
+          like a distinct block rather than a tightly-stacked second row. */}
+      {probeResult && (
+        <div className="mt-4 border-t border-line/60 pt-3.5">
+          <ProbeCard result={probeResult} onDismiss={() => setProbeResult(null)} />
+        </div>
+      )}
 
       {curlOpen && (
         <div
@@ -295,81 +361,6 @@ export function RequestPanel({ value, onChange, host, variables, busy }: Request
           </div>
         </div>
       )}
-
-      <div className="mt-3 flex items-center gap-2">
-        <button
-          type="button"
-          disabled={!value.url.trim()}
-          onClick={async () => {
-            // Build a config shell from the form, including the variables
-            // (interpolation will be re-applied by the recipient tool).
-            const cfg: TestConfig = {
-              method: value.method,
-              url: value.url,
-              timeout: value.timeout,
-              headers: value.headers,
-              body: value.body,
-              contentType: value.contentType,
-              loadModel: 'constant',
-              users: 1,
-              rps: 0,
-              duration: 1,
-              ramp: 0,
-              stepUsers: 0,
-              stepDuration: 0,
-              spikeUsers: 0,
-              spikeDuration: 0,
-              maxErrorRate: 0,
-              maxP95: 0,
-              assertions: [],
-              variables,
-            };
-            try {
-              await navigator.clipboard.writeText(toCurl(cfg));
-              setCopied(true);
-              window.setTimeout(() => setCopied(false), 1200);
-            } catch {
-              /* clipboard unavailable — silently ignore. */
-            }
-          }}
-          className="ghost-btn flex flex-1 items-center justify-center gap-1.5 disabled:cursor-not-allowed disabled:opacity-60"
-          title={t('request.copyCurlHint')}
-        >
-          {copied ? <Check size={13} /> : <Copy size={13} />}
-          {copied ? t('request.copyCurlCopied') : t('request.copyCurl')}
-        </button>
-        <ConnectionProbe
-          disabled={busy || !value.url.trim().startsWith('http')}
-          run={() => {
-          // Build a TestConfig shell from the current form so the probe
-          // goes through exactly the same URL/headers/body/variables as
-          // a real run would. Only the load-side fields matter for
-          // probeRequest, and they fall back to safe defaults.
-          const cfg: TestConfig = {
-            method: value.method,
-            url: value.url,
-            timeout: value.timeout,
-            headers: value.headers,
-            body: value.body,
-            contentType: value.contentType,
-            loadModel: 'constant',
-            users: 1,
-            rps: 0,
-            duration: 1,
-            ramp: 0,
-            stepUsers: 0,
-            stepDuration: 0,
-            spikeUsers: 0,
-            spikeDuration: 0,
-            maxErrorRate: 0,
-            maxP95: 0,
-            assertions: [],
-            variables,
-          };
-          return host.probe(cfg);
-        }}
-      />
-      </div>
     </section>
   );
 }

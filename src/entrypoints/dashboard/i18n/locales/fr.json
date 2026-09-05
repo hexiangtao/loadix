@@ -25,25 +25,20 @@
   },
   "sections": {
     "request": {
-      "title": "Configuration de la requête",
-      "desc": "Définissez l'API cible, les paramètres et l'authentification."
-    },
+      "title": "Configuration de la requête"
+  },
     "load": {
-      "title": "Modèle de charge",
-      "desc": "Configurez les utilisateurs virtuels, le RPS cible, la durée et la montée en charge."
-    },
+      "title": "Modèle de charge"
+  },
     "assertions": {
-      "title": "Règles d'assertion",
-      "desc": "Définissez les critères métier et de performance pour une requête réussie."
-    },
+      "title": "Règles d'assertion"
+  },
     "variables": {
-      "title": "Variables",
-      "desc": "Définissez des variables réutilisables pour l'URL, les en-têtes et le corps."
-    },
+      "title": "Variables"
+  },
     "history": {
-      "title": "Historique",
-      "desc": "Consultez et restaurez les configurations de test récentes."
-    }
+      "title": "Historique"
+  }
   },
   "request": {
     "method": "Méthode HTTP",
@@ -105,21 +100,18 @@
     "spikeDuration": "Durée du pic (sec)",
     "autoStop": "Arrêt automatique",
     "maxErrorRate": "Taux d'erreur max (%)",
-    "maxP95": "P95 max (ms)",
-    "hint": "Les tests de charge navigateur sont idéaux pour le développement, la régression et les tests de stress légers. Utilisez un cluster dédié pour les tests à grande échelle."
+    "maxP95": "P95 max (ms)"
   },
   "assertions": {
     "add": "＋ Ajouter une assertion",
     "status": "Statut HTTP",
     "latency": "Latence ≤ ms",
-    "contains": "Corps contient",
-    "hint": "Assertions sur le statut HTTP, le temps de réponse et le contenu du corps."
+    "contains": "Corps contient"
   },
   "variables": {
     "name": "nom",
     "value": "valeur",
-    "add": "＋ Ajouter une variable",
-    "hint": "Utilisez {{variable}} dans l'URL, les en-têtes ou le corps. Chaque utilisateur virtuel lit le même ensemble de variables."
+    "add": "＋ Ajouter une variable"
   },
   "history": {
     "empty": "Aucun test enregistré. Lancez un test et les 20 derniers seront sauvegardés ici.",
@@ -129,7 +121,6 @@
     "running": "En cours…",    "requests": "requêtes"
   },
   "results": {
-    "title": "Résultats en direct",
     "waiting": "En attente",
     "completed": "{{count}} requêtes en {{seconds}}s",
     "stop": "■ Arrêter",
@@ -226,39 +217,32 @@
     "more": "Plus",
     "group_query": "Requête",
     "hash": {
-      "name": "Hash",
-      "desc": "Calculer MD5 / SHA-1 / SHA-256 / SHA-512",
-      "hint": "MD5 calculé localement sans dépendance externe."
-    },
+      "name": "Hash"
+  },
     "color": {
       "name": "Pipette",
-      "desc": "Convertir entre HEX, RGB et HSL",
-      "hex": "HEX",
+          "hex": "HEX",
       "preview": "Aperçu"
     },
     "markdown": {
       "name": "Markdown",
-      "desc": "Aperçu Markdown en direct",
-      "source": "Source",
+          "source": "Source",
       "preview": "Aperçu",
       "empty": "Commencez à taper du markdown…"
     },
     "jwt-encode": {
       "name": "JWT Encode",
-      "desc": "Signer et générer un nouveau JWT",
-      "needSecret": "Un secret est requis pour HS256",
+          "needSecret": "Un secret est requis pour HS256",
       "generate": "Générer le jeton"
     },
     "jsonpath": {
       "name": "JSONPath",
-      "desc": "Extraire des données JSON par expression",
-      "presets": "Exemples :",
+          "presets": "Exemples :",
       "matches": "Résultats"
     },
     "unicode": {
       "name": "Unicode",
-      "desc": "Échapper et restaurer les séquences \\uXXXX, inspecter les points de code",
-      "encode": "Échapper",
+          "encode": "Échapper",
       "decode": "Restaurer",
       "scope_nonAscii": "Non-ASCII",
       "scope_control": "Contrôle seul",

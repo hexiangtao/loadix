@@ -18,6 +18,7 @@ import { AssertionsPanel } from './panels/AssertionsPanel';
 import { HistoryPanel } from './panels/HistoryPanel';
 import { LoadPanel, type LoadFormValue } from './panels/LoadPanel';
 import { RequestPanel, type RequestFormValue } from './panels/RequestPanel';
+import { TargetBar } from './components/TargetBar';
 import { VariablesPanel } from './panels/VariablesPanel';
 import { useUiStore } from './store/ui-store';
 import { RequestDetails } from './components/RequestDetails';
@@ -60,12 +61,18 @@ const DEFAULT_ASSERTIONS: Assertion[] = [
   { type: 'latency', value: '1000' },
 ];
 
-const SECTION_META = {
-  request: ['sections.request.title', 'sections.request.desc'],
-  load: ['sections.load.title', 'sections.load.desc'],
-  assertions: ['sections.assertions.title', 'sections.assertions.desc'],
-  variables: ['sections.variables.title', 'sections.variables.desc'],
-  history: ['sections.history.title', 'sections.history.desc'],
+// Section titles only — the original second tuple element (a `desc`
+// tagline under each panel heading) was deleted in bulk because every
+// one of them was filler copy that repeated what the form itself was
+// already showing. If we ever need a real "what is this section for?"
+// hint, add it back per-section as a `description` key, not as a
+// paragraph under every heading.
+const SECTION_TITLE_KEYS = {
+  request: 'sections.request.title',
+  load: 'sections.load.title',
+  assertions: 'sections.assertions.title',
+  variables: 'sections.variables.title',
+  history: 'sections.history.title',
 } as const;
 
 const SECTIONS = ['request', 'load', 'assertions', 'variables', 'history'] as const;
@@ -334,7 +341,7 @@ export default function App({ host }: { host: EngineHost }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [engineState]);
 
-  const [titleKey, descKey] = SECTION_META[activeSection];
+  const titleKey = SECTION_TITLE_KEYS[activeSection];
 
   return (
     <>
@@ -372,25 +379,11 @@ export default function App({ host }: { host: EngineHost }) {
         <div className="flex items-center gap-1">
           {view === 'loadtest' && (
             <>
-              <motion.button
-                whileTap={{ scale: 0.97 }}
-                className="primary-btn"
-                disabled={running}
-                onClick={handleStart}
-              >
-                {t('results.start')}
-              </motion.button>
-              <motion.button
-                whileTap={{ scale: 0.97 }}
-                className="danger-btn"
-                disabled={!running}
-                onClick={handleStop}
-              >
-                {t('results.stop')}
-              </motion.button>
-
+              {/* Start / Stop live in <TargetBar /> next to the URL they
+                  act on, so the toolbar stays focused on document-level
+                  actions (preset, theme, language, save, export). No
+                  duplicate Stop here. */}
               <span className="mx-2 h-6 w-px bg-line" />
-
               <PresetMenu onApply={setLoad} />
             </>
           )}
@@ -475,7 +468,6 @@ export default function App({ host }: { host: EngineHost }) {
               <div className="mb-3 flex items-center justify-between">
                 <div className="min-w-0">
                   <h1 className="truncate text-[15px] font-bold">{t(titleKey)}</h1>
-                  <p className="m-0 truncate text-xs text-muted">{t(descKey)}</p>
                 </div>
                 <div
                   className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold ${
@@ -494,7 +486,7 @@ export default function App({ host }: { host: EngineHost }) {
                   exit={{ opacity: 0, y: -8 }}
                   transition={{ duration: 0.16, ease: 'easeOut' }}
                 >
-                   {activeSection === 'request' && <RequestPanel value={request} onChange={setRequest} host={host} variables={variables} busy={running} />}
+                  {activeSection === 'request' && <RequestPanel value={request} onChange={setRequest} host={host} variables={variables} busy={running} />}
                   {activeSection === 'load' && <LoadPanel value={load} onChange={setLoad} />}
                   {activeSection === 'assertions' && <AssertionsPanel value={assertions} onChange={setAssertions} />}
                   {activeSection === 'variables' && <VariablesPanel value={variables} onChange={setVariables} />}
@@ -505,13 +497,22 @@ export default function App({ host }: { host: EngineHost }) {
           </aside>
 
           {/* ——— Right: live results (sticky on xl+) ——— */}
-          <aside className="flex min-w-0 flex-col gap-3 xl:sticky xl:top-20 xl:max-h-[calc(100vh-5.5rem)] xl:overflow-y-auto">
-            <div className="mb-1 flex items-center justify-between">
-              <div>
-                <h2 className="mb-0.5 text-[17px] font-bold">{t('results.title')}</h2>
-                <span className="text-xs text-muted">{resultMessage || t('results.waiting')}</span>
-              </div>
-            </div>
+          <aside className="app-scroller flex min-w-0 flex-col gap-3 xl:sticky xl:top-20 xl:max-h-[calc(100vh-5.5rem)] xl:overflow-y-auto">
+            {/* Target API bar at the top of the work area. The URL is the
+                "thing being tested" — putting it directly above the
+                results makes the visual flow: target → execute → outcome.
+                It also gets the right-aside's full width (~600px on
+                desktop), enough to show long URLs without truncation,
+                without claiming the global header. */}
+            <TargetBar
+              method={request.method}
+              url={request.url}
+              timeout={request.timeout}
+              busy={running}
+              onChange={(partial) => setRequest((r) => ({ ...r, ...partial }))}
+              onStart={handleStart}
+              onStop={handleStop}
+            />
 
             <ProgressBar running={running} durationSec={load.duration} />
             <VerdictCard engineState={engineState} metrics={metrics} resultMessage={resultMessage} autoStopHint={resultMessage} />

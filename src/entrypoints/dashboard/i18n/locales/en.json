@@ -25,25 +25,20 @@
   },
   "sections": {
     "request": {
-      "title": "Request Configuration",
-      "desc": "Define the target API, request parameters and authentication."
-    },
+      "title": "Request Configuration"
+  },
     "load": {
-      "title": "Load Model",
-      "desc": "Configure virtual users, target RPS, duration and ramp-up strategy."
-    },
+      "title": "Load Model"
+  },
     "assertions": {
-      "title": "Assertion Rules",
-      "desc": "Define business and performance criteria for a successful request."
-    },
+      "title": "Assertion Rules"
+  },
     "variables": {
-      "title": "Variables",
-      "desc": "Define reusable variables for URL, headers and body."
-    },
+      "title": "Variables"
+  },
     "history": {
-      "title": "Test History",
-      "desc": "Review and restore recently saved test configurations."
-    }
+      "title": "Test History"
+  }
   },
   "request": {
     "method": "HTTP Method",
@@ -105,21 +100,18 @@
     "spikeDuration": "Spike duration (sec)",
     "autoStop": "Auto-stop",
     "maxErrorRate": "Max error rate (%)",
-    "maxP95": "Max P95 (ms)",
-    "hint": "Browser-based load testing is ideal for API development, regression and light stress testing. Use a dedicated load-testing cluster for large-scale tests."
+    "maxP95": "Max P95 (ms)"
   },
   "assertions": {
     "add": "＋ Add Assertion",
     "status": "HTTP Status",
     "latency": "Latency ≤ ms",
-    "contains": "Body contains",
-    "hint": "Supports HTTP status code, response time and response body text assertions."
+    "contains": "Body contains"
   },
   "variables": {
     "name": "name",
     "value": "value",
-    "add": "＋ Add Variable",
-    "hint": "Use {{variable}} in URL, headers or body. Every virtual user reads the same set of variables."
+    "add": "＋ Add Variable"
   },
   "history": {
     "empty": "No test records yet. Run a test and the last 20 runs will be saved here automatically.",
@@ -131,7 +123,6 @@
     "requests": "requests"
   },
   "results": {
-    "title": "Live Results",
     "waiting": "Waiting to start",
     "completed": "{{count}} requests completed in {{seconds}}s",
     "stop": "■ Stop",
@@ -249,8 +240,7 @@
     "group_query": "Query",
     "base64": {
       "name": "Base64",
-      "desc": "Encode & decode Base64 strings",
-      "encode": "Encode",
+          "encode": "Encode",
       "decode": "Decode",
       "input": "Base64 string",
       "placeholder": "Type text to encode…",
@@ -260,8 +250,7 @@
     },
     "baseconv": {
       "name": "Base Converter",
-      "desc": "Convert between binary, octal, decimal, and hexadecimal",
-      "input": "Number",
+          "input": "Number",
       "interpretAs": "Interpret as",
       "invalid": "Not a valid number for the selected base",
       "decimal": "Decimal value",
@@ -269,8 +258,7 @@
     },
     "json": {
       "name": "JSON Formatter",
-      "desc": "Format, validate & minify JSON",
-      "spaces": "spaces",
+          "spaces": "spaces",
       "keys": "keys",
       "depth": "depth",
       "size": "size",
@@ -279,8 +267,7 @@
     },
     "jwt": {
       "name": "JWT",
-      "desc": "Decode & sign JWTs locally",
-      "decode": "Decode",
+          "decode": "Decode",
       "encode": "Encode",
       "editEncode": "Edit in encode mode",
       "input": "Paste a JWT",
@@ -301,8 +288,7 @@
     },
     "regex": {
       "name": "Regex Tester",
-      "desc": "Test regex & extract capture groups",
-      "templates": "Templates",
+          "templates": "Templates",
       "pattern": "Pattern",
       "test": "Test text",
       "placeholder": "Paste text to test against…",
@@ -311,15 +297,13 @@
     },
     "url": {
       "name": "URL Encode",
-      "desc": "Encode & decode URL components",
-      "encode": "Encode",
+          "encode": "Encode",
       "decode": "Decode",
       "invalid": "Invalid percent encoding"
     },
     "urlparser": {
       "name": "URL Parser",
-      "desc": "Inspect every part of a URL & edit query params",
-      "invalid": "Not a valid URL (expected protocol://host/...)",
+          "invalid": "Not a valid URL (expected protocol://host/...)",
       "samples": "Samples",
       "protocol": "Protocol",
       "host": "Host",
@@ -335,14 +319,12 @@
     },
     "html": {
       "name": "HTML Entities",
-      "desc": "Escape & unescape HTML entities",
-      "encode": "Escape",
+          "encode": "Escape",
       "decode": "Unescape"
     },
     "unicode": {
       "name": "Unicode",
-      "desc": "Escape & unescape \\uXXXX sequences, inspect codepoints",
-      "encode": "Escape",
+          "encode": "Escape",
       "decode": "Unescape",
       "scope_nonAscii": "Non-ASCII",
       "scope_control": "Control only",
@@ -354,18 +336,15 @@
     },
     "uuid": {
       "name": "UUID Generator",
-      "desc": "Generate UUID v1 / v3 / v4 / v5 / v7",
-      "count": "Count",
+          "count": "Count",
       "generate": "Generate",
       "nameLabel": "Name",
       "namespace": "Namespace",
-      "customNamespace": "Custom namespace (UUID)",
-      "hint": "v4 is random; v7 is time-ordered. v3/v5 are namespace-derived (v3=MD5, v5=SHA-1). v1 embeds a timestamp."
-    },
+      "customNamespace": "Custom namespace (UUID)"
+  },
     "timestamp": {
       "name": "Timestamp",
-      "desc": "Convert epoch & date strings",
-      "epochSec": "Epoch (seconds)",
+          "epochSec": "Epoch (seconds)",
       "epochMs": "Epoch (ms)",
       "local": "Local time",
       "input": "Epoch or date string",
@@ -374,37 +353,30 @@
     },
     "cron": {
       "name": "Cron Parser",
-      "desc": "Parse cron & preview next runs",
-      "input": "Cron expression (5 fields)",
+          "input": "Cron expression (5 fields)",
       "minute": "Minute",
       "hour": "Hour",
       "dayOfMonth": "Day of month",
       "month": "Month",
       "dayOfWeek": "Day of week",
       "next": "Next 5 runs",
-      "invalid": "Invalid cron expression (expected 5 fields)",
-      "hint": "Standard 5-field cron: minute hour day-of-month month day-of-week."
-    },
+      "invalid": "Invalid cron expression (expected 5 fields)"
+  },
     "sql": {
       "name": "SQL Formatter",
-      "desc": "Format & beautify SQL queries",
-      "uppercase": "Uppercase keywords"
+          "uppercase": "Uppercase keywords"
     },
     "hash": {
-      "name": "Hash",
-      "desc": "Compute MD5 / SHA-1 / SHA-256 / SHA-512",
-      "hint": "MD5 is computed locally via a tiny JS implementation (no external library)."
-    },
+      "name": "Hash"
+  },
     "color": {
       "name": "Color Picker",
-      "desc": "Pick & convert between HEX, RGB, HSL",
-      "hex": "HEX",
+          "hex": "HEX",
       "preview": "Live preview"
     },
     "screenshot": {
       "name": "Element Snapshot",
-      "desc": "Capture a single element on the current page as PNG or JPEG",
-      "selector": "CSS selector",
+          "selector": "CSS selector",
       "selectorNotFound": "No element matches \"{{selector}}\"",
       "format": "Format",
       "background": "Background",
@@ -424,8 +396,7 @@
     },
     "gradient": {
       "name": "CSS Gradient",
-      "desc": "Build linear / radial CSS gradients with live preview",
-      "type": "Type",
+          "type": "Type",
       "angle": "Angle",
       "presets": "Presets",
       "stops": "Stops",
@@ -434,8 +405,7 @@
     },
     "markdown": {
       "name": "Markdown",
-      "desc": "Live Markdown preview",
-      "source": "Markdown source",
+          "source": "Markdown source",
       "preview": "Rendered preview",
       "empty": "Start typing markdown on the left…",
       "sample": "Insert sample",
@@ -492,8 +462,7 @@
     },
     "diff": {
       "name": "Diff",
-      "desc": "Compare two texts and see the changes",
-      "samples": "Samples",
+          "samples": "Samples",
       "original": "Original",
       "changed": "Changed",
       "unified": "Unified",
@@ -502,8 +471,7 @@
     },
     "jsonpath": {
       "name": "JSONPath",
-      "desc": "Extract data from JSON with a path expression",
-      "presets": "Quick:",
+          "presets": "Quick:",
       "matches": "Matches"
     }
   },

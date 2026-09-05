@@ -25,25 +25,20 @@
   },
   "sections": {
     "request": {
-      "title": "リクエスト設定",
-      "desc": "対象API、リクエストパラメータ、認証情報を定義します。"
-    },
+      "title": "リクエスト設定"
+  },
     "load": {
-      "title": "負荷モデル",
-      "desc": "仮想ユーザー数、目標RPS、実行時間、ランプアップ戦略を設定します。"
-    },
+      "title": "負荷モデル"
+  },
     "assertions": {
-      "title": "アサーションルール",
-      "desc": "成功リクエストのビジネスおよびパフォーマンス基準を定義します。"
-    },
+      "title": "アサーションルール"
+  },
     "variables": {
-      "title": "変数",
-      "desc": "URL、ヘッダー、ボディで再利用可能な変数を定義します。"
-    },
+      "title": "変数"
+  },
     "history": {
-      "title": "テスト履歴",
-      "desc": "最近保存されたテスト設定を確認・復元します。"
-    }
+      "title": "テスト履歴"
+  }
   },
   "request": {
     "method": "HTTPメソッド",
@@ -105,21 +100,18 @@
     "spikeDuration": "スパイク時間（秒）",
     "autoStop": "自動停止",
     "maxErrorRate": "最大エラー率（%）",
-    "maxP95": "最大P95（ミリ秒）",
-    "hint": "ブラウザベースの負荷テストはAPI開発、回帰テスト、軽量ストレステストに最適です。大規模テストには専用クラスタをご利用ください。"
+    "maxP95": "最大P95（ミリ秒）"
   },
   "assertions": {
     "add": "＋ アサーションを追加",
     "status": "HTTPステータス",
     "latency": "レイテンシ ≤ ms",
-    "contains": "ボディに含む",
-    "hint": "HTTPステータスコード、応答時間、レスポンスボディのテキストアサーションをサポートします。"
+    "contains": "ボディに含む"
   },
   "variables": {
     "name": "変数名",
     "value": "値",
-    "add": "＋ 変数を追加",
-    "hint": "URL、ヘッダー、ボディで {{variable}} を使用します。すべての仮想ユーザーが同じ変数セットを読み取ります。"
+    "add": "＋ 変数を追加"
   },
   "history": {
     "empty": "まだテスト記録がありません。テストを実行すると、直近20件がここに自動保存されます。",
@@ -226,39 +218,32 @@
     "more": "その他",
     "group_query": "クエリ",
     "hash": {
-      "name": "ハッシュ",
-      "desc": "MD5 / SHA-1 / SHA-256 / SHA-512 を計算",
-      "hint": "MD5 は外部ライブラリなしでローカル計算します。"
-    },
+      "name": "ハッシュ"
+  },
     "color": {
       "name": "カラーピッカー",
-      "desc": "HEX / RGB / HSL を相互変換",
-      "hex": "HEX",
+          "hex": "HEX",
       "preview": "ライブプレビュー"
     },
     "markdown": {
       "name": "Markdown",
-      "desc": "Markdown をライブプレビュー",
-      "source": "ソース",
+          "source": "ソース",
       "preview": "プレビュー",
       "empty": "左側で Markdown を入力…"
     },
     "jwt-encode": {
       "name": "JWT エンコード",
-      "desc": "新しい JWT を署名して生成",
-      "needSecret": "HS256 にはシークレットが必要です",
+          "needSecret": "HS256 にはシークレットが必要です",
       "generate": "トークンを生成"
     },
     "jsonpath": {
       "name": "JSONPath",
-      "desc": "パス式で JSON から値を抽出",
-      "presets": "プリセット:",
+          "presets": "プリセット:",
       "matches": "一致"
     },
     "unicode": {
       "name": "Unicode",
-      "desc": "\\uXXXX エスケープのエンコード/デコード、コードポイントを表示",
-      "encode": "エスケープ",
+          "encode": "エスケープ",
       "decode": "復元",
       "scope_nonAscii": "非ASCII",
       "scope_control": "制御文字のみ",
