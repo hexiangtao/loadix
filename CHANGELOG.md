@@ -1,3 +1,10 @@
+# [1.37.0](https://github.com/hexiangtao/loadix/compare/v1.36.0...v1.37.0) (2026-09-05)
+
+
+### Features
+
+* **markdown:** promote to top-level view with immersive reading ([fd7b5d8](https://github.com/hexiangtao/loadix/commit/fd7b5d83c9d30e3cd3ad5c869b390c7ff47d7978))
+
 # [1.36.0](https://github.com/hexiangtao/loadix/compare/v1.35.0...v1.36.0) (2026-09-05)
 
 
