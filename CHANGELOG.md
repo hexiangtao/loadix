@@ -1,3 +1,10 @@
+# [1.39.0](https://github.com/hexiangtao/loadix/compare/v1.38.0...v1.39.0) (2026-09-05)
+
+
+### Features
+
+* **ui:** focused top nav, tools "更多" gallery, native-app layout pass ([28ee678](https://github.com/hexiangtao/loadix/commit/28ee6782f9178bce688b928e49a9e3e9ca02513b))
+
 # [1.38.0](https://github.com/hexiangtao/loadix/compare/v1.37.0...v1.38.0) (2026-09-05)
 
 
