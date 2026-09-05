@@ -87,3 +87,55 @@ body {
 .focus-ring {
   @apply outline-none focus-visible:ring-2 focus-visible:ring-primary/40;
 }
+
+/* ------------------------------------------------------------- */
+/* Custom scrollbars for in-app scrollers (the right-aside live  */
+/* results column, tool panels, modal bodies).                   */
+/*                                                                */
+/* Problem: on Windows the browser-rendered scrollbar and our    */
+/* in-app scrollbar look identical — same width, same colour —   */
+/* so the screen ends up with two parallel grey rails. We make   */
+/* the in-app scrollbar visually distinct: narrower, rounded,   */
+/* tinted with the theme's muted line colour, and only visible   */
+/* on hover (like macOS).                                         */
+/*                                                                */
+/* macOS / iOS already hide scrollbars by default and use         */
+/* overlay-style gestures, so the styling here only affects       */
+/* Windows + Linux browsers.                                      */
+/* ------------------------------------------------------------- */
+.app-scroller {
+  /* Reserve space for the scrollbar gutter so content doesn't
+     jump when the scroller toggles between overflow / no-overflow. */
+  scrollbar-gutter: stable;
+}
+
+.app-scroller::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.app-scroller::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.app-scroller::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 999px;
+  /* Only fade in on hover, mimicking macOS overlay scrollbars. */
+  transition: background 200ms ease;
+}
+
+.app-scroller:hover::-webkit-scrollbar-thumb {
+  background: var(--color-line);
+}
+
+.app-scroller::-webkit-scrollbar-thumb:hover {
+  background: var(--color-muted);
+}
+
+/* Firefox: thin + matched colour, no gutter reservation needed
+   (the `scrollbar-width: thin` already accounts for it). */
+.app-scroller {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line) transparent;
+}

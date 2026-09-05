@@ -61,7 +61,7 @@ export function LoadPanel({ value, onChange }: LoadPanelProps) {
         </div>
       </div>
 
-      <div className="grid grid-cols-4 gap-3 max-md:grid-cols-2">
+      <div className="grid grid-cols-2 gap-2.5">
         <label className="flex flex-col gap-1.5 text-xs font-semibold text-muted">
           {t('load.users')}
           <input className="field" type="number" min={1} value={value.users} onChange={(e) => patch({ users: +e.target.value || 1 })} />
@@ -90,7 +90,7 @@ export function LoadPanel({ value, onChange }: LoadPanelProps) {
 
       {/* Model-specific fields */}
       {value.loadModel === 'step' && (
-        <div className="mt-3 grid grid-cols-2 gap-3 max-md:grid-cols-1">
+        <div className="mt-3 grid grid-cols-2 gap-2.5">
           <label className="flex flex-col gap-1.5 text-xs font-semibold text-muted">
             {t('load.stepUsers')}
             <input
@@ -114,7 +114,7 @@ export function LoadPanel({ value, onChange }: LoadPanelProps) {
         </div>
       )}
       {value.loadModel === 'spike' && (
-        <div className="mt-3 grid grid-cols-2 gap-3 max-md:grid-cols-1">
+        <div className="mt-3 grid grid-cols-2 gap-2.5">
           <label className="flex flex-col gap-1.5 text-xs font-semibold text-muted">
             {t('load.spikeUsers')}
             <input
@@ -142,7 +142,7 @@ export function LoadPanel({ value, onChange }: LoadPanelProps) {
         <span>{t('load.autoStop')}</span>
         <span className="h-px flex-1 bg-line" />
       </div>
-      <div className="mt-2 grid grid-cols-2 gap-3 max-md:grid-cols-1">
+      <div className="mt-2 grid grid-cols-2 gap-2.5">
         <label className="flex flex-col gap-1.5 text-xs font-semibold text-muted">
           {t('load.maxErrorRate')}
           <input
@@ -165,7 +165,12 @@ export function LoadPanel({ value, onChange }: LoadPanelProps) {
           />
         </label>
       </div>
-      <div className="mt-3.5 text-xs leading-relaxed text-muted">{t('load.hint')}</div>
+      {/* The "load.hint" paragraph used to live here, but it was a
+          textbook AI-sentence ("Browser-based load testing is ideal for
+          API development, regression and light stress testing. Use a
+          dedicated load-testing cluster for large-scale tests.") that
+          didn't tell the user anything actionable about the form above.
+          Removed in favour of leaving the form to speak for itself. */}
     </section>
   );
 }

@@ -74,7 +74,11 @@ export function RecentRequests({ metrics, onSelect }: RecentRequestsProps) {
         {t('results.filterCount', { shown, total })}
       </div>
 
-      <div className="mt-1 flex max-h-60 min-h-30 flex-col overflow-auto">
+      {/* No `overflow-auto` / `max-h` here on purpose: the parent <aside>
+          in App.tsx owns vertical scrolling at xl+, and stacking a second
+          scroll container on top produces the "two scrollbars" UX bug.
+          The list grows naturally and the panel scrolls as one piece. */}
+      <div className="mt-1 flex flex-col">
         {total === 0 && <div className="text-xs text-muted">{t('results.waiting')}</div>}
         {total > 0 && shown === 0 && (
           <div className="text-xs text-muted">{t('results.filterEmpty')}</div>
@@ -83,7 +87,10 @@ export function RecentRequests({ metrics, onSelect }: RecentRequestsProps) {
           <button
             key={`${r.ts}-${i}`}
             onClick={() => onSelect(r)}
-            className="grid w-full grid-cols-[90px_60px_1fr_80px] gap-2 border-b border-line py-1.5 text-left text-xs transition-colors duration-150 hover:bg-hover"
+            // `min-w-0` lets the 1fr column shrink below its min-content
+            // so `truncate` on the status/error cell actually clips instead
+            // of stretching the row and producing a horizontal scrollbar.
+            className="grid w-full min-w-0 grid-cols-[90px_60px_minmax(0,1fr)_80px] gap-2 border-b border-line py-1.5 text-left text-xs transition-colors duration-150 hover:bg-hover"
           >
             <span>{new Date(r.ts).toLocaleTimeString()}</span>
             <span className={r.pass ? 'font-bold text-success' : 'font-bold text-danger'}>{r.pass ? 'PASS' : 'FAIL'}</span>

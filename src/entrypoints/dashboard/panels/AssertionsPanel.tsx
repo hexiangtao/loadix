@@ -15,9 +15,9 @@ export function AssertionsPanel({ value, onChange }: AssertionsPanelProps) {
   return (
     <section className="panel">
       {value.map((a, i) => (
-        <div className="mb-2 grid grid-cols-[1fr_1.5fr_36px] items-center gap-2" key={i}>
+        <div className="mb-1.5 grid grid-cols-[1fr_1.8fr_28px] items-center gap-1.5" key={i}>
           <select
-            className="field"
+            className="field min-w-0 text-[12px]"
             value={a.type}
             onChange={(e) => onChange(value.map((x, j) => (j === i ? { ...x, type: e.target.value as AssertionType } : x)))}
           >
@@ -28,11 +28,16 @@ export function AssertionsPanel({ value, onChange }: AssertionsPanelProps) {
             ))}
           </select>
           <input
-            className="field"
+            className="field min-w-0 text-[12px]"
             value={a.value}
             onChange={(e) => onChange(value.map((x, j) => (j === i ? { ...x, value: e.target.value } : x)))}
           />
-          <button className="icon-btn" onClick={() => onChange(value.filter((_, j) => j !== i))}>
+          <button
+            className="icon-btn"
+            onClick={() => onChange(value.filter((_, j) => j !== i))}
+            title="Remove"
+            aria-label="Remove assertion"
+          >
             ×
           </button>
         </div>
@@ -40,7 +45,10 @@ export function AssertionsPanel({ value, onChange }: AssertionsPanelProps) {
       <button className="add-btn" onClick={() => onChange([...value, { type: 'status', value: '200' }])}>
         {t('assertions.add')}
       </button>
-      <div className="mt-3.5 text-xs leading-relaxed text-muted">{t('assertions.hint')}</div>
+      {/* The "assertions.hint" paragraph used to live here. It was
+          filler ("Supports HTTP status code, response time and response
+          body text assertions.") — the three select options already
+          advertise what each assertion type does. Removed. */}
     </section>
   );
 }
