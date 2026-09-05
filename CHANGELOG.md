@@ -1,3 +1,15 @@
+# [1.34.0](https://github.com/hexiangtao/loadix/compare/v1.33.3...v1.34.0) (2026-09-05)
+
+
+### Bug Fixes
+
+* **deps:** declare CodeMirror 6 dependencies used by the Markdown editor ([d99df3c](https://github.com/hexiangtao/loadix/commit/d99df3c6dbb00c57f2e8017f0880193cd3d6cbf3))
+
+
+### Features
+
+* **loadtest:** rewrite UI as config/results split, add presets, verdict, request drawer, cURL import and HTML report ([8423f24](https://github.com/hexiangtao/loadix/commit/8423f24dc541c81304a69ca633ee19a6f492773f))
+
 ## [1.33.3](https://github.com/hexiangtao/loadix/compare/v1.33.2...v1.33.3) (2026-09-04)
 
 ## [1.33.2](https://github.com/hexiangtao/loadix/compare/v1.33.1...v1.33.2) (2026-09-04)
