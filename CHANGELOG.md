@@ -1,3 +1,10 @@
+# [1.40.0](https://github.com/hexiangtao/loadix/compare/v1.39.0...v1.40.0) (2026-09-05)
+
+
+### Features
+
+* **markdown:** drill-down doc navigation, recency fix, header search pill ([589ea8c](https://github.com/hexiangtao/loadix/commit/589ea8cae3a7f891cde97c16c254ee53e1fbf0c2))
+
 # [1.39.0](https://github.com/hexiangtao/loadix/compare/v1.38.0...v1.39.0) (2026-09-05)
 
 
