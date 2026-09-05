@@ -1,3 +1,10 @@
+# [1.41.0](https://github.com/hexiangtao/loadix/compare/v1.40.0...v1.41.0) (2026-09-05)
+
+
+### Features
+
+* **share:** point 返回首页 at lab.loadix.dev and soften the header CTA ([5faad96](https://github.com/hexiangtao/loadix/commit/5faad963f9e0adb23ec1b975b6fe1e953de4b7a9))
+
 # [1.40.0](https://github.com/hexiangtao/loadix/compare/v1.39.0...v1.40.0) (2026-09-05)
 
 
