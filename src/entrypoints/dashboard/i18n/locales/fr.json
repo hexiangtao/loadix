@@ -226,6 +226,7 @@
           "hex": "HEX",
       "preview": "Aperçu"
     },
+    "searchTools": "Rechercher…",
     "markdown": {
       "name": "Markdown",
       "desc": "Aperçu Markdown en direct",
@@ -233,6 +234,8 @@
       "preview": "Aperçu",
       "empty": "Commencez à taper du markdown…",
       "documents": "Documents",
+      "recentDocs": "Récents",
+      "allDocs": "Tous les documents",
       "newDoc": "Nouveau document",
       "newFolder": "Nouveau dossier",
       "untitled": "Sans titre",

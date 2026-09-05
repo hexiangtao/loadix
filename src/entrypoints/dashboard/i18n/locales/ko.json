@@ -226,6 +226,7 @@
           "hex": "HEX",
       "preview": "실시간 미리보기"
     },
+    "searchTools": "검색…",
     "markdown": {
       "name": "Markdown",
       "desc": "Markdown 실시간 미리보기",
@@ -233,6 +234,8 @@
       "preview": "미리보기",
       "empty": "왼쪽에서 Markdown 입력…",
       "documents": "문서",
+      "recentDocs": "최근",
+      "allDocs": "모든 문서",
       "newDoc": "새 문서",
       "newFolder": "새 폴더",
       "untitled": "제목 없음",

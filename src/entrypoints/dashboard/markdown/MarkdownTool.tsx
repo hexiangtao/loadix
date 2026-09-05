@@ -135,13 +135,18 @@ export function MarkdownTool({ initialPayload, fullscreen = false, chromeGone = 
   }, [input]);
 
   /** Persists the current working copy to IndexedDB (uses refs, so it's safe
-      to call from timers and unmount cleanup). */
+      to call from timers and unmount cleanup). updatedAt only moves when the
+      content actually changed — merely opening a document (which flushes here
+      and re-fires through the autosave watcher) must not reshuffle the
+      recency-sorted sidebar. */
   const persist = useCallback(async () => {
     const id = activeIdRef.current;
     if (!id) return;
     const existing = docsRef.current.find((d) => d.id === id);
     if (!existing) return;
-    const updated: MarkdownDoc = { ...existing, content: inputRef.current, updatedAt: Date.now() };
+    const content = inputRef.current;
+    if (existing.content === content) return; // nothing new — don't touch updatedAt
+    const updated: MarkdownDoc = { ...existing, content, updatedAt: Date.now() };
     await saveDoc(updated);
     setDocs((list) => list.map((d) => (d.id === id ? updated : d)));
   }, []);
@@ -335,8 +340,8 @@ export function MarkdownTool({ initialPayload, fullscreen = false, chromeGone = 
     }
   }, [confirm, openDoc]);
 
-  const handleCreateFolder = useCallback(async (name: string) => {
-    const folder = await createFolder(name);
+  const handleCreateFolder = useCallback(async (name: string, parentId: string | null) => {
+    const folder = await createFolder(name, parentId);
     setFolders((list) => [...list, folder]);
   }, []);
 
@@ -537,7 +542,7 @@ export function MarkdownTool({ initialPayload, fullscreen = false, chromeGone = 
         hidden={fullscreen}
         onOpenDoc={openDoc}
         onCreateDoc={(folderId) => void handleCreateDoc(folderId)}
-        onCreateFolder={(name) => void handleCreateFolder(name)}
+        onCreateFolder={(name, parentId) => void handleCreateFolder(name, parentId)}
         onRenameDoc={(id, title) => void handleRenameDoc(id, title)}
         onMoveDoc={(id, folderId) => void handleMoveDoc(id, folderId)}
         onDeleteDoc={(id) => void handleDeleteDoc(id)}

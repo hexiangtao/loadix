@@ -227,6 +227,7 @@
           "hex": "HEX",
       "preview": "ライブプレビュー"
     },
+    "searchTools": "検索…",
     "markdown": {
       "name": "Markdown",
       "desc": "Markdown をライブプレビュー",
@@ -234,6 +235,8 @@
       "preview": "プレビュー",
       "empty": "左側で Markdown を入力…",
       "documents": "ドキュメント",
+      "recentDocs": "最近",
+      "allDocs": "すべてのドキュメント",
       "newDoc": "新規ドキュメント",
       "newFolder": "新規フォルダー",
       "untitled": "無題",

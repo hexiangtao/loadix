@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -27,7 +27,7 @@ interface DocSidebarProps {
   hidden?: boolean;
   onOpenDoc: (id: string) => void;
   onCreateDoc: (folderId: string | null) => void;
-  onCreateFolder: (name: string) => void;
+  onCreateFolder: (name: string, parentId: string | null) => void;
   onRenameDoc: (id: string, title: string) => void;
   onMoveDoc: (id: string, folderId: string | null) => void;
   onDeleteDoc: (id: string) => void;
@@ -41,6 +41,8 @@ interface DocSidebarProps {
 
 const COLLAPSED_KEY = 'loadix-tool:markdown.sidebarCollapsed';
 const TRASH_KEY = '__trash__';
+/** How many recency-sorted documents to surface in the quick-access strip. */
+const RECENT_LIMIT = 5;
 const MIME_DOC = 'application/x-loadix-doc';
 const MIME_FOLDER = 'application/x-loadix-folder';
 
@@ -175,6 +177,7 @@ function Collapsible({ open, children }: { open: boolean; children: React.ReactN
 function DocRow({
   doc,
   title,
+  hint,
   active,
   folders,
   dragging,
@@ -187,6 +190,9 @@ function DocRow({
 }: {
   doc: MarkdownDoc;
   title: string;
+  /** Small muted context shown after the title (e.g. the folder a recent
+      doc lives in) so shortcuts stay unambiguous. */
+  hint?: string;
   active: boolean;
   folders: MarkdownFolder[];
   dragging: boolean;
@@ -231,11 +237,12 @@ function DocRow({
       ) : (
         <button
           onClick={onOpen}
-          className={`min-w-0 flex-1 truncate text-left text-[13px] transition-colors duration-150 ${
+          className={`flex min-w-0 flex-1 items-center gap-1.5 text-left text-[13px] transition-colors duration-150 ${
             active ? 'font-semibold text-primary' : 'text-ink'
           }`}
         >
-          {title}
+          <span className="truncate">{title}</span>
+          {hint && <span className="shrink-0 text-[11px] text-muted/60">· {hint}</span>}
         </button>
       )}
       <button
@@ -558,24 +565,22 @@ export function DocSidebar(props: DocSidebarProps) {
   const { t } = useTranslation();
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(COLLAPSED_KEY) === '1');
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set([TRASH_KEY]));
+  /** Drill-down navigation: folder ids from root to the folder currently
+      shown. Empty = the root view. Depth is expressed as a breadcrumb path,
+      never as indentation. */
+  const [navPath, setNavPath] = useState<string[]>([]);
   const [namingFolder, setNamingFolder] = useState(false);
   const [dragState, setDragState] = useState<DragState>(null);
   const [dropTarget, setDropTarget] = useState<string | null>(null);
 
-  // New folders default to expanded; the toggle sticks for the session.
+  // If the folder open in drill-down mode disappears (deleted), step up one
+  // level instead of pointing into the void.
   useEffect(() => {
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      let changed = false;
-      for (const f of folders) {
-        if (!next.has(f.id)) {
-          next.add(f.id);
-          changed = true;
-        }
-      }
-      return changed ? next : prev;
-    });
-  }, [folders]);
+    const current = navPath[navPath.length - 1];
+    if (current != null && !folders.some((f) => f.id === current)) {
+      setNavPath((p) => p.slice(0, -1));
+    }
+  }, [folders, navPath]);
 
   useEffect(() => {
     localStorage.setItem(COLLAPSED_KEY, collapsed ? '1' : '0');
@@ -588,7 +593,6 @@ export function DocSidebar(props: DocSidebarProps) {
   const byCreatedAt = (a: MarkdownFolder, b: MarkdownFolder) => a.createdAt - b.createdAt;
   const byFolder = (folderId: string | null) =>
     docs.filter((d) => d.folderId === folderId).sort(byUpdatedAt);
-  const rootFolders = folders.filter((f) => (f.parentId ?? null) === null).sort(byCreatedAt);
   const toggleExpanded = (key: string) =>
     setExpanded((prev) => {
       const next = new Set(prev);
@@ -596,6 +600,22 @@ export function DocSidebar(props: DocSidebarProps) {
       else next.add(key);
       return next;
     });
+
+  /* ——— Recency-first, drill-down layout ——— */
+  const hasFolders = folders.length > 0;
+  const recentDocs = [...docs].sort(byUpdatedAt).slice(0, RECENT_LIMIT);
+  const folderNameOf = (folderId: string | null) =>
+    folderId == null ? undefined : folders.find((f) => f.id === folderId)?.name;
+
+  // Current drill-down location: the last breadcrumb entry (null = root view).
+  const currentFolderId = navPath.length > 0 ? (navPath[navPath.length - 1] ?? null) : null;
+  const navigateInto = (folderId: string) => setNavPath((p) => [...p, folderId]);
+
+  // The recency strip is a shortcut to docs outside the current level — hide
+  // it when it would only duplicate what the level list already shows. (Note:
+  // this must come after currentFolderId is declared — the .every() callback
+  // runs synchronously inside this initializer.)
+  const showRecent = !(recentDocs.length > 0 && recentDocs.every((d) => d.folderId === currentFolderId));
 
   /* ——— Drag & drop ——— */
 
@@ -632,10 +652,6 @@ export function DocSidebar(props: DocSidebarProps) {
     if (!canDrop(target)) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
-    // File-manager habit: hovering a collapsed folder opens it.
-    if (target !== 'root' && target !== 'trash') {
-      setExpanded((prev) => (prev.has(target) ? prev : new Set(prev).add(target)));
-    }
     setDropTarget(target);
   };
 
@@ -652,53 +668,51 @@ export function DocSidebar(props: DocSidebarProps) {
     endDrag();
   };
 
-  /** One recursive level of the folder tree. */
-  const renderFolder = (folder: MarkdownFolder, depth: number) => {
-    const open = expanded.has(folder.id);
-    const items = byFolder(folder.id);
-    const children = folders.filter((f) => (f.parentId ?? null) === folder.id).sort(byCreatedAt);
+  /** One flat level of drill-down navigation: subfolders (tap to enter) then
+      documents. Depth is carried by the breadcrumb path, never indentation. */
+  const renderLevel = (folderId: string | null) => {
+    const subs = folders.filter((f) => (f.parentId ?? null) === folderId).sort(byCreatedAt);
+    const items = byFolder(folderId);
     return (
-      <div key={folder.id}>
-        <FolderRow
-          folder={folder}
-          count={items.length}
-          open={open}
-          indent={depth}
-          dragging={dragState?.type === 'folder' && dragState.id === folder.id}
-          over={dropTarget === folder.id}
-          onToggle={() => toggleExpanded(folder.id)}
-          onDragStart={(e) => startDrag(e, 'folder', folder.id)}
-          onDragEnd={endDrag}
-          onDragOver={(e) => dragOver(e, folder.id)}
-          onDrop={(e) => drop(e, folder.id)}
-          onCreateDoc={() => props.onCreateDoc(folder.id)}
-          onRename={(name) => props.onRenameFolder(folder.id, name)}
-          onDelete={() => props.onDeleteFolder(folder.id)}
-        />
-        <Collapsible open={open}>
-          <div className="ml-3 border-l border-line pl-2">
-            {children.map((c) => renderFolder(c, depth + 1))}
-            {items.map((doc) => (
-              <DocRow
-                key={doc.id}
-                doc={doc}
-                title={docDisplayTitle(doc, untitled)}
-                active={doc.id === activeDocId}
-                folders={folders}
-                dragging={dragState?.type === 'doc' && dragState.id === doc.id}
-                onOpen={() => onOpenDoc(doc.id)}
-                onDragStart={(e) => startDrag(e, 'doc', doc.id)}
-                onDragEnd={endDrag}
-                onRename={(title) => props.onRenameDoc(doc.id, title)}
-                onMove={(folderId) => props.onMoveDoc(doc.id, folderId)}
-                onDelete={() => props.onDeleteDoc(doc.id)}
-              />
-            ))}
-            {items.length === 0 && children.length === 0 && (
-              <p className="px-2 py-1 text-[11px] text-muted/60">{t('tools.markdown.emptyFolder')}</p>
-            )}
-          </div>
-        </Collapsible>
+      <div>
+        {subs.map((f) => (
+          <FolderRow
+            key={f.id}
+            folder={f}
+            count={byFolder(f.id).length}
+            open={false}
+            indent={0}
+            dragging={dragState?.type === 'folder' && dragState.id === f.id}
+            over={dropTarget === f.id}
+            onToggle={() => navigateInto(f.id)}
+            onDragStart={(e) => startDrag(e, 'folder', f.id)}
+            onDragEnd={endDrag}
+            onDragOver={(e) => dragOver(e, f.id)}
+            onDrop={(e) => drop(e, f.id)}
+            onCreateDoc={() => props.onCreateDoc(f.id)}
+            onRename={(name) => props.onRenameFolder(f.id, name)}
+            onDelete={() => props.onDeleteFolder(f.id)}
+          />
+        ))}
+        {items.map((doc) => (
+          <DocRow
+            key={doc.id}
+            doc={doc}
+            title={docDisplayTitle(doc, untitled)}
+            active={doc.id === activeDocId}
+            folders={folders}
+            dragging={dragState?.type === 'doc' && dragState.id === doc.id}
+            onOpen={() => onOpenDoc(doc.id)}
+            onDragStart={(e) => startDrag(e, 'doc', doc.id)}
+            onDragEnd={endDrag}
+            onRename={(title) => props.onRenameDoc(doc.id, title)}
+            onMove={(folderId) => props.onMoveDoc(doc.id, folderId)}
+            onDelete={() => props.onDeleteDoc(doc.id)}
+          />
+        ))}
+        {subs.length === 0 && items.length === 0 && (
+          <p className="px-2 py-1 text-[11px] text-muted/60">{t('tools.markdown.emptyFolder')}</p>
+        )}
       </div>
     );
   };
@@ -745,7 +759,7 @@ export function DocSidebar(props: DocSidebarProps) {
           {/* Actions */}
           <div className="flex gap-1.5 px-3 pb-2">
             <button
-              onClick={() => props.onCreateDoc(null)}
+              onClick={() => props.onCreateDoc(currentFolderId)}
               className="flex flex-1 cursor-pointer items-center justify-center gap-1 rounded-lg bg-primary px-2 py-1.5 text-xs font-semibold text-white transition-colors duration-150 hover:bg-primary/90"
             >
               <Plus size={13} />
@@ -760,34 +774,100 @@ export function DocSidebar(props: DocSidebarProps) {
             </button>
           </div>
 
-          {/* Tree */}
-          <div className="app-scroller min-h-0 flex-1 overflow-y-auto px-2 pb-3">
+          {/* Breadcrumb — the current location in the hierarchy. Deep nesting
+              shows up here as a path you can jump on, never as indentation. */}
+          {hasFolders && (
+            <div className="app-scroller flex shrink-0 items-center gap-0.5 overflow-x-auto border-b border-line px-2 py-1.5">
+              <button
+                onClick={() => setNavPath([])}
+                className={`shrink-0 rounded px-1 py-0.5 text-[12px] transition-colors duration-150 ${
+                  navPath.length === 0 ? 'font-semibold text-ink' : 'text-muted hover:bg-hover hover:text-ink'
+                }`}
+              >
+                {t('tools.markdown.allDocs')}
+              </button>
+              {navPath.map((id, i) => {
+                const f = folders.find((x) => x.id === id);
+                if (!f) return null;
+                const isLast = i === navPath.length - 1;
+                return (
+                  <Fragment key={id}>
+                    <span className="shrink-0 text-[11px] text-muted/40">/</span>
+                    <button
+                      onClick={() => setNavPath(navPath.slice(0, i + 1))}
+                      className={`shrink-0 rounded px-1 py-0.5 text-[12px] transition-colors duration-150 ${
+                        isLast ? 'font-semibold text-ink' : 'text-muted hover:bg-hover hover:text-ink'
+                      }`}
+                    >
+                      <span className="block max-w-28 truncate">{f.name}</span>
+                    </button>
+                  </Fragment>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Content — recency-first, one level at a time */}
+          <div className="app-scroller min-h-0 flex-1 overflow-y-auto px-2 pb-2">
             {namingFolder && (
               <div className="px-2 py-1">
                 <RenameInput
                   initial=""
-                  placeholder={t('tools.markdown.folderNamePlaceholder')}
-                  onCommit={(v) => {
-                    setNamingFolder(false);
-                    if (v.trim()) props.onCreateFolder(v.trim());
-                  }}
+                  placeholder={t('tools.markdown.folderNamePlaceholder')}                    onCommit={(v) => {
+                      setNamingFolder(false);
+                      if (v.trim()) props.onCreateFolder(v.trim(), currentFolderId);
+                    }}
                   onCancel={() => setNamingFolder(false)}
                 />
               </div>
             )}
 
-            {/* Root group — drop target that moves docs back to the root */}
-            <div
-              onDragOver={(e) => dragOver(e, 'root')}
-              onDrop={(e) => drop(e, 'root')}
-              className={`mb-0.5 rounded-lg ${
-                dropTarget === 'root' ? 'bg-primary/10 ring-1 ring-primary' : ''
-              }`}
-            >
-              <div className="px-2 py-1 text-[11px] font-bold uppercase tracking-wide text-muted/70">
-                {t('tools.markdown.root')}
-              </div>
-              {docs.length === 0 && folders.length === 0 && !namingFolder ? (
+            {hasFolders ? (
+              <>
+                {/* The recency strip only earns its space as a shortcut —
+                    hidden when every recent doc is already visible in the
+                    current level (e.g. a flat root view). */}
+                {showRecent && (
+                  <div className="border-b border-line pb-1 pt-1">
+                    <div className="px-2 pb-1 text-[11px] font-bold uppercase tracking-wide text-muted/70">
+                      {t('tools.markdown.recentDocs')}
+                    </div>
+                    {recentDocs.length === 0 ? (
+                      <p className="px-3 py-6 text-center text-xs leading-relaxed text-muted">
+                        {t('tools.markdown.emptyDocs')}
+                      </p>
+                    ) : (
+                      recentDocs.map((doc) => (
+                        <DocRow
+                          key={doc.id}
+                          doc={doc}
+                          title={docDisplayTitle(doc, untitled)}
+                          hint={folderNameOf(doc.folderId)}
+                          active={doc.id === activeDocId}
+                          folders={folders}
+                          dragging={dragState?.type === 'doc' && dragState.id === doc.id}
+                          onOpen={() => onOpenDoc(doc.id)}
+                          onDragStart={(e) => startDrag(e, 'doc', doc.id)}
+                          onDragEnd={endDrag}
+                          onRename={(title) => props.onRenameDoc(doc.id, title)}
+                          onMove={(folderId) => props.onMoveDoc(doc.id, folderId)}
+                          onDelete={() => props.onDeleteDoc(doc.id)}
+                        />
+                      ))
+                    )}
+                  </div>
+                )}
+
+                {/* Current location — one flat level under the breadcrumb.
+                    Subfolders (tap to enter) then documents. */}
+                <div className="pt-1">
+                  {renderLevel(currentFolderId)}
+                </div>
+              </>
+            ) : (
+              /* No folders — a flat recency list. No tree chrome at all:
+                 no 根目录 pseudo-heading, no nesting, nothing to navigate. */
+              docs.length === 0 && !namingFolder ? (
                 <p className="px-3 py-8 text-center text-xs leading-relaxed text-muted">
                   {t('tools.markdown.emptyDocs')}
                 </p>
@@ -808,40 +888,40 @@ export function DocSidebar(props: DocSidebarProps) {
                     onDelete={() => props.onDeleteDoc(doc.id)}
                   />
                 ))
-              )}
-            </div>
+              )
+            )}
+          </div>
 
-            {/* Folder groups */}
-            {rootFolders.map((folder) => renderFolder(folder, 0))}
-
-            {/* Recycle bin */}
-            <div className="mt-2 border-t border-line pt-1">
-              <TrashRow
-                count={trashedDocs.length}
-                open={expanded.has(TRASH_KEY)}
-                over={dropTarget === 'trash'}
-                onToggle={() => toggleExpanded(TRASH_KEY)}
-                onEmpty={props.onEmptyTrash}
-                onDragOver={(e) => dragOver(e, 'trash')}
-                onDrop={(e) => drop(e, 'trash')}
-              />
-              <Collapsible open={expanded.has(TRASH_KEY)}>
-                <div className="ml-3 border-l border-line pl-2">
-                  {trashedDocs.length === 0 ? (
-                    <p className="px-2 py-1 text-[11px] text-muted/60">{t('tools.markdown.trashEmpty')}</p>
-                  ) : (
-                    trashedDocs.map((doc) => (
+          {/* Recycle bin — pinned footer so it never scrolls out of reach,
+              visually separated from the document content. */}
+          <div className="shrink-0 border-t border-line px-2 pb-2 pt-1">
+            <TrashRow
+              count={trashedDocs.length}
+              open={expanded.has(TRASH_KEY)}
+              over={dropTarget === 'trash'}
+              onToggle={() => toggleExpanded(TRASH_KEY)}
+              onEmpty={props.onEmptyTrash}
+              onDragOver={(e) => dragOver(e, 'trash')}
+              onDrop={(e) => drop(e, 'trash')}
+            />
+            <Collapsible open={expanded.has(TRASH_KEY)}>
+              <div className="ml-3 border-l border-line pl-2">
+                {trashedDocs.length === 0 ? (
+                  <p className="px-2 py-1 text-[11px] text-muted/60">{t('tools.markdown.trashEmpty')}</p>
+                ) : (
+                  <div className="app-scroller max-h-52 overflow-y-auto pr-0.5">
+                    {trashedDocs.map((doc) => (
                       <TrashDocRow
                         key={doc.id}
                         title={docDisplayTitle(doc, untitled)}
                         onRestore={() => props.onRestoreDoc(doc.id)}
                         onDeleteForever={() => props.onDeleteDocForever(doc.id)}
                       />
-                    ))
-                  )}
-                </div>
-              </Collapsible>
-            </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </Collapsible>
           </div>
         </div>
       )}

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
+import { Search } from 'lucide-react';
 import type { Assertion, TestConfig } from '@/shared/types';
 import type { EngineHost } from '@/engine/engine-host';
 import { changeLanguage, SUPPORTED_LANGUAGES, type SupportedLanguage } from './i18n';
@@ -35,6 +36,9 @@ import { generateReport } from '@/shared/report';
 const CONFIG_KEY = 'api-pressure-config';
 const HISTORY_KEY = 'api-pressure-history';
 const THEME_KEY = 'api-pressure-theme';
+
+/** Shortcut badge shown inside the header search pill (⌘K on Mac, Ctrl K elsewhere). */
+const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
 
 const DEFAULT_REQUEST: RequestFormValue = {
   method: 'GET',
@@ -410,6 +414,22 @@ export default function App({ host }: { host: EngineHost }) {
             <span className="mx-1 h-6 w-px bg-line" />
 
             <ToolsMenu activeTool={activeTool} view={view} onSelect={(id) => openTool(id)} />
+
+            {/* Ctrl/Cmd+K search pill — the same gallery the shortcut opens,
+                in the GitHub/tech-site shape so discoverability doesn't rely
+                on the keyboard. */}
+            <button
+              onClick={() => setPaletteOpen(true)}
+              title={t('tools.searchTools')}
+              aria-label={t('tools.searchTools')}
+              className="ml-1 flex cursor-pointer items-center gap-1.5 rounded-lg border border-line bg-panel px-2.5 py-1.5 text-[13px] text-muted transition-colors duration-150 hover:border-primary/40 hover:text-ink"
+            >
+              <Search size={13} className="shrink-0" />
+              <span className="max-w-28 truncate">{t('tools.searchTools')}</span>
+              <kbd className="ml-0.5 shrink-0 rounded border border-line bg-surface px-1 py-px text-[10px] font-medium text-muted/70">
+                {IS_MAC ? '⌘K' : 'Ctrl K'}
+              </kbd>
+            </button>
           </nav>
 
         <div className="flex items-center gap-1">

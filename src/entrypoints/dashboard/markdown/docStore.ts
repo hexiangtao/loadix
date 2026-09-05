@@ -196,8 +196,8 @@ export async function getAllFolders(): Promise<MarkdownFolder[]> {
   return getAll<MarkdownFolder>('folders');
 }
 
-export async function createFolder(name: string): Promise<MarkdownFolder> {
-  const folder: MarkdownFolder = { id: uid(), name, parentId: null, createdAt: Date.now() };
+export async function createFolder(name: string, parentId: string | null = null): Promise<MarkdownFolder> {
+  const folder: MarkdownFolder = { id: uid(), name, parentId, createdAt: Date.now() };
   await putOne('folders', folder);
   return folder;
 }
