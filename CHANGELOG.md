@@ -1,3 +1,10 @@
+# [1.45.0](https://github.com/hexiangtao/loadix/compare/v1.44.1...v1.45.0) (2026-09-05)
+
+
+### Features
+
+* **share:** default-open left outline, rail-owned toggle, and scroll-hiding header ([c512a61](https://github.com/hexiangtao/loadix/commit/c512a6175d68d30639daaed7066a78d67cc99863))
+
 ## [1.44.1](https://github.com/hexiangtao/loadix/compare/v1.44.0...v1.44.1) (2026-09-05)
 
 

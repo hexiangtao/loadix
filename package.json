@@ -1,6 +1,6 @@
 {
   "name": "loadix",
-  "version": "1.44.1",
+  "version": "1.45.0",
   "description": "Loadix — a browser-based HTTP API load & stress testing workbench.",
   "type": "module",
   "repository": {
