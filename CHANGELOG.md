@@ -1,3 +1,10 @@
+# [1.35.0](https://github.com/hexiangtao/loadix/compare/v1.34.0...v1.35.0) (2026-09-05)
+
+
+### Features
+
+* **loadtest:** Test Connection, Copy as cURL, RecentRequests filter, History re-run ([7e4c904](https://github.com/hexiangtao/loadix/commit/7e4c9040ef265916bc6e55824d3f2d3bbde4940a)), closes [hi#frequency](https://github.com/hi/issues/frequency)
+
 # [1.34.0](https://github.com/hexiangtao/loadix/compare/v1.33.3...v1.34.0) (2026-09-05)
 
 
