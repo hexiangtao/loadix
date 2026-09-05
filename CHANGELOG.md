@@ -1,3 +1,10 @@
+## [1.45.1](https://github.com/hexiangtao/loadix/compare/v1.45.0...v1.45.1) (2026-09-05)
+
+
+### Bug Fixes
+
+* **functions:** correct _lib import depth in /s/[id] route ([3190571](https://github.com/hexiangtao/loadix/commit/31905717a0721e1df4ef1e9aa8917e8433a98c4c))
+
 # [1.45.0](https://github.com/hexiangtao/loadix/compare/v1.44.1...v1.45.0) (2026-09-05)
 
 
