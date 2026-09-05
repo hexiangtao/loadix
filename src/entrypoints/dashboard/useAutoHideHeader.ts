@@ -29,9 +29,16 @@ export function useAutoHideHeader(enabled: boolean): boolean {
       const prev = pos.get(el) ?? cur;
       pos.set(el, cur);
       const delta = cur - prev;
+      // "Back at the top" means the element being scrolled is at ITS top —
+      // window.scrollY for the page, its own scrollTop for nested scrollers
+      // (preview pane, editor). Checking only window.scrollY here breaks
+      // immersive reading in inner-scroll layouts (where the window never
+      // scrolls): every small-delta event would force the header back into
+      // view, so it jitters and never stays hidden.
+      const atTop = cur <= 16;
       if (delta > 6) setHidden(true);
       else if (delta < -6) setHidden(false);
-      else if (window.scrollY <= 16) setHidden(false); // back at the top — always reveal
+      else if (atTop) setHidden(false);
     };
 
     window.addEventListener('scroll', onScroll, { capture: true, passive: true });
