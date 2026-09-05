@@ -3,7 +3,7 @@
 // office apps preview with real context. Unknown/invalid ids fall through to
 // the static `/s/* → /share.html` rewrite, where the client-side viewer shows
 // its own not-found state.
-import { readShare, renderSharePage } from '../../_lib/share-core.mjs';
+import { readShare, renderSharePage } from '../_lib/share-core.mjs';
 
 export const onRequestGet = async ({ params, env, request, next }) => {
   const record = await readShare(params.id, env.SHARE_KV);
