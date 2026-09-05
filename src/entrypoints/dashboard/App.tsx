@@ -365,32 +365,24 @@ export default function App({ host }: { host: EngineHost }) {
   return (
     <>
       <header
-        className={`toolbar flex h-14 items-center justify-between px-6 transition-transform duration-300 ${markdownChromeGone ? '-translate-y-full' : 'translate-y-0'}`}
+        className={`toolbar flex h-14 items-center px-6 transition-transform duration-300 ${markdownChromeGone ? '-translate-y-full' : 'translate-y-0'}`}
       >
-        <div className="flex items-center gap-8">
-          <a
-            href="https://loadix.dev"
-            target="_blank"
-            rel="noreferrer"
-            title={t('app.name')}
-            className="rounded-lg text-[15px] font-bold transition-colors duration-150 hover:text-primary"
-          >
-            {t('app.name')}
-          </a>
+        <a
+          href="https://loadix.dev"
+          target="_blank"
+          rel="noreferrer"
+          title={t('app.name')}
+          className="rounded-lg text-[15px] font-bold transition-colors duration-150 hover:text-primary"
+        >
+          {t('app.name')}
+        </a>
 
-          <nav className="flex items-center gap-1">
-            <button
-              onClick={() => switchView('loadtest')}
-              className={`relative rounded-lg px-3 py-2 text-sm transition-colors duration-150 ${
-                view === 'loadtest' ? 'font-bold text-primary' : 'text-muted hover:bg-hover hover:text-ink'
-              }`}
-            >
-              {view === 'loadtest' && (
-                <motion.span layoutId="view-active" className="absolute inset-0 rounded-lg bg-primary/10" />
-              )}
-              <span className="relative">{t('views.loadtest')}</span>
-            </button>
+        {/* Push the primary destinations to the right of the brand — the
+            familiar brand-left / actions-right header — instead of crowding
+            the Loadix wordmark. Contextual actions follow at the far right. */}
+        <div className="flex-1" />
 
+        <nav className="mr-2 flex items-center gap-1">
             <button
               onClick={() => switchView('markdown')}
               className={`relative rounded-lg px-3 py-2 text-sm transition-colors duration-150 ${
@@ -403,11 +395,22 @@ export default function App({ host }: { host: EngineHost }) {
               <span className="relative">{t('tools.markdown.name')}</span>
             </button>
 
+            <button
+              onClick={() => switchView('loadtest')}
+              className={`relative rounded-lg px-3 py-2 text-sm transition-colors duration-150 ${
+                view === 'loadtest' ? 'font-bold text-primary' : 'text-muted hover:bg-hover hover:text-ink'
+              }`}
+            >
+              {view === 'loadtest' && (
+                <motion.span layoutId="view-active" className="absolute inset-0 rounded-lg bg-primary/10" />
+              )}
+              <span className="relative">{t('views.loadtest')}</span>
+            </button>
+
             <span className="mx-1 h-6 w-px bg-line" />
 
             <ToolsMenu activeTool={activeTool} view={view} onSelect={(id) => openTool(id)} />
           </nav>
-        </div>
 
         <div className="flex items-center gap-1">
           {view === 'loadtest' && (
@@ -465,20 +468,20 @@ export default function App({ host }: { host: EngineHost }) {
 
       {view === 'loadtest' ? (
         <main
-          className="mx-auto grid max-w-[1600px] gap-6 px-4 py-6 xl:grid-cols-[360px_minmax(0,1fr)]"
+          className="bg-panel max-xl:flex max-xl:flex-col max-xl:gap-6 max-xl:px-4 max-xl:py-5 xl:h-[calc(100vh-3.5rem)] xl:grid xl:grid-cols-[380px_minmax(0,1fr)] xl:overflow-hidden"
           data-screenshot-target="loadtest"
         >
           {/* ——— Left: step navigation + active configuration section ——— */}
-          <aside className="flex min-w-0 flex-col gap-4">
-            <nav className="rounded-xl border border-line bg-panel p-2">
-              <div className="px-2.5 pb-2 pt-1 text-[11px] font-bold uppercase tracking-wide text-muted">
+          <aside className="flex min-w-0 flex-col max-xl:gap-4 xl:min-h-0 xl:overflow-hidden xl:border-r xl:border-line">
+            <nav className="shrink-0 px-1 pb-2 pt-1 xl:px-2 xl:pb-2 xl:pt-2.5">
+              <div className="px-2.5 pb-1.5 pt-1 text-[11px] font-bold uppercase tracking-wide text-muted xl:px-1.5">
                 {t('nav.title')}
               </div>
               {SECTIONS.map((section, idx) => (
                 <button
                   key={section}
                   onClick={() => setActiveSection(section)}
-                  className={`relative mb-0.5 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[13px] transition-colors duration-150 ${
+                  className={`relative mb-0.5 flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-left text-[13px] transition-colors duration-150 ${
                     activeSection === section ? 'font-bold text-primary' : 'text-muted hover:bg-hover hover:text-ink'
                   }`}
                 >
@@ -497,7 +500,7 @@ export default function App({ host }: { host: EngineHost }) {
               ))}
             </nav>
 
-            <section className="min-w-0">
+            <section className="app-scroller min-w-0 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:border-t xl:border-line xl:px-4 xl:py-4">
               <div className="mb-3 flex items-center justify-between">
                 <div className="min-w-0">
                   <h1 className="truncate text-[15px] font-bold">{t(titleKey)}</h1>
@@ -529,14 +532,11 @@ export default function App({ host }: { host: EngineHost }) {
             </section>
           </aside>
 
-          {/* ——— Right: live results (sticky on xl+) ——— */}
-          <aside className="app-scroller flex min-w-0 flex-col gap-3 xl:sticky xl:top-20 xl:max-h-[calc(100vh-5.5rem)] xl:overflow-y-auto">
-            {/* Target API bar at the top of the work area. The URL is the
-                "thing being tested" — putting it directly above the
-                results makes the visual flow: target → execute → outcome.
-                It also gets the right-aside's full width (~600px on
-                desktop), enough to show long URLs without truncation,
-                without claiming the global header. */}
+          {/* ——— Right: live results ——— */}
+          <aside className="flex min-w-0 flex-col xl:min-h-0 xl:overflow-hidden">
+            {/* Target API bar: pinned above the scrolling results so the URL
+                + Start button stay reachable while the metrics stream. */}
+            <div className="shrink-0 border-b border-line px-4 py-3">
             <TargetBar
               method={request.method}
               url={request.url}
@@ -546,7 +546,9 @@ export default function App({ host }: { host: EngineHost }) {
               onStart={handleStart}
               onStop={handleStop}
             />
+            </div>
 
+            <div className="app-scroller flex min-w-0 flex-col gap-3 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:px-4 xl:pb-6 xl:pt-4">
             <ProgressBar running={running} durationSec={load.duration} />
             <VerdictCard engineState={engineState} metrics={metrics} resultMessage={resultMessage} autoStopHint={resultMessage} />
             <HeroMetrics metrics={metrics} target={load} />
@@ -589,17 +591,15 @@ export default function App({ host }: { host: EngineHost }) {
                 <RecentRequests metrics={metrics} onSelect={showRequest} />
               </div>
             </div>
+            </div>
           </aside>
         </main>
       ) : view === 'markdown' ? (
-        <main
-          className={`mx-auto w-full transition-all duration-300 ${
-            markdownFullscreen ? 'px-0 py-0' : 'px-7 py-4'
-          } ${markdownChromeGone ? '-mt-14' : ''}`}
-        >
+        <main className={`w-full transition-all duration-300 ${markdownChromeGone ? '-mt-14' : ''}`}>
           <MarkdownTool
             initialPayload={toolPayload}
             fullscreen={markdownFullscreen}
+            chromeGone={markdownChromeGone}
             onToggleFullscreen={() => setMarkdownFullscreen((v) => !v)}
           />
         </main>

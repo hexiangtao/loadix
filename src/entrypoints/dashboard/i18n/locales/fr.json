@@ -217,15 +217,18 @@
     "more": "Plus",
     "group_query": "Requête",
     "hash": {
-      "name": "Hash"
+      "name": "Hash",
+      "desc": "Calculer MD5 / SHA-1 / SHA-256 / SHA-512"
   },
     "color": {
       "name": "Pipette",
+      "desc": "Convertir entre HEX, RGB et HSL",
           "hex": "HEX",
       "preview": "Aperçu"
     },
     "markdown": {
       "name": "Markdown",
+      "desc": "Aperçu Markdown en direct",
           "source": "Source",
       "preview": "Aperçu",
       "empty": "Commencez à taper du markdown…",
@@ -238,13 +241,20 @@
       "moveTo": "Déplacer vers",
       "delete": "Supprimer",
       "newDocIn": "Nouveau document ici",
-      "confirmDeleteDoc": "Supprimer « {title} » ? Cette action est irréversible.",
-      "confirmDeleteFolder": "Supprimer ce dossier ? Ses documents reviendront à la racine.",
+      "confirmDeleteFolder": "Supprimer ce dossier ? Ses documents seront déplacés vers la corbeille.",
       "emptyDocs": "Aucun document pour l'instant — créez-en un pour commencer.",
       "emptyFolder": "Dossier vide",
       "docTitlePlaceholder": "Titre…",
       "folderNamePlaceholder": "Nom du dossier…",
-      "loadingDocs": "Chargement des documents…"
+      "loadingDocs": "Chargement des documents…",
+      "trash": "Corbeille",
+      "restore": "Restaurer",
+      "deleteForever": "Supprimer définitivement",
+      "emptyTrash": "Vider la corbeille",
+      "confirmEmptyTrash": "Vider la corbeille ? Cette action est irréversible.",
+      "confirmDeleteForever": "Supprimer définitivement « {{title}} » ? Cette action est irréversible.",
+      "confirmCancel": "Annuler",
+      "trashEmpty": "La corbeille est vide"
     },
     "jwt-encode": {
       "name": "JWT Encode",
@@ -253,11 +263,13 @@
     },
     "jsonpath": {
       "name": "JSONPath",
+      "desc": "Extraire des données JSON par expression",
           "presets": "Exemples :",
       "matches": "Résultats"
     },
     "unicode": {
       "name": "Unicode",
+      "desc": "Échapper et restaurer les séquences \\uXXXX, inspecter les points de code",
           "encode": "Échapper",
       "decode": "Restaurer",
       "scope_nonAscii": "Non-ASCII",

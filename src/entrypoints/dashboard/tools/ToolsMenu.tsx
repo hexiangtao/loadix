@@ -1,8 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { ChevronDown, Search } from 'lucide-react';
-import { GROUPS, TOOLS, type Tool } from './registry';
+import { ChevronDown } from 'lucide-react';
+import { GROUPS, TOOLS } from './registry';
+
+/** Max popup width. Wide enough for a 4-column tool grid so the menu stays
+    short and rarely needs to scroll. */
+const MENU_MAX_W = 760;
 
 interface ToolsMenuProps {
   activeTool: string | null;
@@ -11,39 +15,43 @@ interface ToolsMenuProps {
 }
 
 /**
- * Header tools menu: shows the most-used tools inline in the header (zero
- * clicks to discover them) and an "All tools" trigger that opens a grouped
- * popup listing every tool. Replaces the opaque "Tools" tab.
+ * Header "更多" menu — the single entry point for every utility tool.
+ * Markdown and the load-test workbench own the top-level tabs, so the header
+ * stays focused on three destinations. The popup is grouped and searchable;
+ * once inside a tool, ToolsWorkspace's own sidebar takes over switching (and
+ * Ctrl/Cmd+K opens the same gallery from anywhere).
  */
 export function ToolsMenu({ activeTool, view, onSelect }: ToolsMenuProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
-  const [recent, setRecent] = useState<string[]>(() => {
-    try {
-      return JSON.parse(localStorage.getItem('loadix-recent-tools') ?? '[]') as string[];
-    } catch {
-      return [];
-    }
-  });
+  const [pos, setPos] = useState<{ left: number; top: number; width: number } | null>(null);
   const ref = useRef<HTMLDivElement>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  // A tool is open → the trigger reads as the active destination.
+  const inTools = view === 'tools';
 
-  // Track recently used tools (persisted, max 4) for the inline row.
-  useEffect(() => {
-    if (!view || view === 'loadtest' || !activeTool) return;
-    setRecent((list) => {
-      const next = [activeTool, ...recent.filter((id) => id !== activeTool)].slice(0, 4);
-      localStorage.setItem('loadix-recent-tools', JSON.stringify(next));
-      return next;
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTool]);
+  // Markdown lives on its own top-level tab — it stays out of the menu.
+  const gallery = TOOLS.filter((tool) => tool.id !== 'markdown');
 
   useEffect(() => {
     if (!open) setQuery('');
   }, [open]);
 
   // Close on outside click / Escape.
+  // Anchor the popup under the trigger. Prefer the full width (up to
+  // MENU_MAX_W); if the space to the right of the trigger is too small,
+  // grow leftward instead so the menu never clips and stays short enough
+  // to avoid an internal scrollbar.
+  const placeMenu = useCallback(() => {
+    const r = btnRef.current?.getBoundingClientRect();
+    if (!r) return;
+    const width = Math.min(MENU_MAX_W, window.innerWidth - 16);
+    let left = r.left;
+    if (left + width + 8 > window.innerWidth) left = Math.max(8, window.innerWidth - width - 8);
+    setPos({ left, top: r.bottom + 8, width });
+  }, []);
+
   useEffect(() => {
     if (!open) return;
     const onDown = (e: MouseEvent) => {
@@ -54,60 +62,39 @@ export function ToolsMenu({ activeTool, view, onSelect }: ToolsMenuProps) {
     };
     window.addEventListener('mousedown', onDown);
     window.addEventListener('keydown', onKey);
+    window.addEventListener('resize', placeMenu);
     return () => {
       window.removeEventListener('mousedown', onDown);
       window.removeEventListener('keydown', onKey);
+      window.removeEventListener('resize', placeMenu);
     };
-  }, [open]);
+  }, [open, placeMenu]);
 
-  // Markdown has its own top-level tab now, so it leaves the tools menu —
-  // the tab is its single entry point.
-  const GALLERY_TOOLS = TOOLS.filter((tool) => tool.id !== 'markdown');
+  // 4 columns when wide enough to stay short; fall back to 3 / 2 on narrow
+  // windows where tiles would get cramped.
+  const gridCols = !pos ? 4 : pos.width >= 660 ? 4 : pos.width >= 500 ? 3 : 2;
+  const gridClass = gridCols === 4 ? 'grid-cols-4' : gridCols === 3 ? 'grid-cols-3' : 'grid-cols-2';
 
   const q = query.trim().toLowerCase();
   const filtered = q
-    ? GALLERY_TOOLS.filter(
+    ? gallery.filter(
         (tool) =>
           tool.id.includes(q) ||
           tool.keywords.some((k) => k.includes(q)) ||
           t(tool.nameKey).toLowerCase().includes(q),
       )
-    : GALLERY_TOOLS;
-
-  // Inline tools: recent first (deduped), then fill with defaults.
-  const inline = [...new Set([...recent, ...GALLERY_TOOLS.slice(0, 4).map((tool) => tool.id)])].slice(0, 4);
-  const inlineTools = inline
-    .map((id) => GALLERY_TOOLS.find((tool) => tool.id === id))
-    .filter((tool): tool is Tool => Boolean(tool));
+    : gallery;
 
   return (
-    <div ref={ref} className="relative flex items-center gap-1">
-      {inlineTools.map((tool) => {
-        const Icon = tool.icon;
-        const active = view === 'tools' && tool.id === activeTool;
-        return (
-          <button
-            key={tool.id}
-            onClick={() => onSelect(tool.id)}
-            title={t(tool.descKey)}
-            className={`relative flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-sm transition-colors duration-150 ${
-              active ? 'font-bold text-primary' : 'text-muted hover:bg-hover hover:text-ink'
-            }`}
-          >
-            {active && (
-              <motion.span layoutId="view-active" className="absolute inset-0 rounded-lg bg-primary/10" />
-            )}
-            <Icon size={15} className="relative shrink-0" />
-            <span className="relative hidden xl:inline">{t(tool.nameKey)}</span>
-          </button>
-        );
-      })}
-
-      {/* More: popup with every tool, searchable */}
+    <div ref={ref} className="relative">
       <button
-        onClick={() => setOpen((v) => !v)}
+        ref={btnRef}
+        onClick={() => {
+          if (!open) placeMenu();
+          setOpen((v) => !v);
+        }}
         className={`relative flex items-center gap-1 rounded-lg px-2.5 py-2 text-sm transition-colors duration-150 ${
-          open ? 'text-primary' : 'text-muted hover:bg-hover hover:text-ink'
+          open || inTools ? 'font-bold text-primary' : 'text-muted hover:bg-hover hover:text-ink'
         }`}
       >
         {t('tools.more')}
@@ -117,11 +104,12 @@ export function ToolsMenu({ activeTool, view, onSelect }: ToolsMenuProps) {
       <AnimatePresence>
         {open && (
           <motion.div
-            initial={{ opacity: 0, y: -6, scale: 0.98 }}
+            initial={{ opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.14, ease: 'easeOut' }}
-            className="absolute right-0 top-full z-50 mt-2 w-[560px] overflow-hidden rounded-xl border border-line bg-panel shadow-2xl"
+            style={pos ? { left: pos.left, top: pos.top, width: pos.width } : undefined}
+            className="app-scroller fixed z-50 max-h-[calc(100vh-5rem)] max-w-[calc(100vw-1rem)] overflow-y-auto rounded-xl border border-line bg-panel shadow-2xl"
           >
             {/* Search */}
             <div className="border-b border-line px-4 py-2.5">
@@ -134,8 +122,8 @@ export function ToolsMenu({ activeTool, view, onSelect }: ToolsMenuProps) {
               />
             </div>
 
-            {/* Mega-menu body: grouped columns, e-commerce style.
-                No max-height / no scrolling — all tools visible at once. */}
+            {/* Mega-menu body: grouped columns. No max-height / no scrolling —
+                every tool visible at once. */}
             <div className="p-4">
               {GROUPS.map((group) => {
                 const tools = filtered.filter((tool) => tool.group === group.id);
@@ -145,7 +133,7 @@ export function ToolsMenu({ activeTool, view, onSelect }: ToolsMenuProps) {
                     <div className="mb-2 text-[11px] font-bold uppercase tracking-wide text-muted/70">
                       {t(group.labelKey)}
                     </div>
-                    <div className="grid grid-cols-3 gap-1.5 max-sm:grid-cols-2">
+                    <div className={`grid gap-1.5 ${gridClass}`}>
                       {tools.map((tool) => {
                         const Icon = tool.icon;
                         const active = tool.id === activeTool;
@@ -157,7 +145,7 @@ export function ToolsMenu({ activeTool, view, onSelect }: ToolsMenuProps) {
                               setOpen(false);
                             }}
                             className={`group flex items-start gap-2.5 rounded-lg border border-transparent p-2.5 text-left transition-all duration-150 hover:border-line hover:bg-hover ${
-                              tool.id === activeTool ? 'bg-primary/5' : ''
+                              active ? 'bg-primary/5' : ''
                             }`}
                           >
                             <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors duration-150 group-hover:bg-primary group-hover:text-white">

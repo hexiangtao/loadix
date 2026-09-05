@@ -5,15 +5,14 @@
 // and re-renders with the same MarkdownPreview the tool uses — mermaid,
 // KaTeX, GFM tables and highlighting all work with zero extra code.
 //
-// Immersive by design: the header retreats on scroll and there is no other
-// chrome — the document is the page. The header keeps a single funnel link
-// back to the workbench (打开工具箱).
+// Product-consistent by design: the document renders flat on the same white
+// surface and measure as the workbench preview, under a fixed header whose
+// funnel link (打开工具箱) invites visitors into the product.
 import { createRoot } from 'react-dom/client';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, ArrowUpRight, FileQuestion, Loader2, RotateCw } from 'lucide-react';
 import { initI18n } from '@/entrypoints/dashboard/i18n';
-import { useAutoHideHeader } from '@/entrypoints/dashboard/useAutoHideHeader';
 import { MarkdownPreview } from '@/entrypoints/dashboard/markdown/MarkdownPreview';
 import '@/entrypoints/dashboard/app.css';
 
@@ -53,8 +52,6 @@ function useSystemTheme() {
 
 function ShareApp() {
   useSystemTheme();
-  // Immersive reading: the sticky header retreats while the document scrolls.
-  const headerHidden = useAutoHideHeader(true);
   const { t } = useTranslation();
   const [id] = useState(shareIdFromUrl);
   const [state, setState] = useState<ViewState>(() =>
@@ -97,10 +94,8 @@ function ShareApp() {
   }, [state]);
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <header
-        className={`sticky top-0 z-30 border-b border-line bg-panel/80 backdrop-blur-md transition-transform duration-300 ${headerHidden ? '-translate-y-full' : ''}`}
-      >
+    <div className="flex h-screen flex-col bg-panel">
+      <header className="shrink-0 border-b border-line bg-panel">
         <div className="flex h-14 items-center justify-between px-4 sm:px-6">
           <a
             href={HOME_URL}
@@ -114,7 +109,7 @@ function ShareApp() {
           </a>
           <a
             href={HOME_URL}
-            className="flex items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-muted transition-colors duration-150 hover:border-primary hover:text-primary"
+            className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white transition-colors duration-150 hover:bg-primary/90"
           >
             {t('share.openToolbox')}
             <ArrowUpRight size={13} />
@@ -122,13 +117,14 @@ function ShareApp() {
         </div>
       </header>
 
-      <main className="flex-1 px-4 py-5 sm:px-6 sm:py-6">
-        {/* Immersive reading column: the document is the hero — no tool rail,
-            no other chrome. Text follows the prose measure; wide tables and
-            diagrams overflow-scroll inside their own wrappers. */}
-        <div className="mx-auto w-full max-w-[960px]">
+      <main className="app-scroller min-h-0 flex-1 overflow-y-auto">
+        {/* The document is the hero, rendered flat on the same white surface
+            and measure as the workbench's preview pane — preview and share
+            stay consistent, so a shared visitor sees exactly the product.
+            Wide tables and diagrams overflow-scroll in their own wrappers. */}
+        <div className="mx-auto w-full max-w-[880px] px-6 py-8 sm:px-8 sm:py-10">
           {(state.status === 'loading' || state.status === 'ready') && (
-            <div className="rounded-xl border border-line bg-panel px-6 py-4 shadow-sm sm:px-8 sm:py-6 md:px-10 md:py-8">
+            <div>
               {state.status === 'loading' && (
                 <div aria-label={t('share.loading')} className="space-y-3" role="status">
                   <div className="h-6 w-1/2 animate-pulse rounded-md bg-hover" />
@@ -179,7 +175,7 @@ function ShareApp() {
         </div>
       </main>
 
-      <footer className="border-t border-line py-5">
+      <footer className="shrink-0 border-t border-line py-5">
         <p className="text-center text-xs text-muted">
           {t('share.renderedBy')}
           <span className="mx-2 opacity-40">·</span>

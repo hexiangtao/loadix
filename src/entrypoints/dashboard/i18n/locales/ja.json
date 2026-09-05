@@ -218,15 +218,18 @@
     "more": "その他",
     "group_query": "クエリ",
     "hash": {
-      "name": "ハッシュ"
+      "name": "ハッシュ",
+      "desc": "MD5 / SHA-1 / SHA-256 / SHA-512 を計算"
   },
     "color": {
       "name": "カラーピッカー",
+      "desc": "HEX / RGB / HSL を相互変換",
           "hex": "HEX",
       "preview": "ライブプレビュー"
     },
     "markdown": {
       "name": "Markdown",
+      "desc": "Markdown をライブプレビュー",
           "source": "ソース",
       "preview": "プレビュー",
       "empty": "左側で Markdown を入力…",
@@ -239,13 +242,20 @@
       "moveTo": "移動先",
       "delete": "削除",
       "newDocIn": "ここに新規ドキュメント",
-      "confirmDeleteDoc": "「{title}」を削除しますか？この操作は元に戻せません。",
-      "confirmDeleteFolder": "このフォルダーを削除しますか？中のドキュメントはルートに移動します。",
+      "confirmDeleteFolder": "このフォルダーを削除しますか？中のドキュメントはゴミ箱に移動します。",
       "emptyDocs": "まだドキュメントがありません。作成して書き始めましょう。",
       "emptyFolder": "空のフォルダー",
       "docTitlePlaceholder": "タイトル…",
       "folderNamePlaceholder": "フォルダー名…",
-      "loadingDocs": "ドキュメントを読み込み中…"
+      "loadingDocs": "ドキュメントを読み込み中…",
+      "trash": "ゴミ箱",
+      "restore": "復元",
+      "deleteForever": "完全に削除",
+      "emptyTrash": "ゴミ箱を空にする",
+      "confirmEmptyTrash": "ゴミ箱を空にしますか？この操作は元に戻せません。",
+      "confirmDeleteForever": "「{{title}}」を完全に削除しますか？この操作は元に戻せません。",
+      "confirmCancel": "キャンセル",
+      "trashEmpty": "ゴミ箱は空です"
     },
     "jwt-encode": {
       "name": "JWT エンコード",
@@ -254,11 +264,13 @@
     },
     "jsonpath": {
       "name": "JSONPath",
+      "desc": "パス式で JSON から値を抽出",
           "presets": "プリセット:",
       "matches": "一致"
     },
     "unicode": {
       "name": "Unicode",
+      "desc": "\\uXXXX エスケープのエンコード/デコード、コードポイントを表示",
           "encode": "エスケープ",
       "decode": "復元",
       "scope_nonAscii": "非ASCII",

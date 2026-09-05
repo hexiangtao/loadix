@@ -217,15 +217,18 @@
     "more": "더보기",
     "group_query": "쿼리",
     "hash": {
-      "name": "해시"
+      "name": "해시",
+      "desc": "MD5 / SHA-1 / SHA-256 / SHA-512 계산"
   },
     "color": {
       "name": "색상 피커",
+      "desc": "HEX / RGB / HSL 상호 변환",
           "hex": "HEX",
       "preview": "실시간 미리보기"
     },
     "markdown": {
       "name": "Markdown",
+      "desc": "Markdown 실시간 미리보기",
           "source": "소스",
       "preview": "미리보기",
       "empty": "왼쪽에서 Markdown 입력…",
@@ -238,13 +241,20 @@
       "moveTo": "이동",
       "delete": "삭제",
       "newDocIn": "여기에 새 문서",
-      "confirmDeleteDoc": "「{title}」을(를) 삭제할까요? 되돌릴 수 없습니다.",
-      "confirmDeleteFolder": "이 폴더를 삭제할까요? 안의 문서는 루트로 이동합니다.",
+      "confirmDeleteFolder": "이 폴더를 삭제할까요? 안의 문서는 휴지통으로 이동합니다.",
       "emptyDocs": "아직 문서가 없습니다. 새로 만들어 시작하세요.",
       "emptyFolder": "빈 폴더",
       "docTitlePlaceholder": "제목…",
       "folderNamePlaceholder": "폴더 이름…",
-      "loadingDocs": "문서 불러오는 중…"
+      "loadingDocs": "문서 불러오는 중…",
+      "trash": "휴지통",
+      "restore": "복원",
+      "deleteForever": "영구 삭제",
+      "emptyTrash": "휴지통 비우기",
+      "confirmEmptyTrash": "휴지통을 비우시겠습니까? 되돌릴 수 없습니다.",
+      "confirmDeleteForever": "「{{title}}」을(를) 영구 삭제하시겠습니까? 되돌릴 수 없습니다.",
+      "confirmCancel": "취소",
+      "trashEmpty": "휴지통이 비어 있습니다"
     },
     "jwt-encode": {
       "name": "JWT 인코딩",
@@ -253,11 +263,13 @@
     },
     "jsonpath": {
       "name": "JSONPath",
+      "desc": "경로 표현식으로 JSON에서 값 추출",
           "presets": "빠른 선택:",
       "matches": "일치"
     },
     "unicode": {
       "name": "Unicode",
+      "desc": "\\uXXXX 시퀀스 이스케이프 및 복원, 코드 포인트 정보 표시",
           "encode": "이스케이프",
       "decode": "복원",
       "scope_nonAscii": "비-ASCII",

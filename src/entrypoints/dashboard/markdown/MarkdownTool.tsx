@@ -25,15 +25,19 @@ import { DocSidebar } from './DocSidebar';
 import {
   createDoc,
   createFolder,
-  deleteDoc,
+  deleteDocForever,
   deleteFolder,
   docDisplayTitle,
+  emptyTrash,
   getAllDocs,
   getDoc,
   loadWorkspace,
+  moveFolder,
   patchDocMeta,
   renameFolder,
+  restoreDoc,
   saveDoc,
+  trashDoc,
   type MarkdownDoc,
   type MarkdownFolder,
 } from './docStore';
@@ -44,6 +48,9 @@ interface MarkdownToolProps {
   /** Fullscreen reading (preview mode): hides all chrome and widens the
       document to the viewport. Toggled by double-click or Ctrl/Cmd+Shift+F. */
   fullscreen?: boolean;
+  /** The app header has auto-hidden (immersive reading): the canvas then
+      owns the whole viewport instead of reserving the header's height. */
+  chromeGone?: boolean;
   onToggleFullscreen?: () => void;
 }
 
@@ -81,7 +88,7 @@ function useViewMode(): [ViewMode, (m: ViewMode) => void] {
   return [mode, setMode];
 }
 
-export function MarkdownTool({ initialPayload, fullscreen = false, onToggleFullscreen }: MarkdownToolProps) {
+export function MarkdownTool({ initialPayload, fullscreen = false, chromeGone = false, onToggleFullscreen }: MarkdownToolProps) {
   const { t } = useTranslation();
   const [mode, setMode] = useViewMode();
   // Reading mode is immersive: scrolling the rendered document collapses the
@@ -93,6 +100,7 @@ export function MarkdownTool({ initialPayload, fullscreen = false, onToggleFulls
   /* ——— Document workspace state ——— */
   const [ready, setReady] = useState(false);
   const [docs, setDocs] = useState<MarkdownDoc[]>([]);
+  const [trashed, setTrashed] = useState<MarkdownDoc[]>([]);
   const [folders, setFolders] = useState<MarkdownFolder[]>([]);
   const [activeDocId, setActiveDocId] = useState<string | null>(null);
   const [input, setInput] = useState('');
@@ -101,13 +109,24 @@ export function MarkdownTool({ initialPayload, fullscreen = false, onToggleFulls
   const [loadedFor, setLoadedFor] = useState<string | null>(null);
 
   const docsRef = useRef<MarkdownDoc[]>([]);
+  const trashedRef = useRef<MarkdownDoc[]>([]);
+  const foldersRef = useRef<MarkdownFolder[]>([]);
   const activeIdRef = useRef<string | null>(null);
   const inputRef = useRef('');
   const payloadConsumed = useRef(false);
+  // Destructive-action confirmations are state-driven (styled dialog, not
+  // window.confirm), so the pending action lives here until confirmed.
+  const [confirm, setConfirm] = useState<PendingConfirm | null>(null);
 
   useEffect(() => {
     docsRef.current = docs;
   }, [docs]);
+  useEffect(() => {
+    trashedRef.current = trashed;
+  }, [trashed]);
+  useEffect(() => {
+    foldersRef.current = folders;
+  }, [folders]);
   useEffect(() => {
     activeIdRef.current = activeDocId;
   }, [activeDocId]);
@@ -168,7 +187,9 @@ export function MarkdownTool({ initialPayload, fullscreen = false, onToggleFulls
     void (async () => {
       const { docs: all, folders: allFolders } = await loadWorkspace();
       if (cancelled) return;
-      setDocs(all);
+      // Documents in the recycle bin stay out of the live tree.
+      setDocs(all.filter((d) => d.deletedAt == null));
+      setTrashed(all.filter((d) => d.deletedAt != null).sort((a, b) => (b.deletedAt ?? 0) - (a.deletedAt ?? 0)));
       setFolders(allFolders);
       setReady(true);
 
@@ -221,18 +242,19 @@ export function MarkdownTool({ initialPayload, fullscreen = false, onToggleFulls
     if (updated) setDocs((list) => list.map((d) => (d.id === id ? updated : d)));
   }, []);
 
+  /** One click only: the document moves to the recycle bin, no confirm. */
   const handleDeleteDoc = useCallback(
     async (id: string) => {
       const doc = docsRef.current.find((d) => d.id === id);
       if (!doc) return;
-      const title = docDisplayTitle(doc, t('tools.markdown.untitled'));
-      if (!window.confirm(t('tools.markdown.confirmDeleteDoc', { title }))) return;
-      await deleteDoc(id);
+      const updated = await trashDoc(id);
+      if (!updated) return;
       const remaining = docsRef.current.filter((d) => d.id !== id);
       // Sync the ref now: the openDoc() flush below must not resurrect the
-      // just-deleted doc (it would re-save its content under its old id).
+      // just-trashed doc (it would re-save it as live under its old id).
       docsRef.current = remaining;
       setDocs(remaining);
+      setTrashed((list) => [updated, ...list.filter((d) => d.id !== id)]);
       if (activeIdRef.current === id) {
         const next = remaining[0] ?? null;
         if (next) {
@@ -244,8 +266,74 @@ export function MarkdownTool({ initialPayload, fullscreen = false, onToggleFulls
         }
       }
     },
-    [openDoc, t],
+    [openDoc],
   );
+
+  const handleRestoreDoc = useCallback(async (id: string) => {
+    const restored = await restoreDoc(id);
+    if (!restored) return;
+    // Its folder may have been deleted while it sat in the trash.
+    const folderId = foldersRef.current.some((f) => f.id === restored.folderId)
+      ? restored.folderId
+      : null;
+    const finalDoc =
+      folderId !== restored.folderId
+        ? ((await patchDocMeta(id, { folderId })) ?? restored)
+        : restored;
+    setTrashed((list) => list.filter((d) => d.id !== id));
+    setDocs((list) => [finalDoc, ...list]);
+  }, []);
+
+  // Destructive actions ask through a styled in-app dialog (state-driven)
+  // instead of the native window.confirm, which is unstyled and clipped.
+  const handleDeleteDocForever = useCallback((id: string) => {
+    const doc = trashedRef.current.find((d) => d.id === id);
+    if (!doc) return;
+    setConfirm({
+      kind: 'deleteDocForever',
+      docId: id,
+      title: docDisplayTitle(doc, t('tools.markdown.untitled')),
+    });
+  }, [t]);
+
+  const handleEmptyTrash = useCallback(() => {
+    if (trashedRef.current.length === 0) return;
+    setConfirm({ kind: 'emptyTrash' });
+  }, []);
+
+  /** Runs the destructive action the confirm dialog agreed to. */
+  const runConfirm = useCallback(async () => {
+    const pending = confirm;
+    if (!pending) return;
+    setConfirm(null);
+    if (pending.kind === 'deleteDocForever') {
+      await deleteDocForever(pending.docId);
+      setTrashed((list) => list.filter((d) => d.id !== pending.docId));
+    } else if (pending.kind === 'emptyTrash') {
+      await emptyTrash();
+      setTrashed([]);
+    } else {
+      await deleteFolder(pending.folderId);
+      // Folder deletion trashes the documents it held, so refresh both lists
+      // and re-sync docsRef before any openDoc() flush below.
+      const all = await getAllDocs();
+      const remaining = all.filter((d) => d.deletedAt == null);
+      docsRef.current = remaining;
+      setDocs(remaining);
+      setTrashed(all.filter((d) => d.deletedAt != null).sort((a, b) => (b.deletedAt ?? 0) - (a.deletedAt ?? 0)));
+      setFolders((list) => list.filter((f) => f.id !== pending.folderId && f.parentId !== pending.folderId));
+      if (activeIdRef.current && !remaining.some((d) => d.id === activeIdRef.current)) {
+        const next = remaining[0] ?? null;
+        if (next) {
+          openDoc(next.id);
+        } else {
+          const created = await createDoc({});
+          setDocs([created]);
+          openDoc(created.id);
+        }
+      }
+    }
+  }, [confirm, openDoc]);
 
   const handleCreateFolder = useCallback(async (name: string) => {
     const folder = await createFolder(name);
@@ -257,12 +345,14 @@ export function MarkdownTool({ initialPayload, fullscreen = false, onToggleFulls
     if (updated) setFolders((list) => list.map((f) => (f.id === id ? updated : f)));
   }, []);
 
-  const handleDeleteFolder = useCallback(async (id: string) => {
-    if (!window.confirm(t('tools.markdown.confirmDeleteFolder'))) return;
-    await deleteFolder(id);
-    setFolders((list) => list.filter((f) => f.id !== id));
-    setDocs(await getAllDocs()); // folder deletion moves docs back to root
-  }, [t]);
+  const handleDeleteFolder = useCallback((id: string) => {
+    setConfirm({ kind: 'deleteFolder', folderId: id });
+  }, []);
+
+  const handleMoveFolder = useCallback(async (id: string, parentId: string | null) => {
+    const updated = await moveFolder(id, parentId);
+    if (updated) setFolders((list) => list.map((f) => (f.id === id ? updated : f)));
+  }, []);
 
 
   // Fullscreen toggles: double-click on the document, Ctrl/Cmd+Shift+F (only
@@ -435,12 +525,13 @@ export function MarkdownTool({ initialPayload, fullscreen = false, onToggleFulls
 
   return (
     <div
-      className={`flex gap-3 transition-all duration-300 ${
-        fullscreen ? 'min-h-screen p-0' : 'min-h-[calc(100vh-8.5rem)] p-4'
+      className={`flex overflow-hidden transition-all duration-300 ${
+        fullscreen || chromeGone ? 'h-screen' : 'h-[calc(100vh-3.5rem)]'
       }`}
     >
       <DocSidebar
         docs={docs}
+        trashedDocs={trashed}
         folders={folders}
         activeDocId={activeDocId}
         hidden={fullscreen}
@@ -452,8 +543,12 @@ export function MarkdownTool({ initialPayload, fullscreen = false, onToggleFulls
         onDeleteDoc={(id) => void handleDeleteDoc(id)}
         onRenameFolder={(id, name) => void handleRenameFolder(id, name)}
         onDeleteFolder={(id) => void handleDeleteFolder(id)}
+        onMoveFolder={(id, parentId) => void handleMoveFolder(id, parentId)}
+        onRestoreDoc={(id) => void handleRestoreDoc(id)}
+        onDeleteDocForever={(id) => void handleDeleteDocForever(id)}
+        onEmptyTrash={() => void handleEmptyTrash()}
       />
-      <div ref={areaRef} className="flex min-h-0 flex-1 flex-col">
+      <div ref={areaRef} className="flex min-h-0 flex-1 flex-col bg-panel">
         {ready ? (
         <>
         {/* Toolbar: view mode + source actions (available in every mode).
@@ -461,10 +556,10 @@ export function MarkdownTool({ initialPayload, fullscreen = false, onToggleFulls
             mode — the toolbar is for doing things, not for reading. */}
         <div
           className={`overflow-hidden transition-all duration-300 ${
-            chromeHidden || fullscreen ? 'mb-0 max-h-0 opacity-0' : 'mb-2 max-h-12 opacity-100'
+            chromeHidden || fullscreen ? 'max-h-0 opacity-0' : 'max-h-12 opacity-100'
           }`}
         >
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center justify-between gap-2 border-b border-line px-3 py-2">
           <div className="flex items-center gap-0.5 rounded-lg border border-line bg-hover p-0.5">
             {VIEW_MODES.map(({ id, icon: Icon, labelKey }) => (
               <button
@@ -540,7 +635,7 @@ export function MarkdownTool({ initialPayload, fullscreen = false, onToggleFulls
 
         {mode === 'edit' ? (
           <div className="flex min-h-0 flex-1 flex-col">
-            <div className="min-h-[320px] min-h-0 flex-1 overflow-hidden rounded-lg border border-line bg-panel">
+            <div className="min-h-0 flex-1 overflow-hidden bg-panel">
               <MarkdownEditor
                 value={input}
                 onChange={updateInput}
@@ -562,17 +657,17 @@ flowchart LR
               onDoubleClick={() => onToggleFullscreen?.()}
               className={`${
                 fullscreen
-                  ? 'min-h-screen overflow-auto bg-panel'
-                  : 'min-h-[320px] flex-1 overflow-auto rounded-lg border border-line bg-panel px-6 py-4 sm:px-8 sm:py-6 md:px-10 md:py-8'
+                  ? 'min-h-0 flex-1 overflow-auto bg-panel'
+                  : 'min-h-0 flex-1 overflow-auto bg-panel px-6 py-4 sm:px-8 sm:py-5'
               }`}
             >
               {preview}
             </div>
           </div>
         ) : (
-          <div className="grid min-h-0 flex-1 grid-cols-2 gap-3 max-lg:grid-cols-1">
+          <div className="grid min-h-0 flex-1 grid-cols-2 max-lg:grid-cols-1">
             <div className="flex min-h-0 flex-col">
-              <div className="min-h-[260px] min-h-0 flex-1 overflow-hidden rounded-lg border border-line bg-panel">
+              <div className="min-h-0 flex-1 overflow-hidden bg-panel">
                 <MarkdownEditor
                   value={input}
                   onChange={updateInput}
@@ -587,8 +682,8 @@ flowchart LR
                 />
               </div>
             </div>
-            <div className="flex min-h-0 flex-col">
-              <div className="min-h-[260px] flex-1 overflow-auto rounded-lg border border-line bg-panel px-6 py-4">
+            <div className="flex min-h-0 flex-col lg:border-l lg:border-line">
+              <div className="min-h-0 flex-1 overflow-auto bg-panel px-6 py-4">
                 {preview}
               </div>
             </div>
@@ -596,7 +691,7 @@ flowchart LR
         )}
         </>
         ) : (
-          <div className="flex flex-1 items-center justify-center rounded-lg border border-line bg-panel text-sm text-muted">
+          <div className="flex flex-1 items-center justify-center text-sm text-muted">
             {t('tools.markdown.loadingDocs')}
           </div>
         )}
@@ -612,6 +707,35 @@ flowchart LR
           }}
         />
       )}
+
+      {confirm && (
+        <ConfirmDialog
+          title={t(
+            confirm.kind === 'deleteDocForever'
+              ? 'tools.markdown.deleteForever'
+              : confirm.kind === 'emptyTrash'
+                ? 'tools.markdown.emptyTrash'
+                : 'tools.markdown.delete',
+          )}
+          message={
+            confirm.kind === 'deleteDocForever'
+              ? t('tools.markdown.confirmDeleteForever', { title: confirm.title })
+              : confirm.kind === 'emptyTrash'
+                ? t('tools.markdown.confirmEmptyTrash')
+                : t('tools.markdown.confirmDeleteFolder')
+          }
+          confirmLabel={t(
+            confirm.kind === 'deleteDocForever'
+              ? 'tools.markdown.deleteForever'
+              : confirm.kind === 'emptyTrash'
+                ? 'tools.markdown.emptyTrash'
+                : 'tools.markdown.delete',
+          )}
+          cancelLabel={t('tools.markdown.confirmCancel')}
+          onConfirm={() => void runConfirm()}
+          onClose={() => setConfirm(null)}
+        />
+      )}
     </div>
   );
 }
@@ -620,6 +744,12 @@ flowchart LR
 type ShareDialogState =
   | { status: 'ready'; url: string; autoCopied: boolean }
   | { status: 'error'; reason: 'generic' | 'too-large' };
+
+/** Destructive-action confirmations (replaces window.confirm). */
+type PendingConfirm =
+  | { kind: 'deleteDocForever'; docId: string; title: string }
+  | { kind: 'emptyTrash' }
+  | { kind: 'deleteFolder'; folderId: string };
 
 /**
  * Share result sheet. The link was copied as soon as it was created (see
@@ -738,6 +868,61 @@ function ShareDialog({
             </div>
           </>
         )}
+      </div>
+    </div>
+  );
+}
+
+/** In-app replacement for window.confirm: styled to match the app, Escape
+    cancels, and clicking the backdrop closes without choosing. */
+function ConfirmDialog({
+  title,
+  message,
+  confirmLabel,
+  cancelLabel,
+  onConfirm,
+  onClose,
+}: {
+  title: string;
+  message: string;
+  confirmLabel: string;
+  cancelLabel: string;
+  onConfirm: () => void;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-[2px]"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div
+        role="alertdialog"
+        aria-modal="true"
+        className="w-[min(380px,92vw)] rounded-xl border border-line bg-panel p-4 shadow-2xl"
+      >
+        <h3 className="text-[14px] font-bold">{title}</h3>
+        <p className="mt-1.5 text-[13px] leading-relaxed text-muted">{message}</p>
+        <div className="mt-4 flex justify-end gap-2">
+          <button className="ghost-btn" onClick={onClose} autoFocus>
+            {cancelLabel}
+          </button>
+          <button
+            onClick={onConfirm}
+            className="cursor-pointer rounded-lg bg-danger px-3.5 py-1.5 text-[13px] font-semibold text-white transition-colors duration-150 hover:bg-danger/90"
+          >
+            {confirmLabel}
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -15,6 +15,8 @@ export interface MarkdownDoc {
   content: string;
   createdAt: number;
   updatedAt: number;
+  /** When set the doc sits in the recycle bin; null (or missing) means live. */
+  deletedAt: number | null;
 }
 
 export interface MarkdownFolder {
@@ -123,6 +125,7 @@ export async function createDoc(input: { title?: string; folderId?: string | nul
     content: input.content ?? '',
     createdAt: now,
     updatedAt: now,
+    deletedAt: null,
   };
   await putOne('docs', doc);
   return doc;
@@ -147,8 +150,44 @@ export async function patchDocMeta(
   return updated;
 }
 
-export async function deleteDoc(id: string): Promise<void> {
+/** Soft-deletes a document: moves it to the recycle bin (deletedAt set). */
+export async function trashDoc(id: string): Promise<MarkdownDoc | null> {
+  const db = await open();
+  const tx = db.transaction('docs', 'readwrite');
+  const store = tx.objectStore('docs');
+  const doc = await req(store.get(id) as IDBRequest<MarkdownDoc | undefined>);
+  if (!doc) return null;
+  const updated: MarkdownDoc = { ...doc, deletedAt: Date.now(), updatedAt: Date.now() };
+  await req(store.put(updated));
+  return updated;
+}
+
+/** Permanently removes a document from storage. */
+export async function deleteDocForever(id: string): Promise<void> {
   await deleteOne('docs', id);
+}
+
+/** Restores a trashed document (clears deletedAt, bumps updatedAt). */
+export async function restoreDoc(id: string): Promise<MarkdownDoc | null> {
+  const db = await open();
+  const tx = db.transaction('docs', 'readwrite');
+  const store = tx.objectStore('docs');
+  const doc = await req(store.get(id) as IDBRequest<MarkdownDoc | undefined>);
+  if (!doc) return null;
+  const updated: MarkdownDoc = { ...doc, deletedAt: null, updatedAt: Date.now() };
+  await req(store.put(updated));
+  return updated;
+}
+
+/** Permanently removes every trashed document. */
+export async function emptyTrash(): Promise<void> {
+  const db = await open();
+  const tx = db.transaction('docs', 'readwrite');
+  const store = tx.objectStore('docs');
+  const all = await req(store.getAll() as IDBRequest<MarkdownDoc[]>);
+  for (const doc of all) {
+    if (doc.deletedAt != null) await req(store.delete(doc.id));
+  }
 }
 
 /* ——— Folders ——— */
@@ -174,14 +213,43 @@ export async function renameFolder(id: string, name: string): Promise<MarkdownFo
   return updated;
 }
 
-/** Deletes the folder and moves its documents back to the root. */
+/** Moves a folder under another folder (parentId) or back to the root (null). */
+export async function moveFolder(id: string, parentId: string | null): Promise<MarkdownFolder | null> {
+  const db = await open();
+  const tx = db.transaction('folders', 'readwrite');
+  const store = tx.objectStore('folders');
+  const folder = await req(store.get(id) as IDBRequest<MarkdownFolder | undefined>);
+  if (!folder) return null;
+  const updated: MarkdownFolder = { ...folder, parentId };
+  await req(store.put(updated));
+  return updated;
+}
+
+/**
+ * Deletes a folder and its whole subtree; the documents they held go to the
+ * recycle bin (folderId reset so restoring lands them at the root).
+ */
 export async function deleteFolder(id: string): Promise<void> {
   const db = await open();
   const tx = db.transaction(['docs', 'folders'], 'readwrite');
-  await req(tx.objectStore('folders').delete(id));
+  const folderStore = tx.objectStore('folders');
+  const allFolders = await req(folderStore.getAll() as IDBRequest<MarkdownFolder[]>);
+  // Collect the folder and every descendant so nested folders are removed too.
+  const doomed = new Set<string>();
+  const walk = (fid: string) => {
+    if (doomed.has(fid)) return;
+    doomed.add(fid);
+    for (const f of allFolders) if (f.parentId === fid) walk(f.id);
+  };
+  walk(id);
+  for (const fid of doomed) await req(folderStore.delete(fid));
   const docs = await req(tx.objectStore('docs').getAll() as IDBRequest<MarkdownDoc[]>);
   for (const doc of docs) {
-    if (doc.folderId === id) await req(tx.objectStore('docs').put({ ...doc, folderId: null, updatedAt: Date.now() }));
+    if (doc.folderId != null && doomed.has(doc.folderId)) {
+      await req(
+        tx.objectStore('docs').put({ ...doc, folderId: null, deletedAt: Date.now(), updatedAt: Date.now() }),
+      );
+    }
   }
 }
 

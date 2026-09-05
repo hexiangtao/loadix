@@ -33,7 +33,7 @@ const METHODS: HttpMethod[] = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD'];
 export function TargetBar({ method, url, timeout, busy, onChange, onStart, onStop }: TargetBarProps) {
   const { t } = useTranslation();
   return (
-    <div className="rounded-xl border border-line bg-panel p-3 shadow-sm">
+    <div>
       <div className="flex flex-wrap items-center gap-2">
         {/* Method select — narrow, fixed width so the URL gets the rest. */}
         <select

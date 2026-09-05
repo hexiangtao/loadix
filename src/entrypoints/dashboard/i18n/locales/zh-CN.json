@@ -240,6 +240,7 @@
     "group_query": "查询",
     "base64": {
       "name": "Base64",
+      "desc": "编码与解码 Base64 字符串",
           "encode": "编码",
       "decode": "解码",
       "input": "Base64 字符串",
@@ -250,6 +251,7 @@
     },
     "baseconv": {
       "name": "进制转换",
+      "desc": "二进制、八进制、十进制、十六进制互转",
           "input": "数字",
       "interpretAs": "按以下进制解析",
       "invalid": "不是所选进制的有效数字",
@@ -258,6 +260,7 @@
     },
     "json": {
       "name": "JSON 格式化",
+      "desc": "格式化、校验与压缩 JSON",
           "spaces": "空格缩进",
       "keys": "键",
       "depth": "层深",
@@ -267,6 +270,7 @@
     },
     "jwt": {
       "name": "JWT",
+      "desc": "本地解码与签名 JWT",
           "decode": "解码",
       "encode": "编码",
       "editEncode": "在编码模式编辑",
@@ -288,6 +292,7 @@
     },
     "regex": {
       "name": "正则测试器",
+      "desc": "测试正则并提取捕获组",
           "templates": "模板",
       "pattern": "正则表达式",
       "test": "测试文本",
@@ -297,12 +302,14 @@
     },
     "url": {
       "name": "URL 编码",
+      "desc": "编码与解码 URL 组件",
           "encode": "编码",
       "decode": "解码",
       "invalid": "无效的百分号编码"
     },
     "urlparser": {
       "name": "URL 解析器",
+      "desc": "拆解 URL 各部分，可直接编辑 query 参数",
           "invalid": "不是有效的 URL（应形如 protocol://host/...）",
       "samples": "示例",
       "protocol": "协议",
@@ -319,11 +326,13 @@
     },
     "html": {
       "name": "HTML 实体",
+      "desc": "HTML 实体转义与还原",
           "encode": "转义",
       "decode": "还原"
     },
     "unicode": {
       "name": "Unicode",
+      "desc": "\\uXXXX 转义与还原,查看码点信息",
           "encode": "转义",
       "decode": "还原",
       "scope_nonAscii": "非 ASCII",
@@ -336,6 +345,7 @@
     },
     "uuid": {
       "name": "UUID 生成器",
+      "desc": "生成 UUID v1 / v3 / v4 / v5 / v7",
           "count": "数量",
       "generate": "生成",
       "nameLabel": "名称",
@@ -344,6 +354,7 @@
   },
     "timestamp": {
       "name": "时间戳转换",
+      "desc": "Unix 时间戳与日期互转",
           "epochSec": "秒级时间戳",
       "epochMs": "毫秒时间戳",
       "local": "本地时间",
@@ -353,6 +364,7 @@
     },
     "cron": {
       "name": "Cron 解析器",
+      "desc": "解析 Cron 并预览执行时间",
           "input": "Cron 表达式（5 段）",
       "minute": "分钟",
       "hour": "小时",
@@ -364,18 +376,22 @@
   },
     "sql": {
       "name": "SQL 格式化",
+      "desc": "格式化与美化 SQL 语句",
           "uppercase": "关键字大写"
     },
     "hash": {
-      "name": "哈希"
+      "name": "哈希",
+      "desc": "计算 MD5 / SHA-1 / SHA-256 / SHA-512"
   },
     "color": {
       "name": "颜色取色器",
+      "desc": "HEX、RGB、HSL 互转与可视化调色",
           "hex": "HEX",
       "preview": "实时预览"
     },
     "screenshot": {
       "name": "元素截图",
+      "desc": "把当前页某个元素截成 PNG 或 JPEG",
           "selector": "CSS 选择器",
       "selectorNotFound": "找不到匹配 \"{{selector}}\" 的元素",
       "format": "格式",
@@ -396,6 +412,7 @@
     },
     "gradient": {
       "name": "CSS 渐变",
+      "desc": "可视化生成 linear / radial CSS 渐变",
           "type": "类型",
       "angle": "角度",
       "presets": "预设",
@@ -405,6 +422,7 @@
     },
     "markdown": {
       "name": "Markdown",
+      "desc": "Markdown 实时预览",
           "source": "源码",
       "preview": "渲染结果",
       "empty": "在左侧开始输入 Markdown…",
@@ -438,13 +456,20 @@
       "moveTo": "移动到",
       "delete": "删除",
       "newDocIn": "在此新建文档",
-      "confirmDeleteDoc": "确定删除“{title}”？此操作无法撤销。",
-      "confirmDeleteFolder": "确定删除此文件夹？其中的文档会移回根目录。",
+      "confirmDeleteFolder": "确定删除此文件夹？其中的文档将移入回收站。",
       "emptyDocs": "还没有文档，新建一篇开始写作吧。",
       "emptyFolder": "空文件夹",
       "docTitlePlaceholder": "标题…",
       "folderNamePlaceholder": "文件夹名称…",
       "loadingDocs": "正在加载文档…",
+      "trash": "回收站",
+      "restore": "恢复",
+      "deleteForever": "永久删除",
+      "emptyTrash": "清空回收站",
+      "confirmEmptyTrash": "确定清空回收站？此操作无法撤销。",
+      "confirmDeleteForever": "确定永久删除“{{title}}”？此操作无法撤销。",
+      "confirmCancel": "取消",
+      "trashEmpty": "回收站为空",
       "edit": {
         "undo": "撤销",
         "redo": "重做",
@@ -478,6 +503,7 @@
     },
     "diff": {
       "name": "文本对比",
+      "desc": "对比两段文本的差异",
           "samples": "示例",
       "original": "原文本",
       "changed": "新文本",
@@ -487,6 +513,7 @@
     },
     "jsonpath": {
       "name": "JSONPath",
+      "desc": "用路径表达式从 JSON 提取数据",
           "presets": "快速:",
       "matches": "匹配"
     }

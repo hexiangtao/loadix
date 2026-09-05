@@ -240,6 +240,7 @@
     "group_query": "Query",
     "base64": {
       "name": "Base64",
+      "desc": "Encode & decode Base64 strings",
           "encode": "Encode",
       "decode": "Decode",
       "input": "Base64 string",
@@ -250,6 +251,7 @@
     },
     "baseconv": {
       "name": "Base Converter",
+      "desc": "Convert between binary, octal, decimal, and hexadecimal",
           "input": "Number",
       "interpretAs": "Interpret as",
       "invalid": "Not a valid number for the selected base",
@@ -258,6 +260,7 @@
     },
     "json": {
       "name": "JSON Formatter",
+      "desc": "Format, validate & minify JSON",
           "spaces": "spaces",
       "keys": "keys",
       "depth": "depth",
@@ -267,6 +270,7 @@
     },
     "jwt": {
       "name": "JWT",
+      "desc": "Decode & sign JWTs locally",
           "decode": "Decode",
       "encode": "Encode",
       "editEncode": "Edit in encode mode",
@@ -288,6 +292,7 @@
     },
     "regex": {
       "name": "Regex Tester",
+      "desc": "Test regex & extract capture groups",
           "templates": "Templates",
       "pattern": "Pattern",
       "test": "Test text",
@@ -297,12 +302,14 @@
     },
     "url": {
       "name": "URL Encode",
+      "desc": "Encode & decode URL components",
           "encode": "Encode",
       "decode": "Decode",
       "invalid": "Invalid percent encoding"
     },
     "urlparser": {
       "name": "URL Parser",
+      "desc": "Inspect every part of a URL & edit query params",
           "invalid": "Not a valid URL (expected protocol://host/...)",
       "samples": "Samples",
       "protocol": "Protocol",
@@ -319,11 +326,13 @@
     },
     "html": {
       "name": "HTML Entities",
+      "desc": "Escape & unescape HTML entities",
           "encode": "Escape",
       "decode": "Unescape"
     },
     "unicode": {
       "name": "Unicode",
+      "desc": "Escape & unescape \\uXXXX sequences, inspect codepoints",
           "encode": "Escape",
       "decode": "Unescape",
       "scope_nonAscii": "Non-ASCII",
@@ -336,6 +345,7 @@
     },
     "uuid": {
       "name": "UUID Generator",
+      "desc": "Generate UUID v1 / v3 / v4 / v5 / v7",
           "count": "Count",
       "generate": "Generate",
       "nameLabel": "Name",
@@ -344,6 +354,7 @@
   },
     "timestamp": {
       "name": "Timestamp",
+      "desc": "Convert epoch & date strings",
           "epochSec": "Epoch (seconds)",
       "epochMs": "Epoch (ms)",
       "local": "Local time",
@@ -353,6 +364,7 @@
     },
     "cron": {
       "name": "Cron Parser",
+      "desc": "Parse cron & preview next runs",
           "input": "Cron expression (5 fields)",
       "minute": "Minute",
       "hour": "Hour",
@@ -364,18 +376,22 @@
   },
     "sql": {
       "name": "SQL Formatter",
+      "desc": "Format & beautify SQL queries",
           "uppercase": "Uppercase keywords"
     },
     "hash": {
-      "name": "Hash"
+      "name": "Hash",
+      "desc": "Compute MD5 / SHA-1 / SHA-256 / SHA-512"
   },
     "color": {
       "name": "Color Picker",
+      "desc": "Pick & convert between HEX, RGB, HSL",
           "hex": "HEX",
       "preview": "Live preview"
     },
     "screenshot": {
       "name": "Element Snapshot",
+      "desc": "Capture a single element on the current page as PNG or JPEG",
           "selector": "CSS selector",
       "selectorNotFound": "No element matches \"{{selector}}\"",
       "format": "Format",
@@ -396,6 +412,7 @@
     },
     "gradient": {
       "name": "CSS Gradient",
+      "desc": "Build linear / radial CSS gradients with live preview",
           "type": "Type",
       "angle": "Angle",
       "presets": "Presets",
@@ -405,6 +422,7 @@
     },
     "markdown": {
       "name": "Markdown",
+      "desc": "Live Markdown preview",
           "source": "Markdown source",
       "preview": "Rendered preview",
       "empty": "Start typing markdown on the left…",
@@ -438,13 +456,20 @@
       "moveTo": "Move to",
       "delete": "Delete",
       "newDocIn": "New document here",
-      "confirmDeleteDoc": "Delete “{title}”? This cannot be undone.",
-      "confirmDeleteFolder": "Delete this folder? Its documents move back to the root.",
+      "confirmDeleteFolder": "Delete this folder? Its documents move to the recycle bin.",
       "emptyDocs": "No documents yet — create one to start writing.",
       "emptyFolder": "Empty folder",
       "docTitlePlaceholder": "Title…",
       "folderNamePlaceholder": "Folder name…",
       "loadingDocs": "Loading documents…",
+      "trash": "Trash",
+      "restore": "Restore",
+      "deleteForever": "Delete forever",
+      "emptyTrash": "Empty trash",
+      "confirmEmptyTrash": "Empty the trash? This cannot be undone.",
+      "confirmDeleteForever": "Permanently delete “{{title}}”? This cannot be undone.",
+      "confirmCancel": "Cancel",
+      "trashEmpty": "Trash is empty",
       "edit": {
         "undo": "Undo",
         "redo": "Redo",
@@ -478,6 +503,7 @@
     },
     "diff": {
       "name": "Diff",
+      "desc": "Compare two texts and see the changes",
           "samples": "Samples",
       "original": "Original",
       "changed": "Changed",
@@ -487,6 +513,7 @@
     },
     "jsonpath": {
       "name": "JSONPath",
+      "desc": "Extract data from JSON with a path expression",
           "presets": "Quick:",
       "matches": "Matches"
     }
