@@ -166,4 +166,31 @@ body {
 
 .app-scroller.sb-hairline {
   scrollbar-color: var(--color-line) transparent;
+}
+
+/* CodeMirror (the markdown source editor) scrolls through its own
+   .cm-scroller rather than an .app-scroller — style it the same hairline
+   so the editor pane matches the surrounding reading surfaces. */
+.cm-scroller::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.cm-scroller::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.cm-scroller::-webkit-scrollbar-thumb {
+  background: var(--color-line);
+  border-radius: 999px;
+  transition: background 150ms ease;
+}
+
+.cm-scroller::-webkit-scrollbar-thumb:hover {
+  background: var(--color-muted);
+}
+
+.cm-scroller {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line) transparent;
 }

@@ -777,7 +777,7 @@ export function DocSidebar(props: DocSidebarProps) {
           {/* Breadcrumb — the current location in the hierarchy. Deep nesting
               shows up here as a path you can jump on, never as indentation. */}
           {hasFolders && (
-            <div className="app-scroller flex shrink-0 items-center gap-0.5 overflow-x-auto border-b border-line px-2 py-1.5">
+            <div className="app-scroller sb-hairline flex shrink-0 items-center gap-0.5 overflow-x-auto border-b border-line px-2 py-1.5">
               <button
                 onClick={() => setNavPath([])}
                 className={`shrink-0 rounded px-1 py-0.5 text-[12px] transition-colors duration-150 ${
@@ -808,7 +808,7 @@ export function DocSidebar(props: DocSidebarProps) {
           )}
 
           {/* Content — recency-first, one level at a time */}
-          <div className="app-scroller min-h-0 flex-1 overflow-y-auto px-2 pb-2">
+          <div className="app-scroller sb-hairline min-h-0 flex-1 overflow-y-auto px-2 pb-2">
             {namingFolder && (
               <div className="px-2 py-1">
                 <RenameInput
@@ -909,7 +909,7 @@ export function DocSidebar(props: DocSidebarProps) {
                 {trashedDocs.length === 0 ? (
                   <p className="px-2 py-1 text-[11px] text-muted/60">{t('tools.markdown.trashEmpty')}</p>
                 ) : (
-                  <div className="app-scroller max-h-52 overflow-y-auto pr-0.5">
+                  <div className="app-scroller sb-hairline max-h-52 overflow-y-auto pr-0.5">
                     {trashedDocs.map((doc) => (
                       <TrashDocRow
                         key={doc.id}
