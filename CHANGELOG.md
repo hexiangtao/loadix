@@ -1,3 +1,10 @@
+# [1.43.0](https://github.com/hexiangtao/loadix/compare/v1.42.0...v1.43.0) (2026-09-05)
+
+
+### Features
+
+* **markdown:** scroll-spy document outline for preview and share pages ([c126f94](https://github.com/hexiangtao/loadix/commit/c126f947febf7918868e4f138ef7473a377ce8c1))
+
 # [1.42.0](https://github.com/hexiangtao/loadix/compare/v1.41.0...v1.42.0) (2026-09-05)
 
 
