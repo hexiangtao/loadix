@@ -714,7 +714,7 @@ flowchart LR
               <div
                 ref={previewScrollRef}
                 onDoubleClick={() => onToggleFullscreen?.()}
-                className={`min-h-0 min-w-0 flex-1 overflow-auto bg-panel ${
+                className={`app-scroller sb-hairline min-h-0 min-w-0 flex-1 overflow-auto bg-panel ${
                   fullscreen ? '' : 'px-6 py-4 sm:px-8 sm:py-5'
                 }`}
               >
@@ -741,7 +741,7 @@ flowchart LR
               </div>
             </div>
             <div className="flex min-h-0 flex-col lg:border-l lg:border-line">
-              <div className="min-h-0 flex-1 overflow-auto bg-panel px-6 py-4">
+              <div className="app-scroller sb-hairline min-h-0 flex-1 overflow-auto bg-panel px-6 py-4">
                 {preview}
               </div>
             </div>

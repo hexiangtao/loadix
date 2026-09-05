@@ -172,7 +172,7 @@ export function DocOutline({ containerRef, source, onClose, onItemsChange, class
         </div>
         <nav
           aria-label={t('tools.markdown.outline')}
-          className="app-scroller min-h-0 flex-1 overflow-y-auto py-1.5 pr-0.5"
+          className="app-scroller sb-hairline min-h-0 flex-1 overflow-y-auto py-1.5 pr-0.5"
         >
           <ul className="space-y-px">
             {items.map((item) => {

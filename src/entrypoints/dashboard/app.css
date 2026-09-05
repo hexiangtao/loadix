@@ -131,11 +131,39 @@ body {
 
 .app-scroller::-webkit-scrollbar-thumb:hover {
   background: var(--color-muted);
-}
-
-/* Firefox: thin + matched colour, no gutter reservation needed
+}/* Firefox: thin + matched colour, no gutter reservation needed
    (the `scrollbar-width: thin` already accounts for it). */
 .app-scroller {
   scrollbar-width: thin;
   scrollbar-color: var(--color-line) transparent;
 }
+
+/* ------------------------------------------------------------- */
+/* Hairline scrollbars for READING surfaces (document outline,  */
+/* markdown preview/split panes, the share viewer).              */
+/*                                                               */
+/* Problem: thick scrollbars either side of a document read as   */
+/* framed panels and cut the content off from its surroundings — */
+/* a sense of fragmentation. On a reading surface the scrollbar  */
+/* should be a barely-there divider: slim (4px), always shown as */
+/* a quiet rounded line in the theme's border colour (deepening  */
+/* to muted on hover), never a chunky grab-rail.                 */
+/* ------------------------------------------------------------- */
+.app-scroller.sb-hairline::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.app-scroller.sb-hairline::-webkit-scrollbar-thumb {
+  background: var(--color-line);
+  border-radius: 999px;
+  transition: background 150ms ease;
+}
+
+.app-scroller.sb-hairline::-webkit-scrollbar-thumb:hover {
+  background: var(--color-muted);
+}
+
+.app-scroller.sb-hairline {
+  scrollbar-color: var(--color-line) transparent;
+}

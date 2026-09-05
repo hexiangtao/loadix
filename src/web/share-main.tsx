@@ -144,9 +144,17 @@ function ShareApp() {
   }, [state]);
 
   return (
-    <div className="flex h-screen flex-col bg-panel">
+    <div className="flex h-screen flex-col overflow-hidden bg-panel">
+      {/* The nav is FIXED (out of the layout flow): the document scroller below
+          always spans the full viewport, and a top spacer inside the scrollable
+          content keeps the first line clear while the nav is visible. Hiding /
+          showing the nav therefore changes ZERO layout — no scroll-container
+          resize, no scrollTop clamping or anchor feedback — so fast scrolling
+          near the bottom of long documents can never fight the hide state.
+          (A layout-based reclaim, e.g. pulling the content up with a negative
+          margin, resizes the scroller each toggle and jitters.) */}
       <header
-        className={`relative z-20 shrink-0 border-b border-line bg-panel transition-transform duration-300 ease-out ${
+        className={`fixed inset-x-0 top-0 z-20 border-b border-line bg-panel transition-transform duration-300 ease-out ${
           headerHidden ? '-translate-y-full' : 'translate-y-0'
         }`}
       >
@@ -176,11 +184,7 @@ function ShareApp() {
         </div>
       </header>
 
-      <main
-        className={`flex min-h-0 flex-1 transition-[margin-top] duration-300 ease-out ${
-          headerHidden ? '-mt-14' : ''
-        }`}
-      >
+      <main className="flex min-h-0 min-w-0 flex-1">
         {/* Outline rail — LEFT of the document (Lark-style), so the document's
             native scrollbar never sits between the two. Mounted whenever the
             doc is ready so it can report heading counts (which show the
@@ -194,12 +198,17 @@ function ShareApp() {
             source={state.source}
             onClose={() => setOutlineOpen(false)}
             onItemsChange={handleOutlineItems}
-            className={`overflow-hidden transition-[width] duration-200 ease-out ${
-              outlineOpen ? 'lg:w-56' : ''
-            } w-0`}
+            className={`overflow-hidden transition-all duration-300 ease-out ${
+              headerHidden ? '' : 'translate-y-[57px]'
+            } ${outlineOpen ? 'lg:w-56' : ''} w-0`}
           />
         )}
-        <div ref={scrollerRef} className="app-scroller min-h-0 min-w-0 flex-1 overflow-y-auto">
+        <div ref={scrollerRef} className="app-scroller sb-hairline min-h-0 min-w-0 flex-1 overflow-y-auto">
+        {/* Top spacer: keeps the document's first line below the FIXED nav
+            while it's visible. It scrolls away with the content, so when the
+            nav hides the text can flow to the very top — reclaiming the nav's
+            band without touching any layout. */}
+        <div aria-hidden="true" className="h-14 shrink-0" />
         {/* The document is the hero, rendered flat on the same white surface
             and measure as the workbench's preview pane — preview and share
             stay consistent, so a shared visitor sees exactly the product.
