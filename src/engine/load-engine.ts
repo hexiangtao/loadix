@@ -79,6 +79,20 @@ export class LoadEngine {
   }
 
   /**
+   * Fire a single request using the engine's current config (or an
+   * ad-hoc one) and return the outcome. Does not touch metrics, history,
+   * or running state — pure connectivity probe for the "Test Connection"
+   * button. Safe to call while a run is in progress; the response goes
+   * straight back to the caller.
+   */
+  async probe(config?: TestConfig): Promise<import('./runner').ProbeResult> {
+    const cfg = config ?? this.config;
+    if (!cfg) throw new Error('No configuration to probe');
+    const mod = await import('./runner');
+    return mod.probeRequest(cfg);
+  }
+
+  /**
    * Control loop: keeps the number of in-flight requests at the model's
    * concurrency target, paced by the token bucket.
    */

@@ -65,7 +65,28 @@
     "pasteCurlPlaceholder": "curl -X POST https://api.example.com/users \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"name\":\"tom\"}'",
     "pasteCurlApply": "应用",
     "pasteCurlCancel": "取消",
-    "pasteCurlHint": "支持 method、headers、JSON/form 请求体、basic auth(-u)，以及大部分浏览器无影响的 flag。"
+    "pasteCurlHint": "支持 method、headers、JSON/form 请求体、basic auth(-u)，以及大部分浏览器无影响的 flag。",
+    "copyCurl": "复制为 cURL",
+    "copyCurlCopied": "已复制",
+    "copyCurlHint": "复制与该请求等价的 curl 命令 — 可粘贴到终端、Postman 或 issue 中。"
+  },
+  "probe": {
+    "test": "测试连接",
+    "testing": "测试中…",
+    "reachable": "可达",
+    "reachableWithStatus": "可达，但服务器返回 {{status}}",
+    "unreachable": "不可达 · {{kind}}",
+    "latency": "延迟",
+    "size": "大小",
+    "finalUrl": "最终",
+    "details": "详情",
+    "copy": "复制",
+    "copied": "已复制",
+    "kindTimeout": "请求超时",
+    "kindNetwork": "网络错误",
+    "kindDns": "DNS 解析失败",
+    "kindCors": "被浏览器 CORS 阻止",
+    "kindAborted": "已中止"
   },
   "load": {
     "users": "虚拟用户数",
@@ -103,6 +124,10 @@
   "history": {
     "empty": "还没有测试记录。运行一次压测后，这里会自动保存最近 20 次。",
     "restore": "恢复",
+    "restoreHint": "将该配置加载到表单（不运行）",
+    "rerun": "重跑",
+    "rerunHint": "立即再次使用此配置运行 — 会保存新的历史记录",
+    "running": "运行中…",
     "requests": "次请求"
   },
   "results": {
@@ -131,6 +156,13 @@
     "slowest": "慢请求 Top N",
     "assertionFailures": "断言失败",
     "errorGroups": "错误分组",
+    "filterAll": "全部",
+    "filterPass": "通过",
+    "filterFail": "失败",
+    "filterSearch": "搜索状态码 / 错误…",
+    "filterClear": "清除",
+    "filterCount": "显示 {{shown}} / {{total}}",
+    "filterEmpty": "没有匹配的请求。",
     "details": {
       "close": "关闭",
       "request": "请求",

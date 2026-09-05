@@ -2,6 +2,7 @@
 
 import type { EngineHost } from '@/engine/engine-host';
 import { LoadEngine } from '@/engine/load-engine';
+import { probeRequest, type ProbeResult } from '@/engine/runner';
 import type { EngineState, MetricsSnapshot, TestConfig } from '@/shared/types';
 
 export class BrowserEngineHost implements EngineHost {
@@ -18,5 +19,12 @@ export class BrowserEngineHost implements EngineHost {
 
   stop(): void {
     this.engine?.stop();
+  }
+
+  probe(config: TestConfig): Promise<ProbeResult> {
+    // The web host runs the engine in-page; even if no run has been
+    // started yet, we can still probe the URL with the supplied config.
+    if (this.engine) return this.engine.probe(config);
+    return probeRequest(config);
   }
 }

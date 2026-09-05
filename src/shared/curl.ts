@@ -368,3 +368,92 @@ function pickContentType(
   if (/^[\w.+-]+\s*=/.test(trimmed)) return 'application/x-www-form-urlencoded';
   return 'text/plain';
 }
+
+/**
+ * Inverse of `parseCurl`: build a copy-paste-ready `curl …` command from
+ * a TestConfig shell. Used by the "Copy as cURL" button in the request
+ * drawer and the request panel.
+ *
+ * Output style:
+ *  - Headers use `-H 'Key: Value'` (single-quoted)
+ *  - Body uses `--data-raw` so binary/JSON/Unicode pass through untouched
+ *  - Body is only emitted for non-GET/HEAD methods
+ *  - Sensitive-looking headers (Authorization, Cookie, X-API-Key) are
+ *    still emitted in plaintext — that's the only way the snippet is
+ *    useful, and the user explicitly asked to copy a cURL.
+ *  - Multi-line output: one flag per line when there's >1 flag, with
+ *    `\` continuations so the snippet stays copy-pasteable. URL goes on
+ *    the first line; subsequent lines are indented for readability.
+ */
+export function toCurl(config: {
+  method: string;
+  url: string;
+  headers: [string, string][];
+  body: string;
+  contentType?: string;
+}): string {
+  const method = config.method.toUpperCase();
+  const hasBody = !!config.body && method !== 'GET' && method !== 'HEAD';
+  // When the user has both an explicit Content-Type header and a
+  // `contentType` config field, the header wins — we don't emit both
+  // (cURL doesn't care, but it makes the snippet noisy and confuses
+  // readers). Case-insensitive comparison because HTTP headers are
+  // case-insensitive.
+  const hasContentTypeHeader = config.headers.some(([k]) => k.toLowerCase() === 'content-type');
+  const showContentType = !!config.contentType && hasBody && !hasContentTypeHeader;
+  const flags: string[] = [];
+
+  if (method !== 'GET') flags.push(`-X ${method}`);
+  for (const [k, v] of config.headers) {
+    if (!k) continue;
+    flags.push(`-H ${shellQuote(`${k}: ${v}`)}`);
+  }
+  if (showContentType) flags.push(`-H ${shellQuote(`Content-Type: ${config.contentType}`)}`);
+  if (hasBody) flags.push(`--data-raw ${shellQuote(config.body)}`);
+
+  const url = shellQuote(config.url);
+
+  // Plain GET with no flags: `curl URL`.
+  if (flags.length === 0) return `curl ${url}`;
+
+  // Short commands (≤2 flags, no body) keep the single-line form for
+  // one-liner-friendliness: `curl -X POST -H 'A: 1' URL`.
+  if (flags.length <= 2 && !hasBody) {
+    return `curl ${flags.join(' ')} ${url}`;
+  }
+
+  // Multi-line form: URL first as the "head" line, then one flag per
+  // continuation line ending in `\` so the snippet stays a single
+  // logical cURL invocation when pasted into a shell. The URL line is
+  // intentionally bare (no trailing `\`) so the snippet reads naturally
+  // at a glance; subsequent lines use `\` continuations so they glue
+  // back to the URL when the user pastes them into a shell. That same
+  // `\` handling also makes the output round-trip through `tokeniseCurl`
+  // cleanly when pasted back into the importer.
+  const lines = [`curl ${url}`];
+  for (let i = 0; i < flags.length - 1; i++) lines.push(`  ${flags[i]} \\`);
+  lines.push(`  ${flags[flags.length - 1]}`);
+  return lines.join('\n');
+}
+
+/**
+ * Quote a value for the shell. Prefers single-quoted strings (the
+ * canonical, fully-portable POSIX form) but switches to double quotes
+ * whenever the value contains a single quote — POSIX single quotes
+ * can't contain a `'` at all, and the `'foo'\''bar'` workaround breaks
+ * naïve tokenisers (including ours). Inside double quotes we still need
+ * to escape `\` and `$` for bash, but `'` is fine.
+ */
+function shellQuote(value: string): string {
+  if (value === '') return "''";
+  // No special chars → single-quoted, the cheapest form to read.
+  if (!/["'\\\n\r\u0000$`]/.test(value)) return `'${value}'`;
+  // Has a single quote: use double quotes; `'` needs no escape inside.
+  if (value.includes("'")) {
+    return `"${value.replace(/[\\$`"]/g, (m) => '\\' + m)}"`;
+  }
+  // Has backslash / newline / `$` / backtick but no single quote:
+  // single-quoted is fine because none of those have meaning inside
+  // single quotes.
+  return `'${value}'`;
+}

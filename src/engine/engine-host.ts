@@ -1,6 +1,7 @@
 /** Platform-agnostic interface for the load-testing engine host. */
 
 import type { EngineState, MetricsSnapshot, TestConfig } from '@/shared/types';
+import type { ProbeResult } from './runner';
 
 /**
  * Both the Chrome extension (background service worker) and the web app
@@ -12,4 +13,6 @@ export interface EngineHost {
   connect(onMetrics: (m: MetricsSnapshot) => void, onState: (s: EngineState, msg?: string) => void): void;
   start(config: TestConfig): void;
   stop(): void;
+  /** Single-shot connectivity probe — does not affect run state or metrics. */
+  probe(config: TestConfig): Promise<ProbeResult>;
 }

@@ -65,7 +65,28 @@
     "pasteCurlPlaceholder": "curl -X POST https://api.example.com/users \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"name\":\"tom\"}'",
     "pasteCurlApply": "Apply",
     "pasteCurlCancel": "Cancel",
-    "pasteCurlHint": "Supports method, headers, JSON/form bodies, basic auth (-u), and most no-op flags."
+    "pasteCurlHint": "Supports method, headers, JSON/form bodies, basic auth (-u), and most no-op flags.",
+    "copyCurl": "Copy as cURL",
+    "copyCurlCopied": "Copied",
+    "copyCurlHint": "Copy a curl command equivalent to this request — paste into a terminal, Postman, or an issue tracker."
+  },
+  "probe": {
+    "test": "Test Connection",
+    "testing": "Testing…",
+    "reachable": "Reachable",
+    "reachableWithStatus": "Reachable, but server replied with {{status}}",
+    "unreachable": "Unreachable · {{kind}}",
+    "latency": "latency",
+    "size": "size",
+    "finalUrl": "final",
+    "details": "details",
+    "copy": "Copy",
+    "copied": "Copied",
+    "kindTimeout": "request timed out",
+    "kindNetwork": "network error",
+    "kindDns": "DNS lookup failed",
+    "kindCors": "CORS blocked by browser",
+    "kindAborted": "aborted"
   },
   "load": {
     "users": "Virtual Users",
@@ -103,6 +124,10 @@
   "history": {
     "empty": "No test records yet. Run a test and the last 20 runs will be saved here automatically.",
     "restore": "Restore",
+    "restoreHint": "Load this configuration into the form (without running it)",
+    "rerun": "Re-run",
+    "rerunHint": "Run this configuration again immediately — a new history entry will be saved",
+    "running": "Running…",
     "requests": "requests"
   },
   "results": {
@@ -131,6 +156,13 @@
     "slowest": "Slowest Requests",
     "assertionFailures": "Assertion Failures",
     "errorGroups": "Error Groups",
+    "filterAll": "All",
+    "filterPass": "PASS",
+    "filterFail": "FAIL",
+    "filterSearch": "Search status / error…",
+    "filterClear": "Clear",
+    "filterCount": "Showing {{shown}} of {{total}}",
+    "filterEmpty": "No requests match the filter.",
     "details": {
       "close": "Close",
       "request": "Request",

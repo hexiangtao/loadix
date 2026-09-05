@@ -494,11 +494,11 @@ export default function App({ host }: { host: EngineHost }) {
                   exit={{ opacity: 0, y: -8 }}
                   transition={{ duration: 0.16, ease: 'easeOut' }}
                 >
-                  {activeSection === 'request' && <RequestPanel value={request} onChange={setRequest} />}
+                   {activeSection === 'request' && <RequestPanel value={request} onChange={setRequest} host={host} variables={variables} busy={running} />}
                   {activeSection === 'load' && <LoadPanel value={load} onChange={setLoad} />}
                   {activeSection === 'assertions' && <AssertionsPanel value={assertions} onChange={setAssertions} />}
                   {activeSection === 'variables' && <VariablesPanel value={variables} onChange={setVariables} />}
-                  {activeSection === 'history' && <HistoryPanel onRestore={handleRestore} />}
+                   {activeSection === 'history' && <HistoryPanel onRestore={handleRestore} host={host} busy={running} />}
                 </motion.div>
               </AnimatePresence>
             </section>

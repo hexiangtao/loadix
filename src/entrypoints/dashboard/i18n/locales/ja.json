@@ -65,7 +65,28 @@
     "pasteCurlPlaceholder": "curl -X POST https://api.example.com/users \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"name\":\"tom\"}'",
     "pasteCurlApply": "適用",
     "pasteCurlCancel": "キャンセル",
-    "pasteCurlHint": "method / headers / JSON・form ボディ / Basic 認証(-u) などをサポート。"
+    "pasteCurlHint": "method / headers / JSON・form ボディ / Basic 認証(-u) などをサポート。",
+    "copyCurl": "cURL としてコピー",
+    "copyCurlCopied": "コピーしました",
+    "copyCurlHint": "このリクエストと等価な curl コマンドをコピー — ターミナル、Postman、Issue に貼り付けできます。"
+  },
+  "probe": {
+    "test": "接続テスト",
+    "testing": "テスト中…",
+    "reachable": "到達可能",
+    "reachableWithStatus": "到達可能ですが、サーバーが {{status}} を返しました",
+    "unreachable": "到達不可 · {{kind}}",
+    "latency": "レイテンシ",
+    "size": "サイズ",
+    "finalUrl": "最終",
+    "details": "詳細",
+    "copy": "コピー",
+    "copied": "コピーしました",
+    "kindTimeout": "リクエストがタイムアウト",
+    "kindNetwork": "ネットワークエラー",
+    "kindDns": "DNS 解決失敗",
+    "kindCors": "ブラウザの CORS でブロック",
+    "kindAborted": "中止"
   },
   "load": {
     "users": "仮想ユーザー数",
@@ -102,8 +123,10 @@
   },
   "history": {
     "empty": "まだテスト記録がありません。テストを実行すると、直近20件がここに自動保存されます。",
-    "restore": "復元",
-    "requests": "リクエスト"
+    "restore": "復元",    "restoreHint": "この設定をフォームに読み込みます（実行はしません）",
+    "rerun": "再実行",
+    "rerunHint": "この設定で直ちに再実行します — 新しい履歴エントリが保存されます",
+    "running": "実行中…",    "requests": "リクエスト"
   },
   "results": {
     "title": "リアルタイム結果",
@@ -131,6 +154,13 @@
     "slowest": "遅いリクエスト",
     "assertionFailures": "アサーション失敗",
     "errorGroups": "エラーグループ",
+    "filterAll": "すべて",
+    "filterPass": "成功",
+    "filterFail": "失敗",
+    "filterSearch": "ステータス / エラー を検索…",
+    "filterClear": "クリア",
+    "filterCount": "{{shown}} / {{total}} 件表示",
+    "filterEmpty": "一致するリクエストがありません。",
     "details": {
       "close": "閉じる",
       "request": "リクエスト",

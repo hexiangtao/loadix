@@ -65,7 +65,28 @@
     "pasteCurlPlaceholder": "curl -X POST https://api.example.com/users \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"name\":\"tom\"}'",
     "pasteCurlApply": "Appliquer",
     "pasteCurlCancel": "Annuler",
-    "pasteCurlHint": "Supporte la méthode, les en-têtes, les corps JSON/form, l'auth basique (-u) et la plupart des options sans effet."
+    "pasteCurlHint": "Supporte la méthode, les en-têtes, les corps JSON/form, l'auth basique (-u) et la plupart des options sans effet.",
+    "copyCurl": "Copier comme cURL",
+    "copyCurlCopied": "Copié",
+    "copyCurlHint": "Copiez une commande curl équivalente à cette requête — collez-la dans un terminal, Postman ou un ticket."
+  },
+  "probe": {
+    "test": "Tester la connexion",
+    "testing": "Test…",
+    "reachable": "Accessible",
+    "reachableWithStatus": "Accessible, mais le serveur a répondu {{status}}",
+    "unreachable": "Inaccessible · {{kind}}",
+    "latency": "latence",
+    "size": "taille",
+    "finalUrl": "final",
+    "details": "détails",
+    "copy": "Copier",
+    "copied": "Copié",
+    "kindTimeout": "délai dépassé",
+    "kindNetwork": "erreur réseau",
+    "kindDns": "échec de la résolution DNS",
+    "kindCors": "bloqué par CORS",
+    "kindAborted": "annulé"
   },
   "load": {
     "users": "Utilisateurs virtuels",
@@ -102,8 +123,10 @@
   },
   "history": {
     "empty": "Aucun test enregistré. Lancez un test et les 20 derniers seront sauvegardés ici.",
-    "restore": "Restaurer",
-    "requests": "requêtes"
+    "restore": "Restaurer",    "restoreHint": "Charger cette configuration dans le formulaire (sans l'exécuter)",
+    "rerun": "Relancer",
+    "rerunHint": "Relancer immédiatement avec cette configuration — un nouvel historique sera sauvegardé",
+    "running": "En cours…",    "requests": "requêtes"
   },
   "results": {
     "title": "Résultats en direct",
@@ -131,6 +154,13 @@
     "slowest": "Requêtes les plus lentes",
     "assertionFailures": "Échecs d'assertion",
     "errorGroups": "Groupes d'erreurs",
+    "filterAll": "Tous",
+    "filterPass": "OK",
+    "filterFail": "KO",
+    "filterSearch": "Rechercher statut / erreur…",
+    "filterClear": "Effacer",
+    "filterCount": "{{shown}} sur {{total}}",
+    "filterEmpty": "Aucune requête ne correspond.",
     "details": {
       "close": "Fermer",
       "request": "Requête",

@@ -65,7 +65,28 @@
     "pasteCurlPlaceholder": "curl -X POST https://api.example.com/users \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"name\":\"tom\"}'",
     "pasteCurlApply": "적용",
     "pasteCurlCancel": "취소",
-    "pasteCurlHint": "method, headers, JSON/form 본문, Basic 인증(-u)을 지원합니다."
+    "pasteCurlHint": "method, headers, JSON/form 본문, Basic 인증(-u)을 지원합니다.",
+    "copyCurl": "cURL로 복사",
+    "copyCurlCopied": "복사됨",
+    "copyCurlHint": "이 요청과 동일한 curl 명령을 복사 — 터미널, Postman, 이슈에 붙여넣을 수 있습니다."
+  },
+  "probe": {
+    "test": "연결 테스트",
+    "testing": "테스트 중…",
+    "reachable": "접근 가능",
+    "reachableWithStatus": "접근 가능하지만 서버가 {{status}}를 반환했습니다",
+    "unreachable": "접근 불가 · {{kind}}",
+    "latency": "지연",
+    "size": "크기",
+    "finalUrl": "최종",
+    "details": "상세",
+    "copy": "복사",
+    "copied": "복사됨",
+    "kindTimeout": "요청 시간 초과",
+    "kindNetwork": "네트워크 오류",
+    "kindDns": "DNS 확인 실패",
+    "kindCors": "브라우저 CORS 차단",
+    "kindAborted": "중단됨"
   },
   "load": {
     "users": "가상 사용자",
@@ -102,8 +123,10 @@
   },
   "history": {
     "empty": "아직 테스트 기록이 없습니다. 테스트를 실행하면 최근 20건이 여기에 자동 저장됩니다.",
-    "restore": "복원",
-    "requests": "요청"
+    "restore": "복원",    "restoreHint": "이 설정을 폼에 로드합니다 (실행하지 않음)",
+    "rerun": "재실행",
+    "rerunHint": "이 설정으로 즉시 다시 실행 — 새 기록이 저장됩니다",
+    "running": "실행 중…",    "requests": "요청"
   },
   "results": {
     "title": "실시간 결과",
@@ -131,6 +154,13 @@
     "slowest": "느린 요청",
     "assertionFailures": "어서션 실패",
     "errorGroups": "오류 그룹",
+    "filterAll": "전체",
+    "filterPass": "성공",
+    "filterFail": "실패",
+    "filterSearch": "상태 / 오류 검색…",
+    "filterClear": "지우기",
+    "filterCount": "{{total}} 중 {{shown}} 표시",
+    "filterEmpty": "필터와 일치하는 요청이 없습니다.",
     "details": {
       "close": "닫기",
       "request": "요청",

@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ClipboardPaste, X } from 'lucide-react';
-import type { ContentType, HttpMethod } from '@/shared/types';
-import { parseCurl } from '@/shared/curl';
+import { ClipboardPaste, Copy, Check, X } from 'lucide-react';
+import type { ContentType, HttpMethod, TestConfig } from '@/shared/types';
+import type { EngineHost } from '@/engine/engine-host';
+import { parseCurl, toCurl } from '@/shared/curl';
+import { ConnectionProbe } from '../components/ConnectionProbe';
 
 export interface RequestFormValue {
   method: HttpMethod;
@@ -16,17 +18,27 @@ export interface RequestFormValue {
 interface RequestPanelProps {
   value: RequestFormValue;
   onChange: (value: RequestFormValue) => void;
+  /** EngineHost is injected so the panel can fire a single-shot
+   *  connectivity probe without owning the load engine lifecycle. */
+  host: EngineHost;
+  /** Variable form values, used to interpolate the URL/headers/body for
+   *  the probe exactly as the real run would. */
+  variables: [string, string][];
+  /** True while the engine is running — disables the probe to avoid
+   *  competing for host resources. */
+  busy?: boolean;
 }
 
 const METHODS: HttpMethod[] = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD'];
 const CONTENT_TYPES: ContentType[] = ['application/json', 'application/x-www-form-urlencoded', 'text/plain'];
 
-export function RequestPanel({ value, onChange }: RequestPanelProps) {
+export function RequestPanel({ value, onChange, host, variables, busy }: RequestPanelProps) {
   const { t } = useTranslation();
   const patch = (partial: Partial<RequestFormValue>) => onChange({ ...value, ...partial });
   const [curlOpen, setCurlOpen] = useState(false);
   const [curlText, setCurlText] = useState('');
   const [curlError, setCurlError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   // Close on Escape; the modal is overlay-only so we don't need to manage
   // focus traps — there's exactly one textarea to focus and the user can
@@ -283,6 +295,81 @@ export function RequestPanel({ value, onChange }: RequestPanelProps) {
           </div>
         </div>
       )}
+
+      <div className="mt-3 flex items-center gap-2">
+        <button
+          type="button"
+          disabled={!value.url.trim()}
+          onClick={async () => {
+            // Build a config shell from the form, including the variables
+            // (interpolation will be re-applied by the recipient tool).
+            const cfg: TestConfig = {
+              method: value.method,
+              url: value.url,
+              timeout: value.timeout,
+              headers: value.headers,
+              body: value.body,
+              contentType: value.contentType,
+              loadModel: 'constant',
+              users: 1,
+              rps: 0,
+              duration: 1,
+              ramp: 0,
+              stepUsers: 0,
+              stepDuration: 0,
+              spikeUsers: 0,
+              spikeDuration: 0,
+              maxErrorRate: 0,
+              maxP95: 0,
+              assertions: [],
+              variables,
+            };
+            try {
+              await navigator.clipboard.writeText(toCurl(cfg));
+              setCopied(true);
+              window.setTimeout(() => setCopied(false), 1200);
+            } catch {
+              /* clipboard unavailable — silently ignore. */
+            }
+          }}
+          className="ghost-btn flex flex-1 items-center justify-center gap-1.5 disabled:cursor-not-allowed disabled:opacity-60"
+          title={t('request.copyCurlHint')}
+        >
+          {copied ? <Check size={13} /> : <Copy size={13} />}
+          {copied ? t('request.copyCurlCopied') : t('request.copyCurl')}
+        </button>
+        <ConnectionProbe
+          disabled={busy || !value.url.trim().startsWith('http')}
+          run={() => {
+          // Build a TestConfig shell from the current form so the probe
+          // goes through exactly the same URL/headers/body/variables as
+          // a real run would. Only the load-side fields matter for
+          // probeRequest, and they fall back to safe defaults.
+          const cfg: TestConfig = {
+            method: value.method,
+            url: value.url,
+            timeout: value.timeout,
+            headers: value.headers,
+            body: value.body,
+            contentType: value.contentType,
+            loadModel: 'constant',
+            users: 1,
+            rps: 0,
+            duration: 1,
+            ramp: 0,
+            stepUsers: 0,
+            stepDuration: 0,
+            spikeUsers: 0,
+            spikeDuration: 0,
+            maxErrorRate: 0,
+            maxP95: 0,
+            assertions: [],
+            variables,
+          };
+          return host.probe(cfg);
+        }}
+      />
+      </div>
     </section>
   );
 }

@@ -4,6 +4,22 @@ import type { RequestResult, TestConfig } from '../shared/types';
 import { buildHeaders, evaluateAssertions, interpolate } from './core';
 
 /**
+ * Outcome of a connectivity probe — a deliberately narrow shape that the
+ * "Test Connection" button can render without having to know about the
+ * full RequestResult / assertion / timing model.
+ */
+export interface ProbeResult {
+  ok: boolean;
+  status: number;
+  ms: number;
+  bytes: number;
+  error: string;
+  /** A short label describing the failure mode (`timeout`, `network`, `dns`, …). */
+  errorKind: 'timeout' | 'network' | 'dns' | 'cors' | 'aborted' | 'http' | '';
+  finalUrl: string;
+}
+
+/**
  * Capture response headers into a plain object. Multi-value headers (e.g.
  * Set-Cookie) are joined with `, ` — enough for inspection in the drawer,
  * not a faithful wire-format replay.
@@ -121,4 +137,70 @@ export async function executeAndAssert(config: TestConfig, vars: Record<string, 
   result.pass = failures.length === 0;
   result.failures = failures;
   return result;
+}
+
+/**
+ * Single-shot connectivity probe used by the "Test Connection" button.
+ *
+ * Distinct from `executeRequest`:
+ *  - Returns a narrow `ProbeResult` rather than the full RequestResult
+ *  - Never writes to the metrics collector
+ *  - Tags the failure with a coarse `errorKind` so the UI can colour and
+ *    message each mode (timeout / network / DNS / CORS) consistently
+ *  - Captures `finalUrl` so a redirect chain is visible without
+ *    re-running the request
+ *
+ * Always uses the configured timeout. If no config is supplied the caller
+ * must catch the resulting error.
+ */
+export async function probeRequest(config: TestConfig): Promise<ProbeResult> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), Math.max(100, config.timeout));
+  const started = performance.now();
+  const url = interpolate(config.url, Object.fromEntries(config.variables));
+  try {
+    const res = await fetch(url, {
+      method: config.method,
+      headers: buildHeaders(config, Object.fromEntries(config.variables)),
+      body: config.method === 'GET' || config.method === 'HEAD' ? undefined : interpolate(config.body, Object.fromEntries(config.variables)),
+      signal: controller.signal,
+      cache: 'no-store',
+      redirect: 'follow',
+    });
+    const body = await res.text();
+    const ms = performance.now() - started;
+    return {
+      ok: res.ok,
+      status: res.status,
+      ms,
+      bytes: new TextEncoder().encode(body).length,
+      error: '',
+      errorKind: '',
+      finalUrl: res.url,
+    };
+  } catch (e) {
+    const err = e as Error & { cause?: unknown };
+    const ms = performance.now() - started;
+    const message = err.message || String(err);
+    // Heuristic classification — the Fetch API doesn't expose a stable
+    // error type, so we sniff the message. Each branch maps to a stable
+    // UI colour/icon so users can diagnose at a glance.
+    let errorKind: ProbeResult['errorKind'] = 'network';
+    if (err.name === 'AbortError') errorKind = 'timeout';
+    else if (/Failed to fetch|NetworkError|network/i.test(message)) errorKind = 'network';
+    else if (/DNS|getaddrinfo|ENOTFOUND|hostname/i.test(message)) errorKind = 'dns';
+    else if (/CORS|cors|Access-Control/i.test(message)) errorKind = 'cors';
+    else if (/aborted/i.test(message)) errorKind = 'aborted';
+    return {
+      ok: false,
+      status: 0,
+      ms,
+      bytes: 0,
+      error: message,
+      errorKind,
+      finalUrl: url,
+    };
+  } finally {
+    clearTimeout(timer);
+  }
 }

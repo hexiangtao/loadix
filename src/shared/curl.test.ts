@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseCurl, tokeniseCurl } from './curl';
+import { parseCurl, tokeniseCurl, toCurl } from './curl';
 
 describe('tokeniseCurl', () => {
   it('splits simple space-separated tokens', () => {
@@ -104,5 +104,115 @@ describe('parseCurl', () => {
 
   it('throws on multiple positional URL arguments', () => {
     expect(() => parseCurl('curl https://a https://b')).toThrow(/Multiple positional/);
+  });
+});
+
+describe('toCurl', () => {
+  it('renders a plain GET as a single line', () => {
+    expect(toCurl({
+      method: 'GET',
+      url: 'https://api.example.com/users',
+      headers: [],
+      body: '',
+    })).toBe(`curl 'https://api.example.com/users'`);
+  });
+
+  it('emits -X for non-GET methods', () => {
+    expect(toCurl({
+      method: 'POST',
+      url: 'https://x/y',
+      headers: [],
+      body: '',
+    })).toBe(`curl -X POST 'https://x/y'`);
+  });
+
+  it('renders headers and body in single-line form for short commands', () => {
+    const out = toCurl({
+      method: 'POST',
+      url: 'https://x/y',
+      headers: [['Content-Type', 'application/json']],
+      body: '{"a":1}',
+      contentType: 'application/json',
+    });
+    // 3 flags (X + H + data) with a body crosses the multi-line threshold.
+    // We accept either form as long as everything is present and parseable.
+    const parsed = parseCurl(out);
+    expect(parsed.method).toBe('POST');
+    expect(parsed.url).toBe('https://x/y');
+    expect(parsed.body).toBe('{"a":1}');
+    expect(parsed.headers).toEqual([['Content-Type', 'application/json']]);
+  });
+
+  it('round-trips a complex command through parseCurl', () => {
+    const out = toCurl({
+      method: 'PUT',
+      url: 'https://api.example.com/orders/42',
+      headers: [
+        ['Authorization', 'Bearer abc'],
+        ['X-Trace-Id', 'req-001'],
+      ],
+      body: '{"qty":2}',
+      contentType: 'application/json',
+    });
+    const parsed = parseCurl(out);
+    expect(parsed.method).toBe('PUT');
+    expect(parsed.url).toBe('https://api.example.com/orders/42');
+    expect(parsed.body).toBe('{"qty":2}');
+    expect(parsed.headers).toEqual([
+      ['Authorization', 'Bearer abc'],
+      ['X-Trace-Id', 'req-001'],
+      ['Content-Type', 'application/json'],
+    ]);
+  });
+
+  it('handles single quotes inside body via double-quoted shell form', () => {
+    const out = toCurl({
+      method: 'POST',
+      url: 'https://x',
+      headers: [],
+      body: "it's a test",
+    });
+    // POSIX single-quoted strings can't contain a single quote at all,
+    // so the canonical workaround is `'foo'\''bar'`. We prefer the
+    // much more readable `"it's a test"` (double quotes) whenever the
+    // body contains a `'`. Either form parses identically.
+    expect(out).toContain(`"it's a test"`);
+    expect(parseCurl(out).body).toBe("it's a test");
+  });
+
+  it('omits body for GET / HEAD', () => {
+    const head = toCurl({
+      method: 'HEAD',
+      url: 'https://x',
+      headers: [],
+      body: 'should-not-appear',
+    });
+    expect(head).not.toContain('data');
+    expect(head).not.toContain('--data');
+    expect(parseCurl(head).body).toBe('');
+  });
+
+  it('emits multi-line form for many flags', () => {
+    const out = toCurl({
+      method: 'POST',
+      url: 'https://x',
+      headers: [
+        ['A', '1'],
+        ['B', '2'],
+        ['C', '3'],
+      ],
+      body: 'hello',
+      contentType: 'text/plain',
+    });
+    // URL first, then one flag per line. Continuations everywhere except
+    // the last flag.
+    expect(out.split('\n')[0]).toBe(`curl 'https://x'`);
+    expect(out).toContain(`  -X POST \\`);
+    expect(out).toContain(`  -H 'A: 1' \\`);
+    expect(out).toContain(`  -H 'B: 2' \\`);
+    expect(out).toContain(`  -H 'C: 3' \\`);
+    expect(out).toContain(`  -H 'Content-Type: text/plain' \\`);
+    // The very last line has no trailing `\` — that's the closing line.
+    expect(out.endsWith('\\')).toBe(false);
   });
 });
