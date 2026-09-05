@@ -13,8 +13,9 @@ tables need no extra code on the receiving side.
 | `functions/_lib/share-core.mjs` | All backend logic — framework-agnostic so Cloudflare, the local preview server and the unit tests share one implementation. |
 | `functions/api/share.js` | `POST /api/share` route → `postShare(request, env.SHARE_KV)` |
 | `functions/api/share/[id].js` | `GET /api/share/<id>` route → `getShare(id, env.SHARE_KV)` |
+| `functions/s/[id].js` | `GET /s/<id>` — serves `share.html` with the document's own title baked in (`<title>` + og/twitter meta, via `renderSharePage`) so chat/office apps preview shared links with real context; unknown ids fall through to the static rewrite |
 | `functions/_lib/share-core.test.mjs` | Unit tests (run by `npm test`, in-memory KV + real `Request` objects) |
-| `src/web/public/_redirects` | `/s/*  →  /share.html 200` rewrite (keeps the URL in the browser so the viewer reads the id from the pathname) |
+| `src/web/public/_redirects` | `/s/*  →  /share.html 200` rewrite (keeps the URL in the browser so the viewer reads the id from the pathname; the `/s/[id]` function takes precedence for known ids) |
 | `src/web/share.html`, `src/web/share-main.tsx` | The read-only viewer page |
 
 KV record shape: `share:<id>` → `{ "source": string, "createdAt": number }`,

@@ -15,6 +15,7 @@ import { useTranslation } from 'react-i18next';
 import { AlertTriangle, ArrowUpRight, FileQuestion, Loader2, RotateCw } from 'lucide-react';
 import { initI18n } from '@/entrypoints/dashboard/i18n';
 import { MarkdownPreview } from '@/entrypoints/dashboard/markdown/MarkdownPreview';
+import { firstHeading } from '@/entrypoints/dashboard/markdown/docStore';
 import '@/entrypoints/dashboard/app.css';
 
 const HOME_URL = 'https://loadix.dev';
@@ -92,9 +93,13 @@ function ShareApp() {
     };
   }, [id, attempt]);
 
+  // The tab / link-preview title comes from the document's own first heading
+  // (falling back to the generic brand line) so shared links carry real
+  // context in chat apps and browsers.
   useEffect(() => {
     if (state.status === 'ready') {
-      document.title = 'Loadix · Shared document';
+      const heading = firstHeading(state.source);
+      document.title = heading ? `${heading} · Loadix` : 'Shared document · Loadix';
     }
   }, [state]);
 

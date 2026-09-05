@@ -18,6 +18,11 @@ describe('firstHeading', () => {
     expect(firstHeading('#  Spaced Title  \n')).toBe('Spaced Title');
   });
 
+  it('strips inline emphasis/code markers from the extracted title', () => {
+    expect(firstHeading('# **Bold** Title\n')).toBe('Bold Title');
+    expect(firstHeading('## `code` & ~~gone~~\n')).toBe('code & gone');
+  });
+
   it('returns empty for documents without a heading', () => {
     expect(firstHeading('just a paragraph')).toBe('');
     expect(firstHeading('')).toBe('');

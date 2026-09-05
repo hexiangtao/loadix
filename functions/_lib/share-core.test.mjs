@@ -3,13 +3,17 @@
 // Cloudflare Pages functions and the local preview server execute.
 import { describe, expect, it } from 'vitest';
 import {
+  FALLBACK_PAGE_TITLE,
   ID_LENGTH,
   MAX_SOURCE_BYTES,
+  firstHeading,
   getShare,
   isValidId,
   makeId,
   parseShareBody,
   postShare,
+  readShare,
+  renderSharePage,
 } from './share-core.mjs';
 
 function memKV() {
@@ -152,5 +156,57 @@ describe('getShare', () => {
     await kv.put('share:Ab3xY9zQ', 'not json');
     const res = await getShare('Ab3xY9zQ', kv);
     expect(res.status).toBe(404);
+  });
+});
+
+describe('readShare', () => {
+  it('returns the record for a stored id and null otherwise', async () => {
+    const kv = memKV();
+    await kv.put('share:Ab3xY9zQ', JSON.stringify({ source: '# Hi', createdAt: 1 }));
+    expect((await readShare('Ab3xY9zQ', kv))?.source).toBe('# Hi');
+    expect(await readShare('Ab3xY9zQ!', kv)).toBeNull();
+    expect(await readShare('Missing1', kv)).toBeNull();
+  });
+});
+
+describe('firstHeading', () => {
+  it('prefers the first H1', () => {
+    expect(firstHeading('# Real Title\n\nbody')).toBe('Real Title');
+  });
+
+  it('falls back to the first heading of any level', () => {
+    expect(firstHeading('intro\n\n## Sub title\n')).toBe('Sub title');
+  });
+
+  it('strips inline emphasis/code markers and whitespace', () => {
+    expect(firstHeading('# **Bold** `code`  \n')).toBe('Bold code');
+  });
+
+  it('returns empty for documents without a heading', () => {
+    expect(firstHeading('just text')).toBe('');
+    expect(firstHeading('#not a heading\n')).toBe('');
+  });
+});
+
+describe('renderSharePage', () => {
+  const html = '<!doctype html><html><head><title>Shared document · Loadix</title></head><body>x</body></html>';
+
+  it('bakes the document heading into the title tag', () => {
+    expect(renderSharePage(html, '# My Doc\n\nbody')).toContain('<title>My Doc · Loadix</title>');
+  });
+
+  it('adds Open Graph and Twitter meta', () => {
+    const out = renderSharePage(html, '# My Doc');
+    expect(out).toContain('property="og:title" content="My Doc · Loadix"');
+    expect(out).toContain('name="twitter:title"');
+    expect(out).toContain('property="og:type" content="article"');
+  });
+
+  it('keeps the generic title when the document has no heading', () => {
+    expect(renderSharePage(html, 'no heading')).toContain(`<title>${FALLBACK_PAGE_TITLE}</title>`);
+  });
+
+  it('escapes HTML in the injected title', () => {
+    expect(renderSharePage(html, '# <script>alert(1)</script>')).toContain('&lt;script&gt;');
   });
 });

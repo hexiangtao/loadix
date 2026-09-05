@@ -93,9 +93,15 @@ export function uid(): string {
  */
 export function firstHeading(content: string): string {
   const h1 = /^#\s+(.+?)\s*$/m.exec(content);
-  if (h1) return h1[1]!.trim();
+  if (h1) return cleanHeading(h1[1]!);
   const any = /^#{1,6}\s+(.+?)\s*$/m.exec(content);
-  return any?.[1]?.trim() ?? '';
+  return any?.[1] ? cleanHeading(any[1]) : '';
+}
+
+/** Strips inline emphasis/code markers so extracted titles read cleanly
+    in tabs, link previews, and the document list. */
+function cleanHeading(raw: string): string {
+  return raw.replace(/[*_`~]/g, '').trim();
 }
 
 /**

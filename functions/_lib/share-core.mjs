@@ -81,20 +81,65 @@ export async function postShare(request, kv) {
   return json({ id, url: `/s/${id}` }, 201);
 }
 
-/** GET /api/share/:id — returns { id, source, createdAt } or a JSON 404. */
-export async function getShare(id, kv) {
-  if (!isValidId(id)) return json({ error: 'not_found' }, 404);
+/** Reads a stored share record; null when the id is invalid, missing, or malformed. */
+export async function readShare(id, kv) {
+  if (!isValidId(id)) return null;
   const raw = await kv.get(kvKey(id));
-  if (raw === null || raw === undefined) return json({ error: 'not_found' }, 404);
+  if (raw === null || raw === undefined) return null;
   try {
     const record = JSON.parse(raw);
-    if (!record || typeof record.source !== 'string') return json({ error: 'not_found' }, 404);
-    return json({
+    if (!record || typeof record.source !== 'string') return null;
+    return {
       id,
       source: record.source,
       createdAt: typeof record.createdAt === 'number' ? record.createdAt : null,
-    });
+    };
   } catch {
-    return json({ error: 'not_found' }, 404);
+    return null;
   }
+}
+
+/** GET /api/share/:id — returns { id, source, createdAt } or a JSON 404. */
+export async function getShare(id, kv) {
+  const record = await readShare(id, kv);
+  return record ? json(record) : json({ error: 'not_found' }, 404);
+}
+
+/** Page title from markdown: the first H1, else the first heading of any
+    level, else ''. Mirrors docStore.firstHeading in the dashboard — a small
+    intentional duplicate, since the functions runtime can't import the app
+    bundle. */
+export function firstHeading(content) {
+  const h1 = /^#\s+(.+?)\s*$/m.exec(content);
+  if (h1) return cleanHeading(h1[1]);
+  const any = /^#{1,6}\s+(.+?)\s*$/m.exec(content);
+  return any ? cleanHeading(any[1]) : '';
+}
+
+function cleanHeading(raw) {
+  return raw.replace(/[*_`~]/g, '').trim();
+}
+
+export const FALLBACK_PAGE_TITLE = 'Shared document · Loadix';
+
+const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+/** Bakes the document's own title into the viewer HTML (title tag + Open
+    Graph / Twitter meta), so links shared into chat and office apps preview
+    with real context instead of the generic brand line. */
+export function renderSharePage(html, source) {
+  const heading = firstHeading(source);
+  const title = heading ? `${heading} · Loadix` : FALLBACK_PAGE_TITLE;
+  const description = heading ? `${heading} — shared via Loadix` : 'Shared via Loadix';
+  const meta = [
+    `<meta property="og:title" content="${esc(title)}" />`,
+    `<meta property="og:description" content="${esc(description)}" />`,
+    '<meta property="og:type" content="article" />',
+    '<meta name="twitter:card" content="summary" />',
+    `<meta name="twitter:title" content="${esc(title)}" />`,
+    `<meta name="twitter:description" content="${esc(description)}" />`,
+  ].join('\n    ');
+  return html
+    .replace(/<title>[^<]*<\/title>/, `<title>${esc(title)}</title>`)
+    .replace('</head>', `    ${meta}\n  </head>`);
 }
