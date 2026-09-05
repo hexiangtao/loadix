@@ -7,7 +7,8 @@
 //
 // Product-consistent by design: the document renders flat on the same white
 // surface and measure as the workbench preview, under a fixed header whose
-// funnel link (打开工具箱) invites visitors into the product.
+// funnel link (返回首页) points visitors at the tool site (lab.loadix.dev),
+// not the marketing site.
 import { createRoot } from 'react-dom/client';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -17,6 +18,10 @@ import { MarkdownPreview } from '@/entrypoints/dashboard/markdown/MarkdownPrevie
 import '@/entrypoints/dashboard/app.css';
 
 const HOME_URL = 'https://loadix.dev';
+// The tool site — where the shared document's product actually lives. The
+// CTA and error-state links point here; the brand wordmark keeps the
+// marketing site as its "home".
+const LAB_URL = 'https://lab.loadix.dev';
 
 type ViewState =
   | { status: 'loading' }
@@ -107,11 +112,16 @@ function ShareApp() {
             <span className="size-2 rounded-full bg-primary" />
             Loadix
           </a>
+          {/* Restrained on purpose: the shared document is the hero, so the
+              funnel CTA uses the app's quiet brand tint instead of a heavy
+              filled button — present, but it never competes with the content. */}
           <a
-            href={HOME_URL}
-            className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white transition-colors duration-150 hover:bg-primary/90"
+            href={LAB_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center gap-1.5 rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary transition-colors duration-150 hover:bg-primary/15"
           >
-            {t('share.openToolbox')}
+            {t('share.backHome')}
             <ArrowUpRight size={13} />
           </a>
         </div>
@@ -163,11 +173,11 @@ function ShareApp() {
                 )}
                 <a
                   className="ghost-btn flex items-center gap-1.5"
-                  href={HOME_URL}
+                  href={LAB_URL}
                   target="_blank"
                   rel="noreferrer"
                 >
-                  {t('share.openToolbox')}
+                  {t('share.backHome')}
                 </a>
               </div>
             </div>
@@ -177,8 +187,6 @@ function ShareApp() {
 
       <footer className="shrink-0 border-t border-line py-5">
         <p className="text-center text-xs text-muted">
-          {t('share.renderedBy')}
-          <span className="mx-2 opacity-40">·</span>
           <a href={HOME_URL} target="_blank" rel="noreferrer" className="font-semibold hover:text-primary">
             {t('share.home')}
           </a>

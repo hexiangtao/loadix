@@ -526,8 +526,7 @@
     "loadError": "Could not load the shared document.",
     "notFound": "This shared document does not exist or is no longer available.",
     "retry": "Try again",
-    "openToolbox": "Open the toolbox",
-    "home": "loadix.dev",
-    "renderedBy": "Rendered by Loadix"
+    "backHome": "Back to home",
+    "home": "loadix.dev"
   }
 }
