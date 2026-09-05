@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { useTranslation } from 'react-i18next';
 import { toPng } from 'html-to-image';
@@ -17,11 +17,26 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { CopyButton } from '../tools/CopyButton';
-import { usePersistedState } from '../tools/usePersistedState';
 import { useAutoHideHeader } from '../useAutoHideHeader';
 import { MarkdownPreview } from './MarkdownPreview';
 import { MarkdownEditor } from './MarkdownEditor';
 import { flattenForExport, svgToPng } from './MermaidBlock';
+import { DocSidebar } from './DocSidebar';
+import {
+  createDoc,
+  createFolder,
+  deleteDoc,
+  deleteFolder,
+  docDisplayTitle,
+  getAllDocs,
+  getDoc,
+  loadWorkspace,
+  patchDocMeta,
+  renameFolder,
+  saveDoc,
+  type MarkdownDoc,
+  type MarkdownFolder,
+} from './docStore';
 import sample from './markdown-sample.md?raw';
 
 interface MarkdownToolProps {
@@ -47,6 +62,7 @@ const VIEW_MODES: { id: ViewMode; icon: LucideIcon; labelKey: string }[] = [
 ];
 
 const VIEW_MODE_KEY = 'loadix-tool:markdown.viewMode';
+const ACTIVE_DOC_KEY = 'loadix-tool:markdown.activeDoc';
 const EXPORT_SCALES = [1, 2, 3];
 
 /**
@@ -67,13 +83,187 @@ function useViewMode(): [ViewMode, (m: ViewMode) => void] {
 
 export function MarkdownTool({ initialPayload, fullscreen = false, onToggleFullscreen }: MarkdownToolProps) {
   const { t } = useTranslation();
-  const [input, setInput] = usePersistedState('markdown.input', initialPayload ?? '');
   const [mode, setMode] = useViewMode();
   // Reading mode is immersive: scrolling the rendered document collapses the
   // action toolbar (and the app header, driven from App.tsx) so the page
   // becomes pure content. While editing the toolbar stays put. Fullscreen
   // reading forces the toolbar away regardless of scroll.
   const chromeHidden = useAutoHideHeader(mode === 'preview' && !fullscreen);
+
+  /* ——— Document workspace state ——— */
+  const [ready, setReady] = useState(false);
+  const [docs, setDocs] = useState<MarkdownDoc[]>([]);
+  const [folders, setFolders] = useState<MarkdownFolder[]>([]);
+  const [activeDocId, setActiveDocId] = useState<string | null>(null);
+  const [input, setInput] = useState('');
+  // The doc id whose content `input` currently holds — autosave only fires
+  // while they match, so switching docs can't cross-write contents.
+  const [loadedFor, setLoadedFor] = useState<string | null>(null);
+
+  const docsRef = useRef<MarkdownDoc[]>([]);
+  const activeIdRef = useRef<string | null>(null);
+  const inputRef = useRef('');
+  const payloadConsumed = useRef(false);
+
+  useEffect(() => {
+    docsRef.current = docs;
+  }, [docs]);
+  useEffect(() => {
+    activeIdRef.current = activeDocId;
+  }, [activeDocId]);
+  useEffect(() => {
+    inputRef.current = input;
+  }, [input]);
+
+  /** Persists the current working copy to IndexedDB (uses refs, so it's safe
+      to call from timers and unmount cleanup). */
+  const persist = useCallback(async () => {
+    const id = activeIdRef.current;
+    if (!id) return;
+    const existing = docsRef.current.find((d) => d.id === id);
+    if (!existing) return;
+    const updated: MarkdownDoc = { ...existing, content: inputRef.current, updatedAt: Date.now() };
+    await saveDoc(updated);
+    setDocs((list) => list.map((d) => (d.id === id ? updated : d)));
+  }, []);
+
+  /** Flushes any pending edit, then loads the target document. */
+  const openDoc = useCallback(
+    (id: string) => {
+      void persist(); // activeIdRef still points at the outgoing doc
+      setActiveDocId(id);
+      activeIdRef.current = id;
+      localStorage.setItem(ACTIVE_DOC_KEY, id);
+      void getDoc(id).then((doc) => {
+        if (doc && activeIdRef.current === id) {
+          setInput(doc.content);
+          setLoadedFor(id);
+        }
+      });
+    },
+    [persist],
+  );
+
+  /** Editor/sample input lands here so the loaded-doc guard stays correct. */
+  const updateInput = useCallback((value: string) => {
+    setInput(value);
+    setLoadedFor(activeIdRef.current);
+  }, []);
+
+  // Debounced autosave: 500ms after the last keystroke, and only for the doc
+  // whose content is actually in the editor.
+  useEffect(() => {
+    if (!ready || !activeDocId || loadedFor !== activeDocId) return;
+    const timer = window.setTimeout(() => void persist(), 500);
+    return () => window.clearTimeout(timer);
+  }, [input, activeDocId, loadedFor, ready, persist]);
+
+  // Leave nothing behind on unmount.
+  useEffect(() => () => void persist(), [persist]);
+
+  // First run: migrate the legacy doc, list the workspace, pick the active
+  // document (deep-link payload > last opened > most recent > a fresh one).
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const { docs: all, folders: allFolders } = await loadWorkspace();
+      if (cancelled) return;
+      setDocs(all);
+      setFolders(allFolders);
+      setReady(true);
+
+      let targetId: string | null = null;
+      if (payloadConsumed.current) return;
+      if (initialPayload != null) {
+        // A routed payload (palette / smart paste) becomes a new document.
+        payloadConsumed.current = true;
+        const created = await createDoc({ content: initialPayload });
+        if (cancelled) return;
+        setDocs((list) => [created, ...list]);
+        targetId = created.id;
+      } else {
+        payloadConsumed.current = true;
+        const saved = localStorage.getItem(ACTIVE_DOC_KEY);
+        targetId = saved && all.some((d) => d.id === saved) ? saved : (all[0]?.id ?? null);
+      }
+      if (!targetId) {
+        const created = await createDoc({});
+        if (cancelled) return;
+        setDocs([created]);
+        targetId = created.id;
+      }
+      openDoc(targetId);
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /* ——— Document CRUD ——— */
+
+  const handleCreateDoc = useCallback(
+    async (folderId: string | null) => {
+      const doc = await createDoc({ folderId });
+      setDocs((list) => [doc, ...list]);
+      openDoc(doc.id);
+    },
+    [openDoc],
+  );
+
+  const handleRenameDoc = useCallback(async (id: string, title: string) => {
+    const updated = await patchDocMeta(id, { title });
+    if (updated) setDocs((list) => list.map((d) => (d.id === id ? updated : d)));
+  }, []);
+
+  const handleMoveDoc = useCallback(async (id: string, folderId: string | null) => {
+    const updated = await patchDocMeta(id, { folderId });
+    if (updated) setDocs((list) => list.map((d) => (d.id === id ? updated : d)));
+  }, []);
+
+  const handleDeleteDoc = useCallback(
+    async (id: string) => {
+      const doc = docsRef.current.find((d) => d.id === id);
+      if (!doc) return;
+      const title = docDisplayTitle(doc, t('tools.markdown.untitled'));
+      if (!window.confirm(t('tools.markdown.confirmDeleteDoc', { title }))) return;
+      await deleteDoc(id);
+      const remaining = docsRef.current.filter((d) => d.id !== id);
+      // Sync the ref now: the openDoc() flush below must not resurrect the
+      // just-deleted doc (it would re-save its content under its old id).
+      docsRef.current = remaining;
+      setDocs(remaining);
+      if (activeIdRef.current === id) {
+        const next = remaining[0] ?? null;
+        if (next) {
+          openDoc(next.id);
+        } else {
+          const created = await createDoc({});
+          setDocs([created]);
+          openDoc(created.id);
+        }
+      }
+    },
+    [openDoc, t],
+  );
+
+  const handleCreateFolder = useCallback(async (name: string) => {
+    const folder = await createFolder(name);
+    setFolders((list) => [...list, folder]);
+  }, []);
+
+  const handleRenameFolder = useCallback(async (id: string, name: string) => {
+    const updated = await renameFolder(id, name);
+    if (updated) setFolders((list) => list.map((f) => (f.id === id ? updated : f)));
+  }, []);
+
+  const handleDeleteFolder = useCallback(async (id: string) => {
+    if (!window.confirm(t('tools.markdown.confirmDeleteFolder'))) return;
+    await deleteFolder(id);
+    setFolders((list) => list.filter((f) => f.id !== id));
+    setDocs(await getAllDocs()); // folder deletion moves docs back to root
+  }, [t]);
+
 
   // Fullscreen toggles: double-click on the document, Ctrl/Cmd+Shift+F (only
   // meaningful while previewing), Esc to leave.
@@ -245,11 +435,27 @@ export function MarkdownTool({ initialPayload, fullscreen = false, onToggleFulls
 
   return (
     <div
-      className={`flex flex-col transition-all duration-300 ${
+      className={`flex gap-3 transition-all duration-300 ${
         fullscreen ? 'min-h-screen p-0' : 'min-h-[calc(100vh-8.5rem)] p-4'
       }`}
     >
+      <DocSidebar
+        docs={docs}
+        folders={folders}
+        activeDocId={activeDocId}
+        hidden={fullscreen}
+        onOpenDoc={openDoc}
+        onCreateDoc={(folderId) => void handleCreateDoc(folderId)}
+        onCreateFolder={(name) => void handleCreateFolder(name)}
+        onRenameDoc={(id, title) => void handleRenameDoc(id, title)}
+        onMoveDoc={(id, folderId) => void handleMoveDoc(id, folderId)}
+        onDeleteDoc={(id) => void handleDeleteDoc(id)}
+        onRenameFolder={(id, name) => void handleRenameFolder(id, name)}
+        onDeleteFolder={(id) => void handleDeleteFolder(id)}
+      />
       <div ref={areaRef} className="flex min-h-0 flex-1 flex-col">
+        {ready ? (
+        <>
         {/* Toolbar: view mode + source actions (available in every mode).
             Collapses away while scrolling the rendered document in preview
             mode — the toolbar is for doing things, not for reading. */}
@@ -276,7 +482,7 @@ export function MarkdownTool({ initialPayload, fullscreen = false, onToggleFulls
           </div>
           <div className="flex items-center gap-1.5">
             <button
-              onClick={() => setInput(sample)}
+              onClick={() => updateInput(sample)}
               className="ghost-btn flex items-center gap-1 px-2.5 py-1.5 text-xs"
               title={t('tools.markdown.sampleHint')}
             >
@@ -337,7 +543,7 @@ export function MarkdownTool({ initialPayload, fullscreen = false, onToggleFulls
             <div className="min-h-[320px] min-h-0 flex-1 overflow-hidden rounded-lg border border-line bg-panel">
               <MarkdownEditor
                 value={input}
-                onChange={setInput}
+                onChange={updateInput}
                 autoFocus
                 placeholder="# 标题
 
@@ -369,7 +575,7 @@ flowchart LR
               <div className="min-h-[260px] min-h-0 flex-1 overflow-hidden rounded-lg border border-line bg-panel">
                 <MarkdownEditor
                   value={input}
-                  onChange={setInput}
+                  onChange={updateInput}
                   placeholder="# 标题
 
 **加粗**、*斜体*、`代码`、[链接](https://loadix.dev)
@@ -386,6 +592,12 @@ flowchart LR
                 {preview}
               </div>
             </div>
+          </div>
+        )}
+        </>
+        ) : (
+          <div className="flex flex-1 items-center justify-center rounded-lg border border-line bg-panel text-sm text-muted">
+            {t('tools.markdown.loadingDocs')}
           </div>
         )}
       </div>
