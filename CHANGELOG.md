@@ -1,3 +1,10 @@
+# [1.38.0](https://github.com/hexiangtao/loadix/compare/v1.37.0...v1.38.0) (2026-09-05)
+
+
+### Features
+
+* **markdown:** IndexedDB document workspace with folder tree ([ace6937](https://github.com/hexiangtao/loadix/commit/ace693731d6a4d37654892c6299fe35f12c36eee))
+
 # [1.37.0](https://github.com/hexiangtao/loadix/compare/v1.36.0...v1.37.0) (2026-09-05)
 
 
