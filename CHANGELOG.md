@@ -1,3 +1,11 @@
+## [1.44.1](https://github.com/hexiangtao/loadix/compare/v1.44.0...v1.44.1) (2026-09-05)
+
+
+### Bug Fixes
+
+* **markdown:** header auto-hide treats the scrolled element, not the window ([b136bee](https://github.com/hexiangtao/loadix/commit/b136beea9fc771378a4bf6c45f4245aab7ad22e1))
+* **share:** footer scrolls with the document instead of pinning to the viewport ([86c6920](https://github.com/hexiangtao/loadix/commit/86c6920a6e24d9d08e57a994c243d25db9fb6c88))
+
 # [1.44.0](https://github.com/hexiangtao/loadix/compare/v1.43.0...v1.44.0) (2026-09-05)
 
 
