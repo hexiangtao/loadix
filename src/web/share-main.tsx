@@ -10,10 +10,11 @@
 // funnel link (返回首页) points visitors at the tool site (lab.loadix.dev),
 // not the marketing site.
 import { createRoot } from 'react-dom/client';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, ArrowUpRight, FileQuestion, Loader2, RotateCw } from 'lucide-react';
+import { AlertTriangle, ArrowUpRight, FileQuestion, ListTree, Loader2, RotateCw } from 'lucide-react';
 import { initI18n } from '@/entrypoints/dashboard/i18n';
+import { DocOutline } from '@/entrypoints/dashboard/markdown/DocOutline';
 import { MarkdownPreview } from '@/entrypoints/dashboard/markdown/MarkdownPreview';
 import { firstHeading } from '@/entrypoints/dashboard/markdown/docStore';
 import '@/entrypoints/dashboard/app.css';
@@ -65,6 +66,33 @@ function ShareApp() {
   );
   const [attempt, setAttempt] = useState(0);
   const retry = () => setAttempt((a) => a + 1);
+
+  /* ——— Document outline (大纲) ———
+     Desktop: a fixed rail beside the scroller, always shown (a read-only
+     viewer's outline is pure navigation — a dead-end close would only
+     frustrate). Mobile: a floating button that slides the outline in as a
+     sheet. Both are driven by the same DocOutline component, so behaviour is
+     identical everywhere. The two surfaces keep separate open-state so
+     resizing between breakpoints never strands or auto-covers anything. */
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const [outlineEnabled, setOutlineEnabled] = useState(false);
+  const handleOutlineItems = useCallback((count: number) => setOutlineEnabled(count >= 2), []);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  // Whether we're on a small screen — the sheet + floating button only exist there.
+  const [isMobile, setIsMobile] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(max-width: 1023px)').matches,
+  );
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 1023px)');
+    const apply = () => {
+      const mobile = mq.matches;
+      setIsMobile(mobile);
+      if (!mobile) setSheetOpen(false); // leaving mobile — drop the sheet
+    };
+    mq.addEventListener('change', apply);
+    apply();
+    return () => mq.removeEventListener('change', apply);
+  }, []);
 
   // Fetch the stored source; retry re-runs this effect.
   useEffect(() => {
@@ -132,7 +160,8 @@ function ShareApp() {
         </div>
       </header>
 
-      <main className="app-scroller min-h-0 flex-1 overflow-y-auto">
+      <main className="flex min-h-0 flex-1">
+        <div ref={scrollerRef} className="app-scroller min-h-0 min-w-0 flex-1 overflow-y-auto">
         {/* The document is the hero, rendered flat on the same white surface
             and measure as the workbench's preview pane — preview and share
             stay consistent, so a shared visitor sees exactly the product.
@@ -188,7 +217,51 @@ function ShareApp() {
             </div>
           )}
         </div>
+        </div>
+
+        {/* Desktop outline rail — fixed beside the scroller while the document
+            scrolls; hidden on small screens (the sheet below takes over). */}
+        {state.status === 'ready' && (
+          <DocOutline
+            containerRef={scrollerRef}
+            source={state.source}
+            onItemsChange={handleOutlineItems}
+            className="hidden h-full lg:block"
+          />
+        )}
       </main>
+
+      {/* Mobile outline: a floating toggle + slide-in sheet (below lg only) —
+          shared links are opened on phones at least as often as on desktops. */}
+      {state.status === 'ready' && isMobile && outlineEnabled && !sheetOpen && (
+        <button
+          type="button"
+          onClick={() => setSheetOpen(true)}
+          aria-label={t('tools.markdown.outline')}
+          title={t('tools.markdown.outline')}
+          className="fixed bottom-5 right-5 z-40 flex size-11 cursor-pointer items-center justify-center rounded-full border border-line bg-panel text-muted shadow-lg transition-colors duration-150 hover:text-primary"
+        >
+          <ListTree size={18} />
+        </button>
+      )}
+      {state.status === 'ready' && isMobile && sheetOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/30 backdrop-blur-[2px]"
+          onClick={() => setSheetOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+      {state.status === 'ready' && isMobile && sheetOpen && (
+        <div className="fixed inset-y-0 right-0 z-50 flex w-56 border-l border-line bg-panel shadow-2xl">
+          <DocOutline
+            containerRef={scrollerRef}
+            source={state.source}
+            onClose={() => setSheetOpen(false)}
+            onItemsChange={handleOutlineItems}
+            className="h-full w-full"
+          />
+        </div>
+      )}
 
       <footer className="shrink-0 border-t border-line py-5">
         <p className="text-center text-xs text-muted">

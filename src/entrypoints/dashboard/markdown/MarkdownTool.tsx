@@ -9,6 +9,7 @@ import {
   ExternalLink,
   Eye,
   ImageDown,
+  ListTree,
   Loader2,
   PencilLine,
   Share2,
@@ -18,6 +19,7 @@ import {
 } from 'lucide-react';
 import { CopyButton } from '../tools/CopyButton';
 import { useAutoHideHeader } from '../useAutoHideHeader';
+import { DocOutline } from './DocOutline';
 import { MarkdownPreview } from './MarkdownPreview';
 import { MarkdownEditor } from './MarkdownEditor';
 import { flattenForExport, svgToPng } from './MermaidBlock';
@@ -69,6 +71,7 @@ const VIEW_MODES: { id: ViewMode; icon: LucideIcon; labelKey: string }[] = [
 ];
 
 const VIEW_MODE_KEY = 'loadix-tool:markdown.viewMode';
+const OUTLINE_KEY = 'loadix-tool:markdown.outline';
 const ACTIVE_DOC_KEY = 'loadix-tool:markdown.activeDoc';
 const EXPORT_SCALES = [1, 2, 3];
 
@@ -91,6 +94,16 @@ function useViewMode(): [ViewMode, (m: ViewMode) => void] {
 export function MarkdownTool({ initialPayload, fullscreen = false, chromeGone = false, onToggleFullscreen }: MarkdownToolProps) {
   const { t } = useTranslation();
   const [mode, setMode] = useViewMode();
+  // The document outline (大纲) is a reading aid, so it only exists in preview
+  // mode. Default open; the choice persists across sessions.
+  const [outlineOpen, setOutlineOpen] = useState(() => localStorage.getItem(OUTLINE_KEY) !== '0');
+  useEffect(() => {
+    localStorage.setItem(OUTLINE_KEY, outlineOpen ? '1' : '0');
+  }, [outlineOpen]);
+  // Whether the current document actually has anything to outline (≥2 headings)
+  // — drives the toolbar toggle, which would be dead weight on a flat doc.
+  const [hasOutline, setHasOutline] = useState(false);
+  const handleOutlineItems = useCallback((count: number) => setHasOutline(count >= 2), []);
   // Reading mode is immersive: scrolling the rendered document collapses the
   // action toolbar (and the app header, driven from App.tsx) so the page
   // becomes pure content. While editing the toolbar stays put. Fullscreen
@@ -386,6 +399,8 @@ export function MarkdownTool({ initialPayload, fullscreen = false, chromeGone = 
   const [sharing, setSharing] = useState(false);
   const [shareDialog, setShareDialog] = useState<ShareDialogState | null>(null);
   const areaRef = useRef<HTMLDivElement>(null);
+  // The preview pane's scroll container — the outline scroll-spies on it.
+  const previewScrollRef = useRef<HTMLDivElement>(null);
   const failTimerRef = useRef<number | undefined>(undefined);
 
   useEffect(() => () => window.clearTimeout(failTimerRef.current), []);
@@ -553,7 +568,10 @@ export function MarkdownTool({ initialPayload, fullscreen = false, chromeGone = 
         onDeleteDocForever={(id) => void handleDeleteDocForever(id)}
         onEmptyTrash={() => void handleEmptyTrash()}
       />
-      <div ref={areaRef} className="flex min-h-0 flex-1 flex-col bg-panel">
+      {/* min-w-0: the tool column must shrink below its content's min-content
+          width (toolbar, wide tables) so narrow windows clip inside scroll
+          containers instead of pushing the whole row past the viewport. */}
+      <div ref={areaRef} className="flex min-h-0 min-w-0 flex-1 flex-col bg-panel">
         {ready ? (
         <>
         {/* Toolbar: view mode + source actions (available in every mode).
@@ -564,7 +582,10 @@ export function MarkdownTool({ initialPayload, fullscreen = false, chromeGone = 
             chromeHidden || fullscreen ? 'max-h-0 opacity-0' : 'max-h-12 opacity-100'
           }`}
         >
-        <div className="flex items-center justify-between gap-2 border-b border-line px-3 py-2">
+        {/* overflow-x-auto: below ~750px of tool width the toolbar is wider
+            than its column — it scrolls instead of silently clipping the
+            rightmost actions (or the outline's space) at the viewport edge. */}
+        <div className="flex items-center justify-between gap-2 overflow-x-auto border-b border-line px-3 py-2">
           <div className="flex items-center gap-0.5 rounded-lg border border-line bg-hover p-0.5">
             {VIEW_MODES.map(({ id, icon: Icon, labelKey }) => (
               <button
@@ -581,6 +602,21 @@ export function MarkdownTool({ initialPayload, fullscreen = false, chromeGone = 
             ))}
           </div>
           <div className="flex items-center gap-1.5">
+            {mode === 'preview' && hasOutline && (
+              <button
+                type="button"
+                onClick={() => setOutlineOpen((v) => !v)}
+                aria-pressed={outlineOpen}
+                title={t('tools.markdown.outline')}
+                className={`flex h-7 w-7 cursor-pointer items-center justify-center rounded-lg border transition-colors duration-150 ${
+                  outlineOpen
+                    ? 'border-primary/40 bg-primary/10 text-primary'
+                    : 'border-line bg-panel text-muted hover:border-primary hover:text-primary'
+                }`}
+              >
+                <ListTree size={13} />
+              </button>
+            )}
             <button
               onClick={() => updateInput(sample)}
               className="ghost-btn flex items-center gap-1 px-2.5 py-1.5 text-xs"
@@ -658,15 +694,28 @@ flowchart LR
           </div>
         ) : mode === 'preview' ? (
           <div className="flex min-h-0 flex-1 flex-col">
-            <div
-              onDoubleClick={() => onToggleFullscreen?.()}
-              className={`${
-                fullscreen
-                  ? 'min-h-0 flex-1 overflow-auto bg-panel'
-                  : 'min-h-0 flex-1 overflow-auto bg-panel px-6 py-4 sm:px-8 sm:py-5'
-              }`}
-            >
-              {preview}
+            <div className="flex min-h-0 flex-1">
+              <div
+                ref={previewScrollRef}
+                onDoubleClick={() => onToggleFullscreen?.()}
+                className={`min-h-0 min-w-0 flex-1 overflow-auto bg-panel ${
+                  fullscreen ? '' : 'px-6 py-4 sm:px-8 sm:py-5'
+                }`}
+              >
+                {preview}
+              </div>
+              {/* Reading aid: scroll-spy outline on the right. Always mounted so
+                  the toggle stays truthful about whether the doc has headings;
+                  hidden while reading fullscreen (pure content) or when closed. */}
+              {showPreview && (
+                <DocOutline
+                  containerRef={previewScrollRef}
+                  source={input}
+                  onClose={() => setOutlineOpen(false)}
+                  onItemsChange={handleOutlineItems}
+                  className={`h-full ${outlineOpen && !fullscreen ? '' : 'hidden'}`}
+                />
+              )}
             </div>
           </div>
         ) : (

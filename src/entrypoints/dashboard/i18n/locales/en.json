@@ -427,6 +427,8 @@
           "source": "Markdown source",
       "preview": "Rendered preview",
       "empty": "Start typing markdown on the left…",
+      "outline": "Outline",
+      "outlineClose": "Close outline",
       "sample": "Insert sample",
       "sampleHint": "Load a sample document: tables, code, math and Mermaid diagrams",
       "diagramError": "Could not render this diagram",

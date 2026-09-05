@@ -234,6 +234,8 @@
           "source": "ソース",
       "preview": "プレビュー",
       "empty": "左側で Markdown を入力…",
+      "outline": "アウトライン",
+      "outlineClose": "アウトラインを閉じる",
       "documents": "ドキュメント",
       "recentDocs": "最近",
       "allDocs": "すべてのドキュメント",

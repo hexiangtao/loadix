@@ -233,6 +233,8 @@
           "source": "Source",
       "preview": "Aperçu",
       "empty": "Commencez à taper du markdown…",
+      "outline": "Plan",
+      "outlineClose": "Fermer le plan",
       "documents": "Documents",
       "recentDocs": "Récents",
       "allDocs": "Tous les documents",

@@ -233,6 +233,8 @@
           "source": "소스",
       "preview": "미리보기",
       "empty": "왼쪽에서 Markdown 입력…",
+      "outline": "개요",
+      "outlineClose": "개요 닫기",
       "documents": "문서",
       "recentDocs": "최근",
       "allDocs": "모든 문서",

@@ -427,6 +427,8 @@
           "source": "源码",
       "preview": "渲染结果",
       "empty": "在左侧开始输入 Markdown…",
+      "outline": "大纲",
+      "outlineClose": "关闭大纲",
       "sample": "插入示例",
       "sampleHint": "载入一份演示文档：表格、代码、公式与 Mermaid 图表",
       "diagramError": "图表渲染失败",
