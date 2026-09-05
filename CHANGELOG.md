@@ -1,3 +1,10 @@
+# [1.42.0](https://github.com/hexiangtao/loadix/compare/v1.41.0...v1.42.0) (2026-09-05)
+
+
+### Features
+
+* **share:** title shared pages with the document's own heading ([f7a406b](https://github.com/hexiangtao/loadix/commit/f7a406b2cc65fcafdb2fd6709d3e1dc2ab27ccd3))
+
 # [1.41.0](https://github.com/hexiangtao/loadix/compare/v1.40.0...v1.41.0) (2026-09-05)
 
 
