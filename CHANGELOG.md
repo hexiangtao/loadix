@@ -1,3 +1,10 @@
+# [1.46.0](https://github.com/hexiangtao/loadix/compare/v1.45.2...v1.46.0) (2026-09-05)
+
+
+### Features
+
+* **markdown:** extend hairline scrollbars to the sidebar and editor ([a7ee5e4](https://github.com/hexiangtao/loadix/commit/a7ee5e4bb522712e333ee939cf71318d6120ad8b))
+
 ## [1.45.2](https://github.com/hexiangtao/loadix/compare/v1.45.1...v1.45.2) (2026-09-05)
 
 
