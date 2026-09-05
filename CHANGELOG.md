@@ -1,3 +1,10 @@
+## [1.45.2](https://github.com/hexiangtao/loadix/compare/v1.45.1...v1.45.2) (2026-09-05)
+
+
+### Bug Fixes
+
+* **share:** stop header-toggle jitter on fast scroll and slim reading scrollbars ([cad242a](https://github.com/hexiangtao/loadix/commit/cad242a1ef3eb1e2d186a377697badde5cfcfa2f))
+
 ## [1.45.1](https://github.com/hexiangtao/loadix/compare/v1.45.0...v1.45.1) (2026-09-05)
 
 
