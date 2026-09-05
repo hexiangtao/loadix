@@ -251,6 +251,17 @@ function ShareApp() {
             </div>
           )}
         </div>
+        {/* Page footer lives at the END of the document, not pinned to the
+            viewport — a fixed footer would sit in the reader's way while the
+            document scrolls beneath it. It scrolls with the content and is
+            only seen once the document ends. */}
+        <footer className="border-t border-line py-5">
+          <p className="text-center text-xs text-muted">
+            <a href={HOME_URL} target="_blank" rel="noreferrer" className="font-semibold hover:text-primary">
+              {t('share.home')}
+            </a>
+          </p>
+        </footer>
         </div>
       </main>
 
@@ -274,14 +285,6 @@ function ShareApp() {
           />
         </div>
       )}
-
-      <footer className="shrink-0 border-t border-line py-5">
-        <p className="text-center text-xs text-muted">
-          <a href={HOME_URL} target="_blank" rel="noreferrer" className="font-semibold hover:text-primary">
-            {t('share.home')}
-          </a>
-        </p>
-      </footer>
     </div>
   );
 }
