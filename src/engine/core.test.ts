@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { assertionsPass, interpolate, percentile } from './core';
 import { TokenBucket, evaluateAutoStop, targetConcurrency } from './load-model';
+import { normaliseError } from './metrics';
 
 describe('interpolate', () => {
   it('replaces known variables', () => {
@@ -151,5 +152,48 @@ describe('evaluateAutoStop', () => {
 
   it('does not trigger when within limits', () => {
     expect(evaluateAutoStop({ maxErrorRate: 10, maxP95: 500 }, { errorRate: 3, p95: 400, requests: 100 })).toBeNull();
+  });
+});
+
+describe('normaliseError', () => {
+  it('strips V8-style stack frames', () => {
+    const raw = 'TypeError: Failed to fetch\n    at fetch (app.js:1:42)\n    at runOne (runner.ts:87:5)';
+    expect(normaliseError(raw)).toBe('TypeError: Failed to fetch');
+  });
+
+  it('collapses URLs and IPs into placeholders', () => {
+    const raw = 'CORS error contacting https://api.example.com:8443/v1/x from 10.0.0.7';
+    const out = normaliseError(raw);
+    expect(out).toContain('<url>');
+    expect(out).toContain('<ip>');
+    expect(out).not.toContain('api.example.com');
+  });
+
+  it('passes through short messages unchanged', () => {
+    expect(normaliseError('TIMEOUT')).toBe('TIMEOUT');
+    // Trailing punctuation is intentionally stripped (so identical errors
+    // with/without final punctuation collapse together).
+    expect(normaliseError('NetworkError when attempting to fetch resource.')).toBe(
+      'NetworkError when attempting to fetch resource',
+    );
+  });
+
+  it('trims trailing punctuation', () => {
+    expect(normaliseError('Something happened.')).toBe('Something happened');
+    expect(normaliseError('Something happened.。。')).toBe('Something happened');
+  });
+
+  it('caps very long messages with ellipsis', () => {
+    const raw = 'x'.repeat(500);
+    const out = normaliseError(raw);
+    expect(out.length).toBeLessThanOrEqual(140);
+    expect(out.endsWith('…')).toBe(true);
+  });
+
+  it('falls back to a sentinel when the input is blank', () => {
+    // Whitespace-only or empty strings normalise to '' after trim, so we
+    // surface a constant label rather than an empty bucket.
+    expect(normaliseError('   ')).toBe('Unknown error');
+    expect(normaliseError('')).toBe('Unknown error');
   });
 });

@@ -4,15 +4,24 @@
     "subtitle": "ローカル API ワークベンチ · 負荷テスト",
     "newTest": "新規作成",
     "saveConfig": "設定を保存",
-    "exportReport": "レポート出力"
+    "exportReport": "レポート出力",
+    "exportJson": "JSON 出力",
+    "exportHtml": "HTML 出力",
+    "preset": "プリセット",
+    "preset_smoke": "スモーク",
+    "preset_normal": "ノーマル",
+    "preset_stress": "ストレス",
+    "preset_spike": "スパイク",
+    "preset_soak": "ソーク",
+    "preset_hint": "負荷プリセットを適用（リクエストは変更しない）"
   },
   "nav": {
     "title": "テスト設定",
-    "request": "① リクエスト",
-    "load": "② 負荷",
-    "assertions": "③ アサーション",
-    "variables": "④ 変数",
-    "history": "⑤ 履歴"
+    "request": "リクエスト",
+    "load": "負荷",
+    "assertions": "アサーション",
+    "variables": "変数",
+    "history": "履歴"
   },
   "sections": {
     "request": {
@@ -46,7 +55,17 @@
     "addHeader": "＋ ヘッダーを追加",
     "contentType": "Content-Type",
     "headerKey": "Authorization",
-    "headerValue": "Bearer {{token}}"
+    "headerValue": "Bearer {{token}}",
+    "bodyHintNoBody": "このメソッドはリクエストボディを送信しません。",
+    "bodyInvalidJson": "ボディが有効な JSON ではありません — 修正してから実行してください。",
+    "bodyInvalidForm": "ボディが有効なフォーム URL エンコード形式ではありません。",
+    "formatJson": "JSON を整形",
+    "pasteCurl": "cURL を貼り付け",
+    "pasteCurlTitle": "cURL コマンドをインポート",
+    "pasteCurlPlaceholder": "curl -X POST https://api.example.com/users \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"name\":\"tom\"}'",
+    "pasteCurlApply": "適用",
+    "pasteCurlCancel": "キャンセル",
+    "pasteCurlHint": "method / headers / JSON・form ボディ / Basic 認証(-u) などをサポート。"
   },
   "load": {
     "users": "仮想ユーザー数",
@@ -110,7 +129,56 @@
     "breakdown": "ステータス / エラー内訳",
     "recent": "最近のリクエスト",
     "slowest": "遅いリクエスト",
-    "assertionFailures": "アサーション失敗"
+    "assertionFailures": "アサーション失敗",
+    "errorGroups": "エラーグループ",
+    "details": {
+      "close": "閉じる",
+      "request": "リクエスト",
+      "response": "レスポンス",
+      "headers": "ヘッダー",
+      "body": "ボディ",
+      "timing": "所要時間",
+      "failures": "アサーション失敗",
+      "error": "エラー",
+      "size": "サイズ",
+      "url": "URL",
+      "noHeaders": "レスポンスヘッダーを取得できませんでした",
+      "noBody": "(レスポンスボディなし)",
+      "noTiming": "Performance API がこのリクエストの所要時間を返しませんでした",
+      "copy": "コピー",
+      "copied": "コピーしました",
+      "viewRaw": "原文を表示",
+      "viewFormatted": "整形表示",
+      "preview": "プレビュー"
+    },
+    "timing": {
+      "dns": "DNS",
+      "connect": "接続",
+      "tls": "TLS",
+      "wait": "待機 (TTFB)",
+      "download": "ダウンロード",
+      "total": "合計"
+    },
+    "verdict": {
+      "pass": "すべてのしきい値パス",
+      "fail": "しきい値のいくつかが失敗",
+      "autoStopped": "自動停止:{{reason}}",
+      "completed": "{{seconds}}秒で完了",
+      "aborted": "ユーザーにより停止",
+      "vsTarget": "目標 {{target}}",
+      "vsMax": "上限 {{max}}",
+      "vsMin": "下限 {{min}}",
+      "reason_errorRate": "エラー率超過",
+      "reason_p95": "P95 超過"
+    },
+    "summary": {
+      "requests": "リクエスト",
+      "success": "成功",
+      "errors": "失敗",
+      "avg": "平均",
+      "max": "最大",
+      "details": "詳細"
+    }
   },
   "common": {
     "delete": "削除",

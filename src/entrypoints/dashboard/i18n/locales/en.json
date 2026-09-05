@@ -4,15 +4,24 @@
     "subtitle": "Local API Workbench & Load Tester",
     "newTest": "New Test",
     "saveConfig": "Save Config",
-    "exportReport": "Export Report"
+    "exportReport": "Export Report",
+    "exportJson": "Export JSON",
+    "exportHtml": "Export HTML",
+    "preset": "Preset",
+    "preset_smoke": "Smoke",
+    "preset_normal": "Normal",
+    "preset_stress": "Stress",
+    "preset_spike": "Spike",
+    "preset_soak": "Soak",
+    "preset_hint": "Apply a load preset (request stays untouched)"
   },
   "nav": {
     "title": "Test Configuration",
-    "request": "① Request",
-    "load": "② Load",
-    "assertions": "③ Assertions",
-    "variables": "④ Variables",
-    "history": "⑤ History"
+    "request": "Request",
+    "load": "Load",
+    "assertions": "Assertions",
+    "variables": "Variables",
+    "history": "History"
   },
   "sections": {
     "request": {
@@ -46,7 +55,17 @@
     "addHeader": "＋ Add Header",
     "contentType": "Content-Type",
     "headerKey": "Authorization",
-    "headerValue": "Bearer {{token}}"
+    "headerValue": "Bearer {{token}}",
+    "bodyHintNoBody": "This method does not send a request body.",
+    "bodyInvalidJson": "Body is not valid JSON — fix it before running, or the request will fail.",
+    "bodyInvalidForm": "Body is not valid form-urlencoded (key=value&key=value).",
+    "formatJson": "Format JSON",
+    "pasteCurl": "Paste cURL",
+    "pasteCurlTitle": "Import a cURL command",
+    "pasteCurlPlaceholder": "curl -X POST https://api.example.com/users \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"name\":\"tom\"}'",
+    "pasteCurlApply": "Apply",
+    "pasteCurlCancel": "Cancel",
+    "pasteCurlHint": "Supports method, headers, JSON/form bodies, basic auth (-u), and most no-op flags."
   },
   "load": {
     "users": "Virtual Users",
@@ -110,7 +129,56 @@
     "breakdown": "Status / Error Breakdown",
     "recent": "Recent Requests",
     "slowest": "Slowest Requests",
-    "assertionFailures": "Assertion Failures"
+    "assertionFailures": "Assertion Failures",
+    "errorGroups": "Error Groups",
+    "details": {
+      "close": "Close",
+      "request": "Request",
+      "response": "Response",
+      "headers": "Headers",
+      "body": "Body",
+      "timing": "Timing",
+      "failures": "Assertion failures",
+      "error": "Error",
+      "size": "Size",
+      "url": "URL",
+      "noHeaders": "No response headers captured",
+      "noBody": "(empty response body)",
+      "noTiming": "Performance API did not return timings for this request",
+      "copy": "Copy",
+      "copied": "Copied",
+      "viewRaw": "View raw",
+      "viewFormatted": "View formatted",
+      "preview": "Preview"
+    },
+    "timing": {
+      "dns": "DNS",
+      "connect": "Connect",
+      "tls": "TLS",
+      "wait": "Wait (TTFB)",
+      "download": "Download",
+      "total": "Total"
+    },
+    "verdict": {
+      "pass": "All thresholds passed",
+      "fail": "Some thresholds failed",
+      "autoStopped": "Auto-stopped: {{reason}}",
+      "completed": "Completed in {{seconds}}s",
+      "aborted": "Stopped by user",
+      "vsTarget": "vs target {{target}}",
+      "vsMax": "max {{max}}",
+      "vsMin": "min {{min}}",
+      "reason_errorRate": "error rate exceeded",
+      "reason_p95": "P95 exceeded"
+    },
+    "summary": {
+      "requests": "Requests",
+      "success": "Success",
+      "errors": "Errors",
+      "avg": "Avg",
+      "max": "Max",
+      "details": "Details"
+    }
   },
   "common": {
     "delete": "Delete",
@@ -358,7 +426,37 @@
       "shareDone": "Close",
       "shareFailed": "Could not share this document.",
       "shareRetry": "Try again",
-      "shareTooLarge": "The document is too large to share as a link."
+      "shareTooLarge": "The document is too large to share as a link.",
+      "edit": {
+        "undo": "Undo",
+        "redo": "Redo",
+        "bold": "Bold (Ctrl+B)",
+        "italic": "Italic (Ctrl+I)",
+        "strike": "Strikethrough (Ctrl+Shift+X)",
+        "inlineCode": "Inline code",
+        "h1": "Heading 1",
+        "h2": "Heading 2",
+        "h3": "Heading 3",
+        "quote": "Quote",
+        "bulletList": "Bullet list",
+        "orderedList": "Ordered list",
+        "taskList": "Task list",
+        "link": "Link",
+        "image": "Image",
+        "table": "Table",
+        "codeBlock": "Code block",
+        "mermaid": "Mermaid diagram",
+        "math": "Math formula",
+        "hr": "Horizontal rule",
+        "boldText": "bold text",
+        "italicText": "italic text",
+        "strikeText": "strikethrough text",
+        "codeText": "code",
+        "linkText": "link text",
+        "linkUrl": "https://",
+        "imageAlt": "image description",
+        "tableCol": "Col"
+      }
     },
     "diff": {
       "name": "Diff",

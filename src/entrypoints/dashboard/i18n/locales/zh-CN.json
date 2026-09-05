@@ -4,15 +4,24 @@
     "subtitle": "本地 API 工作台 · 压测",
     "newTest": "＋ 新建",
     "saveConfig": "保存配置",
-    "exportReport": "导出报告"
+    "exportReport": "导出报告",
+    "exportJson": "导出 JSON",
+    "exportHtml": "导出 HTML",
+    "preset": "预设",
+    "preset_smoke": "冒烟",
+    "preset_normal": "常规",
+    "preset_stress": "压测",
+    "preset_spike": "尖峰",
+    "preset_soak": "长跑",
+    "preset_hint": "应用负载预设（请求部分保持不变）"
   },
   "nav": {
     "title": "测试配置",
-    "request": "① 请求",
-    "load": "② 负载",
-    "assertions": "③ 断言",
-    "variables": "④ 变量",
-    "history": "⑤ 历史"
+    "request": "请求",
+    "load": "负载",
+    "assertions": "断言",
+    "variables": "变量",
+    "history": "历史"
   },
   "sections": {
     "request": {
@@ -46,7 +55,17 @@
     "addHeader": "＋ 添加 Header",
     "contentType": "Content-Type",
     "headerKey": "Authorization",
-    "headerValue": "Bearer {{token}}"
+    "headerValue": "Bearer {{token}}",
+    "bodyHintNoBody": "此方法不发送请求体。",
+    "bodyInvalidJson": "请求体不是合法 JSON — 请先修复再运行，否则请求会失败。",
+    "bodyInvalidForm": "请求体不是合法的表单编码格式(key=value&key=value)。",
+    "formatJson": "格式化 JSON",
+    "pasteCurl": "粘贴 cURL",
+    "pasteCurlTitle": "导入 cURL 命令",
+    "pasteCurlPlaceholder": "curl -X POST https://api.example.com/users \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"name\":\"tom\"}'",
+    "pasteCurlApply": "应用",
+    "pasteCurlCancel": "取消",
+    "pasteCurlHint": "支持 method、headers、JSON/form 请求体、basic auth(-u)，以及大部分浏览器无影响的 flag。"
   },
   "load": {
     "users": "虚拟用户数",
@@ -110,7 +129,56 @@
     "breakdown": "状态 / 错误分布",
     "recent": "最近请求",
     "slowest": "慢请求 Top N",
-    "assertionFailures": "断言失败明细"
+    "assertionFailures": "断言失败",
+    "errorGroups": "错误分组",
+    "details": {
+      "close": "关闭",
+      "request": "请求",
+      "response": "响应",
+      "headers": "Headers",
+      "body": "Body",
+      "timing": "耗时",
+      "failures": "断言失败",
+      "error": "错误",
+      "size": "大小",
+      "url": "URL",
+      "noHeaders": "未捕获响应头",
+      "noBody": "（响应体为空）",
+      "noTiming": "Performance API 未返回本次请求的耗时",
+      "copy": "复制",
+      "copied": "已复制",
+      "viewRaw": "查看原文",
+      "viewFormatted": "查看格式化",
+      "preview": "预览"
+    },
+    "timing": {
+      "dns": "DNS",
+      "connect": "连接",
+      "tls": "TLS",
+      "wait": "等待(TTFB)",
+      "download": "下载",
+      "total": "总耗时"
+    },
+    "verdict": {
+      "pass": "全部阈值通过",
+      "fail": "部分阈值未通过",
+      "autoStopped": "自动停止:{{reason}}",
+      "completed": "用时 {{seconds}} 秒",
+      "aborted": "已手动停止",
+      "vsTarget": "目标 {{target}}",
+      "vsMax": "上限 {{max}}",
+      "vsMin": "下限 {{min}}",
+      "reason_errorRate": "错误率超限",
+      "reason_p95": "P95 超限"
+    },
+    "summary": {
+      "requests": "请求数",
+      "success": "成功",
+      "errors": "失败",
+      "avg": "平均",
+      "max": "最大",
+      "details": "详细信息"
+    }
   },
   "common": {
     "delete": "删除",
@@ -358,7 +426,37 @@
       "shareDone": "关闭",
       "shareFailed": "分享失败。",
       "shareRetry": "重试",
-      "shareTooLarge": "文档过大，无法生成分享链接。"
+      "shareTooLarge": "文档过大，无法生成分享链接。",
+      "edit": {
+        "undo": "撤销",
+        "redo": "重做",
+        "bold": "加粗 (Ctrl+B)",
+        "italic": "斜体 (Ctrl+I)",
+        "strike": "删除线 (Ctrl+Shift+X)",
+        "inlineCode": "行内代码",
+        "h1": "一级标题",
+        "h2": "二级标题",
+        "h3": "三级标题",
+        "quote": "引用",
+        "bulletList": "无序列表",
+        "orderedList": "有序列表",
+        "taskList": "任务列表",
+        "link": "链接",
+        "image": "图片",
+        "table": "表格",
+        "codeBlock": "代码块",
+        "mermaid": "Mermaid 图表",
+        "math": "数学公式",
+        "hr": "分割线",
+        "boldText": "加粗文本",
+        "italicText": "斜体文本",
+        "strikeText": "删除线文本",
+        "codeText": "代码",
+        "linkText": "链接文字",
+        "linkUrl": "https://",
+        "imageAlt": "图片描述",
+        "tableCol": "列"
+      }
     },
     "diff": {
       "name": "文本对比",

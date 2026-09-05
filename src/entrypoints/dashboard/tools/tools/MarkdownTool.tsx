@@ -21,6 +21,7 @@ import { ToolShell } from '../ToolShell';
 import { CopyButton } from '../CopyButton';
 import { usePersistedState } from '../usePersistedState';
 import { MarkdownPreview } from './MarkdownPreview';
+import { MarkdownEditor } from './MarkdownEditor';
 import { flattenForExport, svgToPng } from './MermaidBlock';
 import sample from './markdown-sample.md?raw';
 
@@ -293,13 +294,21 @@ export function MarkdownTool({ initialPayload }: MarkdownToolProps) {
         {mode === 'edit' ? (
           <div className="flex min-h-0 flex-1 flex-col">
             <label className="mb-1.5 text-xs font-semibold text-muted">{t('tools.markdown.source')}</label>
-            <textarea
-              autoFocus
-              className="min-h-[320px] w-full flex-1 resize-y rounded-lg border border-line bg-panel px-2.5 py-2 font-mono text-sm outline-none transition-colors duration-150 focus:border-primary"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="# 标题&#10;&#10;**加粗**、*斜体*、`代码`、[链接](https://loadix.dev)&#10;&#10;```mermaid&#10;flowchart LR&#10;  A --> B&#10;```"
-            />
+            <div className="min-h-[320px] min-h-0 flex-1 overflow-hidden rounded-lg border border-line bg-panel">
+              <MarkdownEditor
+                value={input}
+                onChange={setInput}
+                autoFocus
+                placeholder="# 标题
+
+**加粗**、*斜体*、`代码`、[链接](https://loadix.dev)
+
+```mermaid
+flowchart LR
+  A --> B
+```"
+              />
+            </div>
           </div>
         ) : mode === 'preview' ? (
           <div className="flex min-h-0 flex-1 flex-col">
@@ -312,13 +321,20 @@ export function MarkdownTool({ initialPayload }: MarkdownToolProps) {
           <div className="grid min-h-0 flex-1 grid-cols-2 gap-3 max-lg:grid-cols-1">
             <div className="flex min-h-0 flex-col">
               <label className="mb-1.5 text-xs font-semibold text-muted">{t('tools.markdown.source')}</label>
-              <textarea
-                autoFocus
-                className="min-h-[260px] w-full flex-1 resize-y rounded-lg border border-line bg-panel px-2.5 py-2 font-mono text-sm outline-none transition-colors duration-150 focus:border-primary"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="# 标题&#10;&#10;**加粗**、*斜体*、`代码`、[链接](https://loadix.dev)&#10;&#10;```mermaid&#10;flowchart LR&#10;  A --> B&#10;```"
-              />
+              <div className="min-h-[260px] min-h-0 flex-1 overflow-hidden rounded-lg border border-line bg-panel">
+                <MarkdownEditor
+                  value={input}
+                  onChange={setInput}
+                  placeholder="# 标题
+
+**加粗**、*斜体*、`代码`、[链接](https://loadix.dev)
+
+```mermaid
+flowchart LR
+  A --> B
+```"
+                />
+              </div>
             </div>
             <div className="flex min-h-0 flex-col">
               <label className="mb-1.5 text-xs font-semibold text-muted">{t('tools.markdown.preview')}</label>

@@ -7,20 +7,27 @@ import { changeLanguage, SUPPORTED_LANGUAGES, type SupportedLanguage } from './i
 import { Breakdown } from './components/Breakdown';
 import { LineChart } from './components/LineChart';
 import { MetricsGrid } from './components/MetricsGrid';
+import { HeroMetrics } from './components/HeroMetrics';
+import { VerdictCard } from './components/VerdictCard';
+import { ProgressBar } from './components/ProgressBar';
 import { RecentRequests } from './components/RecentRequests';
 import { SlowRequests } from './components/SlowRequests';
 import { AssertionFailures } from './components/AssertionFailures';
+import { ErrorGroups } from './components/ErrorGroups';
 import { AssertionsPanel } from './panels/AssertionsPanel';
 import { HistoryPanel } from './panels/HistoryPanel';
 import { LoadPanel, type LoadFormValue } from './panels/LoadPanel';
 import { RequestPanel, type RequestFormValue } from './panels/RequestPanel';
 import { VariablesPanel } from './panels/VariablesPanel';
 import { useUiStore } from './store/ui-store';
+import { RequestDetails } from './components/RequestDetails';
 import { storageGet, storageSet } from './storage';
 import { CommandPalette } from './tools/CommandPalette';
 import { ToolsWorkspace } from './tools/ToolsWorkspace';
 import { ToolsMenu } from './tools/ToolsMenu';
 import { findTool } from './tools/registry';
+import { PresetMenu } from './PresetMenu';
+import { generateReport } from '@/shared/report';
 
 const CONFIG_KEY = 'api-pressure-config';
 const HISTORY_KEY = 'api-pressure-history';
@@ -86,7 +93,7 @@ function toolFromUrl(): string | null {
 
 export default function App({ host }: { host: EngineHost }) {
   const { t, i18n } = useTranslation();
-  const { activeSection, engineState, resultMessage, metrics, setActiveSection, setEngineState, setMetrics, theme, setTheme } =
+  const { activeSection, engineState, resultMessage, metrics, setActiveSection, setEngineState, setMetrics, theme, setTheme, selectedRequest, setSelectedRequest } =
     useUiStore();
 
   const [view, setView] = useState<'loadtest' | 'tools'>(() =>
@@ -115,6 +122,13 @@ export default function App({ host }: { host: EngineHost }) {
   const switchView = (v: 'loadtest' | 'tools') => {
     setView(v);
     if (v === 'loadtest') setActiveTool(null);
+  };
+
+  // Row-click handler used by Recent / Slowest / Error Groups to open the
+  // request drawer. Wraps the store setter so children only need to know
+  // about a non-null RequestResult, never about clearing.
+  const showRequest = (r: import('@/shared/types').RequestResult) => {
+    setSelectedRequest(r);
   };
 
   // Global Ctrl/Cmd+K opens the tool palette; Esc handled inside the palette.
@@ -198,6 +212,27 @@ export default function App({ host }: { host: EngineHost }) {
       alert(t('common.invalidUrl'));
       return;
     }
+    // Body validation guard: when a method+content-type combo actually
+    // carries a body, refuse to start with a malformed one — running a load
+    // test against an invalid request just generates 400 noise.
+    const hasBody = request.method !== 'GET' && request.method !== 'HEAD';
+    if (hasBody && request.body.trim().length > 0) {
+      if (request.contentType === 'application/json') {
+        try {
+          JSON.parse(request.body);
+        } catch {
+          alert(t('request.bodyInvalidJson'));
+          return;
+        }
+      } else if (request.contentType === 'application/x-www-form-urlencoded') {
+        try {
+          new URLSearchParams(request.body);
+        } catch {
+          alert(t('request.bodyInvalidForm'));
+          return;
+        }
+      }
+    }
     clientRef.current?.start(buildConfig());
   };
 
@@ -234,6 +269,21 @@ export default function App({ host }: { host: EngineHost }) {
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = `api-pressure-report-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+
+  const handleExportHtml = () => {
+    const html = generateReport({
+      generatedAt: new Date().toISOString(),
+      config: buildConfig(),
+      metrics,
+      resultMessage,
+    });
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `loadix-report-${Date.now()}.html`;
     a.click();
     URL.revokeObjectURL(a.href);
   };
@@ -340,6 +390,8 @@ export default function App({ host }: { host: EngineHost }) {
               </motion.button>
 
               <span className="mx-2 h-6 w-px bg-line" />
+
+              <PresetMenu onApply={setLoad} />
             </>
           )}
 
@@ -374,8 +426,11 @@ export default function App({ host }: { host: EngineHost }) {
               <button className="nav-btn" onClick={handleSave}>
                 {t('app.saveConfig')}
               </button>
-              <button className="nav-btn" onClick={handleExport}>
-                {t('app.exportReport')}
+              <button className="nav-btn" onClick={handleExport} title={t('app.exportJson')}>
+                {t('app.exportJson')}
+              </button>
+              <button className="nav-btn" onClick={handleExportHtml} title={t('app.exportHtml')}>
+                {t('app.exportHtml')}
               </button>
             </>
           )}
@@ -383,16 +438,21 @@ export default function App({ host }: { host: EngineHost }) {
       </header>
 
       {view === 'loadtest' ? (
-        <main className="mx-auto grid max-w-[1500px] grid-cols-[210px_minmax(0,1fr)]">
-          {/* ——— Left: step navigation ——— */}
-          <aside className="sticky top-16 flex h-[calc(100vh-4rem)] flex-col p-3 pt-5">
-            <div className="flex-1 overflow-y-auto">
-              <div className="px-2.5 pb-3 text-xs font-bold text-muted">{t('nav.title')}</div>
-              {SECTIONS.map((section) => (
+        <main
+          className="mx-auto grid max-w-[1600px] gap-6 px-4 py-6 xl:grid-cols-[360px_minmax(0,1fr)]"
+          data-screenshot-target="loadtest"
+        >
+          {/* ——— Left: step navigation + active configuration section ——— */}
+          <aside className="flex min-w-0 flex-col gap-4">
+            <nav className="rounded-xl border border-line bg-panel p-2">
+              <div className="px-2.5 pb-2 pt-1 text-[11px] font-bold uppercase tracking-wide text-muted">
+                {t('nav.title')}
+              </div>
+              {SECTIONS.map((section, idx) => (
                 <button
                   key={section}
                   onClick={() => setActiveSection(section)}
-                  className={`relative mb-0.5 w-full rounded-lg px-3 py-2.5 text-left transition-colors duration-150 ${
+                  className={`relative mb-0.5 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[13px] transition-colors duration-150 ${
                     activeSection === section ? 'font-bold text-primary' : 'text-muted hover:bg-hover hover:text-ink'
                   }`}
                 >
@@ -403,93 +463,99 @@ export default function App({ host }: { host: EngineHost }) {
                       transition={{ type: 'spring', stiffness: 500, damping: 40 }}
                     />
                   )}
+                  <span className="relative inline-flex size-5 shrink-0 items-center justify-center rounded-full border border-current text-[10px] font-bold opacity-70">
+                    {idx + 1}
+                  </span>
                   <span className="relative">{t(`nav.${section}`)}</span>
                 </button>
               ))}
-            </div>
-            <div className="px-2.5 pt-3 text-[11px] text-muted">
-              <span className="mr-1.5 inline-block size-[7px] rounded-full bg-success" />
-              {t('common.engineReady')}
-            </div>
+            </nav>
+
+            <section className="min-w-0">
+              <div className="mb-3 flex items-center justify-between">
+                <div className="min-w-0">
+                  <h1 className="truncate text-[15px] font-bold">{t(titleKey)}</h1>
+                  <p className="m-0 truncate text-xs text-muted">{t(descKey)}</p>
+                </div>
+                <div
+                  className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold ${
+                    running ? 'bg-warning/15 text-warning' : 'bg-success/15 text-success'
+                  }`}
+                >
+                  {running ? t('results.running') : t('results.idle')}
+                </div>
+              </div>
+
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.div
+                  key={activeSection}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.16, ease: 'easeOut' }}
+                >
+                  {activeSection === 'request' && <RequestPanel value={request} onChange={setRequest} />}
+                  {activeSection === 'load' && <LoadPanel value={load} onChange={setLoad} />}
+                  {activeSection === 'assertions' && <AssertionsPanel value={assertions} onChange={setAssertions} />}
+                  {activeSection === 'variables' && <VariablesPanel value={variables} onChange={setVariables} />}
+                  {activeSection === 'history' && <HistoryPanel onRestore={handleRestore} />}
+                </motion.div>
+              </AnimatePresence>
+            </section>
           </aside>
 
-          {/* ——— Right: config + results ——— */}
-          <section className="min-w-0 p-7" data-screenshot-target="loadtest">
-            <div className="mb-4 flex items-start justify-between">
+          {/* ——— Right: live results (sticky on xl+) ——— */}
+          <aside className="flex min-w-0 flex-col gap-3 xl:sticky xl:top-20 xl:max-h-[calc(100vh-5.5rem)] xl:overflow-y-auto">
+            <div className="mb-1 flex items-center justify-between">
               <div>
-                <h1 className="mb-1 text-xl font-bold">{t(titleKey)}</h1>
-                <p className="m-0 text-muted">{t(descKey)}</p>
-              </div>
-              <div
-                className={`rounded-full px-3.5 py-1.5 text-xs font-bold ${
-                  running ? 'bg-warning/15 text-warning' : 'bg-success/15 text-success'
-                }`}
-              >
-                {running ? t('results.running') : t('results.idle')}
+                <h2 className="mb-0.5 text-[17px] font-bold">{t('results.title')}</h2>
+                <span className="text-xs text-muted">{resultMessage || t('results.waiting')}</span>
               </div>
             </div>
 
-            <AnimatePresence mode="wait" initial={false}>
-              <motion.div
-                key={activeSection}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.16, ease: 'easeOut' }}
-              >
-                {activeSection === 'request' && <RequestPanel value={request} onChange={setRequest} />}
-                {activeSection === 'load' && <LoadPanel value={load} onChange={setLoad} />}
-                {activeSection === 'assertions' && <AssertionsPanel value={assertions} onChange={setAssertions} />}
-                {activeSection === 'variables' && <VariablesPanel value={variables} onChange={setVariables} />}
-                {activeSection === 'history' && <HistoryPanel onRestore={handleRestore} />}
-              </motion.div>
-            </AnimatePresence>
+            <ProgressBar running={running} durationSec={load.duration} />
+            <VerdictCard engineState={engineState} metrics={metrics} resultMessage={resultMessage} autoStopHint={resultMessage} />
+            <HeroMetrics metrics={metrics} target={load} />
+            <MetricsGrid metrics={metrics} />
 
-            <section className="mt-2">
-              <div className="mb-3.5 flex items-center justify-between">
-                <div>
-                  <h2 className="mb-0.5 text-[17px] font-bold">{t('results.title')}</h2>
-                  <span className="text-xs text-muted">{resultMessage || t('results.waiting')}</span>
+            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+              <div className="chart-card flex h-[200px] flex-col">
+                <div className="chart-title">{t('results.throughput')}</div>
+                <div className="min-h-0 flex-1">
+                  <LineChart values={metrics?.throughput ?? []} unit="/s" />
                 </div>
               </div>
-
-              <MetricsGrid metrics={metrics} />
-
-              <div className="mb-3 grid grid-cols-2 gap-3 max-lg:grid-cols-1">
-                <div className="chart-card flex h-[200px] flex-col">
-                  <div className="chart-title">{t('results.throughput')}</div>
-                  <div className="min-h-0 flex-1">
-                    <LineChart values={metrics?.throughput ?? []} unit="/s" />
-                  </div>
-                </div>
-                <div className="chart-card flex h-[200px] flex-col">
-                  <div className="chart-title">{t('results.latency')}</div>
-                  <div className="min-h-0 flex-1">
-                    <LineChart values={metrics?.latencySeries ?? []} unit=" ms" />
-                  </div>
+              <div className="chart-card flex h-[200px] flex-col">
+                <div className="chart-title">{t('results.latency')}</div>
+                <div className="min-h-0 flex-1">
+                  <LineChart values={metrics?.latencySeries ?? []} unit=" ms" />
                 </div>
               </div>
+            </div>
 
-              <div className="grid grid-cols-2 gap-3 max-lg:grid-cols-1">
-                <div className="chart-card">
-                  <div className="chart-title">{t('results.breakdown')}</div>
-                  <Breakdown metrics={metrics} />
-                </div>
-                <div className="chart-card">
-                  <div className="chart-title">{t('results.assertionFailures')}</div>
-                  <AssertionFailures metrics={metrics} />
-                </div>
-                <div className="chart-card">
-                  <div className="chart-title">{t('results.slowest')}</div>
-                  <SlowRequests metrics={metrics} />
-                </div>
-                <div className="chart-card">
-                  <div className="chart-title">{t('results.recent')}</div>
-                  <RecentRequests metrics={metrics} />
-                </div>
+            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+              <div className="chart-card">
+                <div className="chart-title">{t('results.breakdown')}</div>
+                <Breakdown metrics={metrics} />
               </div>
-            </section>
-          </section>
+              <div className="chart-card">
+                <div className="chart-title">{t('results.errorGroups')}</div>
+                <ErrorGroups metrics={metrics} onSelect={showRequest} />
+              </div>
+              <div className="chart-card">
+                <div className="chart-title">{t('results.assertionFailures')}</div>
+                <AssertionFailures metrics={metrics} />
+              </div>
+              <div className="chart-card">
+                <div className="chart-title">{t('results.slowest')}</div>
+                <SlowRequests metrics={metrics} onSelect={showRequest} />
+              </div>
+              <div className="chart-card lg:col-span-2">
+                <div className="chart-title">{t('results.recent')}</div>
+                <RecentRequests metrics={metrics} onSelect={showRequest} />
+              </div>
+            </div>
+          </aside>
         </main>
       ) : (
         <main className="mx-auto w-full px-7 py-7">
@@ -500,6 +566,11 @@ export default function App({ host }: { host: EngineHost }) {
       )}
 
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} onSelect={openTool} />
+      <RequestDetails
+        request={selectedRequest}
+        requestUrl={request.url}
+        onClose={() => setSelectedRequest(null)}
+      />
     </>
   );
 }

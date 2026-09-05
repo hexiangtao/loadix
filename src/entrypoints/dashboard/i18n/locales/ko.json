@@ -4,15 +4,24 @@
     "subtitle": "로컬 API 워크벤치 · 부하 테스트",
     "newTest": "새로 만들기",
     "saveConfig": "설정 저장",
-    "exportReport": "리포트 내보내기"
+    "exportReport": "리포트 내보내기",
+    "exportJson": "JSON 내보내기",
+    "exportHtml": "HTML 내보내기",
+    "preset": "프리셋",
+    "preset_smoke": "스모크",
+    "preset_normal": "일반",
+    "preset_stress": "스트레스",
+    "preset_spike": "스파이크",
+    "preset_soak": "장시간",
+    "preset_hint": "부하 프리셋 적용(요청은 그대로)"
   },
   "nav": {
     "title": "테스트 설정",
-    "request": "① 요청",
-    "load": "② 부하",
-    "assertions": "③ 어서션",
-    "variables": "④ 변수",
-    "history": "⑤ 이력"
+    "request": "요청",
+    "load": "부하",
+    "assertions": "어서션",
+    "variables": "변수",
+    "history": "이력"
   },
   "sections": {
     "request": {
@@ -46,7 +55,17 @@
     "addHeader": "＋ 헤더 추가",
     "contentType": "Content-Type",
     "headerKey": "Authorization",
-    "headerValue": "Bearer {{token}}"
+    "headerValue": "Bearer {{token}}",
+    "bodyHintNoBody": "이 메서드는 요청 본문을 보내지 않습니다.",
+    "bodyInvalidJson": "본문이 올바른 JSON이 아닙니다 — 수정 후 실행하세요.",
+    "bodyInvalidForm": "본문이 올바른 폼 URL 인코딩 형식이 아닙니다.",
+    "formatJson": "JSON 포맷",
+    "pasteCurl": "cURL 붙여넣기",
+    "pasteCurlTitle": "cURL 명령 가져오기",
+    "pasteCurlPlaceholder": "curl -X POST https://api.example.com/users \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"name\":\"tom\"}'",
+    "pasteCurlApply": "적용",
+    "pasteCurlCancel": "취소",
+    "pasteCurlHint": "method, headers, JSON/form 본문, Basic 인증(-u)을 지원합니다."
   },
   "load": {
     "users": "가상 사용자",
@@ -110,7 +129,56 @@
     "breakdown": "상태 / 오류 분포",
     "recent": "최근 요청",
     "slowest": "느린 요청",
-    "assertionFailures": "어서션 실패"
+    "assertionFailures": "어서션 실패",
+    "errorGroups": "오류 그룹",
+    "details": {
+      "close": "닫기",
+      "request": "요청",
+      "response": "응답",
+      "headers": "헤더",
+      "body": "본문",
+      "timing": "소요 시간",
+      "failures": "어서션 실패",
+      "error": "오류",
+      "size": "크기",
+      "url": "URL",
+      "noHeaders": "응답 헤더를 가져오지 못했습니다",
+      "noBody": "(응답 본문 없음)",
+      "noTiming": "Performance API가 이 요청의 소요 시간을 반환하지 않았습니다",
+      "copy": "복사",
+      "copied": "복사됨",
+      "viewRaw": "원문 보기",
+      "viewFormatted": "포맷 보기",
+      "preview": "미리보기"
+    },
+    "timing": {
+      "dns": "DNS",
+      "connect": "연결",
+      "tls": "TLS",
+      "wait": "대기 (TTFB)",
+      "download": "다운로드",
+      "total": "총 시간"
+    },
+    "verdict": {
+      "pass": "모든 임계값 통과",
+      "fail": "일부 임계값 실패",
+      "autoStopped": "자동 중지:{{reason}}",
+      "completed": "{{seconds}}초 만에 완료",
+      "aborted": "사용자가 중지함",
+      "vsTarget": "목표 {{target}}",
+      "vsMax": "상한 {{max}}",
+      "vsMin": "하한 {{min}}",
+      "reason_errorRate": "오류율 초과",
+      "reason_p95": "P95 초과"
+    },
+    "summary": {
+      "requests": "요청",
+      "success": "성공",
+      "errors": "실패",
+      "avg": "평균",
+      "max": "최대",
+      "details": "상세"
+    }
   },
   "common": {
     "delete": "삭제",

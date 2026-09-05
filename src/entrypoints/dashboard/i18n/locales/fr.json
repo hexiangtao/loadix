@@ -4,15 +4,24 @@
     "subtitle": "Atelier API local · test de charge",
     "newTest": "Nouveau",
     "saveConfig": "Enregistrer",
-    "exportReport": "Exporter"
+    "exportReport": "Exporter",
+    "exportJson": "Exporter JSON",
+    "exportHtml": "Exporter HTML",
+    "preset": "Préréglage",
+    "preset_smoke": "Smoke",
+    "preset_normal": "Normal",
+    "preset_stress": "Stress",
+    "preset_spike": "Spike",
+    "preset_soak": "Soak",
+    "preset_hint": "Appliquer un préréglage de charge (requête inchangée)"
   },
   "nav": {
     "title": "Configuration",
-    "request": "① Requête",
-    "load": "② Charge",
-    "assertions": "③ Assertions",
-    "variables": "④ Variables",
-    "history": "⑤ Historique"
+    "request": "Requête",
+    "load": "Charge",
+    "assertions": "Assertions",
+    "variables": "Variables",
+    "history": "Historique"
   },
   "sections": {
     "request": {
@@ -46,7 +55,17 @@
     "addHeader": "＋ Ajouter un en-tête",
     "contentType": "Content-Type",
     "headerKey": "Authorization",
-    "headerValue": "Bearer {{token}}"
+    "headerValue": "Bearer {{token}}",
+    "bodyHintNoBody": "Cette méthode n'envoie pas de corps de requête.",
+    "bodyInvalidJson": "Le corps n'est pas un JSON valide — corrigez avant de lancer.",
+    "bodyInvalidForm": "Le corps n'est pas un form-urlencoded valide (clé=valeur&clé=valeur).",
+    "formatJson": "Formater JSON",
+    "pasteCurl": "Coller cURL",
+    "pasteCurlTitle": "Importer une commande cURL",
+    "pasteCurlPlaceholder": "curl -X POST https://api.example.com/users \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"name\":\"tom\"}'",
+    "pasteCurlApply": "Appliquer",
+    "pasteCurlCancel": "Annuler",
+    "pasteCurlHint": "Supporte la méthode, les en-têtes, les corps JSON/form, l'auth basique (-u) et la plupart des options sans effet."
   },
   "load": {
     "users": "Utilisateurs virtuels",
@@ -110,7 +129,56 @@
     "breakdown": "Répartition statuts / erreurs",
     "recent": "Requêtes récentes",
     "slowest": "Requêtes les plus lentes",
-    "assertionFailures": "Échecs d'assertion"
+    "assertionFailures": "Échecs d'assertion",
+    "errorGroups": "Groupes d'erreurs",
+    "details": {
+      "close": "Fermer",
+      "request": "Requête",
+      "response": "Réponse",
+      "headers": "En-têtes",
+      "body": "Corps",
+      "timing": "Chronologie",
+      "failures": "Échecs d'assertion",
+      "error": "Erreur",
+      "size": "Taille",
+      "url": "URL",
+      "noHeaders": "Aucun en-tête de réponse capturé",
+      "noBody": "(corps de réponse vide)",
+      "noTiming": "L'API Performance n'a pas renvoyé de chronologie pour cette requête",
+      "copy": "Copier",
+      "copied": "Copié",
+      "viewRaw": "Voir brut",
+      "viewFormatted": "Voir formaté",
+      "preview": "Aperçu"
+    },
+    "timing": {
+      "dns": "DNS",
+      "connect": "Connexion",
+      "tls": "TLS",
+      "wait": "Attente (TTFB)",
+      "download": "Téléchargement",
+      "total": "Total"
+    },
+    "verdict": {
+      "pass": "Tous les seuils sont OK",
+      "fail": "Certains seuils ont échoué",
+      "autoStopped": "Arrêt auto : {{reason}}",
+      "completed": "Terminé en {{seconds}}s",
+      "aborted": "Arrêté par l'utilisateur",
+      "vsTarget": "cible {{target}}",
+      "vsMax": "max {{max}}",
+      "vsMin": "min {{min}}",
+      "reason_errorRate": "taux d'erreur dépassé",
+      "reason_p95": "P95 dépassé"
+    },
+    "summary": {
+      "requests": "Requêtes",
+      "success": "Succès",
+      "errors": "Erreurs",
+      "avg": "Moy.",
+      "max": "Max",
+      "details": "Détails"
+    }
   },
   "common": {
     "delete": "Supprimer",

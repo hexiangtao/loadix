@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { EngineState, MetricsSnapshot, TestConfig } from '@/shared/types';
+import type { EngineState, MetricsSnapshot, RequestResult, TestConfig } from '@/shared/types';
 
 export type Theme = 'light' | 'dark';
 
@@ -10,11 +10,14 @@ interface UiState {
   metrics: MetricsSnapshot | null;
   config: TestConfig | null;
   theme: Theme;
+  /** Request currently shown in the detail drawer. Cleared on close. */
+  selectedRequest: RequestResult | null;
   setActiveSection: (section: UiState['activeSection']) => void;
   setEngineState: (state: EngineState, message?: string) => void;
   setMetrics: (metrics: MetricsSnapshot) => void;
   setConfig: (config: TestConfig) => void;
   setTheme: (theme: Theme) => void;
+  setSelectedRequest: (request: RequestResult | null) => void;
 }
 
 export const useUiStore = create<UiState>((set) => ({
@@ -24,9 +27,11 @@ export const useUiStore = create<UiState>((set) => ({
   metrics: null,
   config: null,
   theme: 'light',
+  selectedRequest: null,
   setActiveSection: (activeSection) => set({ activeSection }),
   setEngineState: (engineState, message) => set({ engineState, resultMessage: message ?? '' }),
   setMetrics: (metrics) => set({ metrics }),
   setConfig: (config) => set({ config }),
   setTheme: (theme) => set({ theme }),
+  setSelectedRequest: (selectedRequest) => set({ selectedRequest }),
 }));

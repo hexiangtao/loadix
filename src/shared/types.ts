@@ -40,6 +40,20 @@ export interface TestConfig {
   variables: [string, string][];
 }
 
+/**
+ * Groups of failures by their normalised error message. The "sample" is the
+ * most recent request that produced the error so users can inspect what
+ * actually went wrong without scrolling through the recent list.
+ *
+ * The normaliser lives in `src/engine/metrics.ts` (it strips stack-trace line
+ * numbers and timestamps so identical errors from different VUs collapse).
+ */
+export interface ErrorGroup {
+  message: string;
+  count: number;
+  sample?: RequestResult;
+}
+
 export interface RequestResult {
   status: number;
   ms: number;
@@ -49,6 +63,22 @@ export interface RequestResult {
   pass: boolean;
   ts: number;
   failures?: Assertion[];
+  /** Response headers captured after the request completed. Optional —
+   *  older in-memory results (and unit-test fixtures) may not have them. */
+  responseHeaders?: Record<string, string>;
+  /** Resolved URL after any redirects. Useful when the configured URL is a
+   *  short alias that ends up somewhere else. */
+  finalUrl?: string;
+  /** Approximate size of the response body in bytes (UTF-8). */
+  bytes?: number;
+  /** Performance API timings broken down for the request drawer. */
+  timing?: {
+    dnsMs?: number;
+    connectMs?: number;
+    tlsMs?: number;
+    waitMs?: number;   // TTFB
+    downloadMs?: number;
+  };
 }
 
 export interface MetricsSnapshot {
@@ -69,6 +99,8 @@ export interface MetricsSnapshot {
   latencySeries: number[];
   assertionFailures: Record<string, number>;
   slowest: RequestResult[];
+  /** Aggregated by error message — finishes ROADMAP Phase 1. */
+  errorGroups: ErrorGroup[];
 }
 
 export type EngineState = 'idle' | 'running' | 'finished' | 'aborted';
