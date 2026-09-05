@@ -95,8 +95,9 @@ export function MarkdownTool({ initialPayload, fullscreen = false, chromeGone = 
   const { t } = useTranslation();
   const [mode, setMode] = useViewMode();
   // The document outline (大纲) is a reading aid, so it only exists in preview
-  // mode. Default open; the choice persists across sessions.
-  const [outlineOpen, setOutlineOpen] = useState(() => localStorage.getItem(OUTLINE_KEY) !== '0');
+  // mode. Like Lark/Feishu it lives on the left of the document and stays
+  // collapsed until the reader asks for it; the choice persists once made.
+  const [outlineOpen, setOutlineOpen] = useState(() => localStorage.getItem(OUTLINE_KEY) === '1');
   useEffect(() => {
     localStorage.setItem(OUTLINE_KEY, outlineOpen ? '1' : '0');
   }, [outlineOpen]);
@@ -695,18 +696,12 @@ flowchart LR
         ) : mode === 'preview' ? (
           <div className="flex min-h-0 flex-1 flex-col">
             <div className="flex min-h-0 flex-1">
-              <div
-                ref={previewScrollRef}
-                onDoubleClick={() => onToggleFullscreen?.()}
-                className={`min-h-0 min-w-0 flex-1 overflow-auto bg-panel ${
-                  fullscreen ? '' : 'px-6 py-4 sm:px-8 sm:py-5'
-                }`}
-              >
-                {preview}
-              </div>
-              {/* Reading aid: scroll-spy outline on the right. Always mounted so
-                  the toggle stays truthful about whether the doc has headings;
-                  hidden while reading fullscreen (pure content) or when closed. */}
+              {/* Reading aid: the scroll-spy outline sits to the LEFT of the
+                  document, Lark/Feishu-style, so the document's native
+                  scrollbar never separates it from the content. Always mounted
+                  so the toggle stays truthful about whether the doc has
+                  headings; hidden while reading fullscreen (pure content) or
+                  while collapsed. */}
               {showPreview && (
                 <DocOutline
                   containerRef={previewScrollRef}
@@ -716,6 +711,15 @@ flowchart LR
                   className={`h-full ${outlineOpen && !fullscreen ? '' : 'hidden'}`}
                 />
               )}
+              <div
+                ref={previewScrollRef}
+                onDoubleClick={() => onToggleFullscreen?.()}
+                className={`min-h-0 min-w-0 flex-1 overflow-auto bg-panel ${
+                  fullscreen ? '' : 'px-6 py-4 sm:px-8 sm:py-5'
+                }`}
+              >
+                {preview}
+              </div>
             </div>
           </div>
         ) : (

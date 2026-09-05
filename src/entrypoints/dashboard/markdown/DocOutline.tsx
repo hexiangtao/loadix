@@ -50,30 +50,36 @@ export function DocOutline({ containerRef, source, onClose, onItemsChange, class
     onItemsChangeRef.current = onItemsChange;
   }, [onItemsChange]);
 
-  // (Re)scan the headings whenever the rendered document changes.
+  // (Re)scan the headings whenever the rendered document changes. Rather than
+  // capturing the container node once, every handler re-reads containerRef
+  // (whose .current always points at the live pane — jumps prove it) so a node
+  // swap under React reconciliation can never orphan the listeners.
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-    const heads = Array.from(container.querySelectorAll<HTMLElement>('h1,h2,h3,h4,h5,h6'));
-    const seen = new Map<string, number>();
-    const list: OutlineItem[] = [];
-    for (const el of heads) {
-      const text = (el.textContent ?? '').trim();
-      if (!text) continue;
-      const base = slugify(text) || 'section';
-      const n = seen.get(base) ?? 0;
-      seen.set(base, n + 1);
-      const id = n === 0 ? base : `${base}-${n}`;
-      el.id = id;
-      list.push({ id, text, level: Number(el.tagName[1]), el });
-    }
-    itemsRef.current = list;
-    setItems(list);
-    setActiveId(null);
-    onItemsChangeRef.current?.(list.length);
+    const scan = () => {
+      const container = containerRef.current;
+      if (!container) return;
+      const heads = Array.from(container.querySelectorAll<HTMLElement>('h1,h2,h3,h4,h5,h6'));
+      const seen = new Map<string, number>();
+      const list: OutlineItem[] = [];
+      for (const el of heads) {
+        const text = (el.textContent ?? '').trim();
+        if (!text) continue;
+        const base = slugify(text) || 'section';
+        const n = seen.get(base) ?? 0;
+        seen.set(base, n + 1);
+        const id = n === 0 ? base : `${base}-${n}`;
+        el.id = id;
+        list.push({ id, text, level: Number(el.tagName[1]), el });
+      }
+      itemsRef.current = list;
+      setItems(list);
+      setActiveId(null);
+      onItemsChangeRef.current?.(list.length);
+    };
 
     // The active heading is the last one whose top sits above the reading line.
     const computeActive = () => {
+      const container = containerRef.current;
       if (!container) return;
       const list = itemsRef.current;
       if (list.length === 0) {
@@ -101,12 +107,29 @@ export function DocOutline({ containerRef, source, onClose, onItemsChange, class
       setActiveId((prev) => (prev === current ? prev : current));
     };
 
+    const container = containerRef.current;
+    if (!container) return;
+    scan();
     computeActive();
     container.addEventListener('scroll', computeActive, { passive: true });
     const ro = new ResizeObserver(computeActive);
     ro.observe(container);
     window.addEventListener('resize', computeActive);
+    // Embedded webviews can coalesce or drop scroll events (especially while a
+    // JS-driven scroll animation is running), which would freeze the highlight.
+    // A slow poller backstops the event listeners — it re-reads the ref each
+    // tick, so it survives any container-node replacement, and only does work
+    // when the scroll position actually moved.
+    let lastTop = container.scrollTop;
+    const poll = window.setInterval(() => {
+      const c = containerRef.current;
+      if (c && c.scrollTop !== lastTop) {
+        lastTop = c.scrollTop;
+        computeActive();
+      }
+    }, 250);
     return () => {
+      window.clearInterval(poll);
       container.removeEventListener('scroll', computeActive);
       ro.disconnect();
       window.removeEventListener('resize', computeActive);
@@ -130,7 +153,7 @@ export function DocOutline({ containerRef, source, onClose, onItemsChange, class
 
   return (
     <div className={className ?? ''}>
-      <aside className="flex h-full w-56 shrink-0 flex-col border-l border-line bg-panel">
+      <aside className="flex h-full w-56 shrink-0 flex-col border-r border-line bg-panel">
         <div className="flex h-9 shrink-0 items-center justify-between border-b border-line pl-3 pr-1.5">
           <span className="text-[10.5px] font-bold uppercase tracking-widest text-muted">
             {t('tools.markdown.outline')}

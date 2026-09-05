@@ -68,17 +68,18 @@ function ShareApp() {
   const retry = () => setAttempt((a) => a + 1);
 
   /* ——— Document outline (大纲) ———
-     Desktop: a fixed rail beside the scroller, always shown (a read-only
-     viewer's outline is pure navigation — a dead-end close would only
-     frustrate). Mobile: a floating button that slides the outline in as a
-     sheet. Both are driven by the same DocOutline component, so behaviour is
-     identical everywhere. The two surfaces keep separate open-state so
-     resizing between breakpoints never strands or auto-covers anything. */
+     Lark/Feishu-style: the outline sits on the LEFT of the document and stays
+     collapsed until the reader asks for it. One shared `outlineOpen` state
+     drives both surfaces — only one is active per breakpoint, so they never
+     fight: the desktop rail (non-modal, next to the content) and the mobile
+     slide-in sheet. The header toggle appears once the doc actually has
+     headings; the same button opens either surface. Entering mobile closes
+     the outline so an open desktop rail never auto-covers the doc as a modal. */
   const scrollerRef = useRef<HTMLDivElement>(null);
   const [outlineEnabled, setOutlineEnabled] = useState(false);
   const handleOutlineItems = useCallback((count: number) => setOutlineEnabled(count >= 2), []);
-  const [sheetOpen, setSheetOpen] = useState(false);
-  // Whether we're on a small screen — the sheet + floating button only exist there.
+  const [outlineOpen, setOutlineOpen] = useState(false);
+  // Whether we're on a small screen — the rail hides below lg and a sheet takes over.
   const [isMobile, setIsMobile] = useState(
     () => typeof window !== 'undefined' && window.matchMedia('(max-width: 1023px)').matches,
   );
@@ -87,7 +88,7 @@ function ShareApp() {
     const apply = () => {
       const mobile = mq.matches;
       setIsMobile(mobile);
-      if (!mobile) setSheetOpen(false); // leaving mobile — drop the sheet
+      if (mobile) setOutlineOpen(false);
     };
     mq.addEventListener('change', apply);
     apply();
@@ -134,17 +135,38 @@ function ShareApp() {
   return (
     <div className="flex h-screen flex-col bg-panel">
       <header className="shrink-0 border-b border-line bg-panel">
-        <div className="flex h-14 items-center justify-between px-4 sm:px-6">
-          <a
-            href={HOME_URL}
-            target="_blank"
-            rel="noreferrer"
-            title={t('share.home')}
-            className="flex items-center gap-2 text-[15px] font-bold transition-colors duration-150 hover:text-primary"
-          >
-            <span className="size-2 rounded-full bg-primary" />
-            Loadix
-          </a>
+        <div className="flex h-14 items-center justify-between gap-2 px-4 sm:px-6">
+          <div className="flex min-w-0 items-center gap-2">
+            <a
+              href={HOME_URL}
+              target="_blank"
+              rel="noreferrer"
+              title={t('share.home')}
+              className="flex shrink-0 items-center gap-2 text-[15px] font-bold transition-colors duration-150 hover:text-primary"
+            >
+              <span className="size-2 rounded-full bg-primary" />
+              Loadix
+            </a>
+            {/* Document outline (大纲), Lark-style: opens the left rail on
+                desktop / the left sheet on mobile. Only appears once the
+                document actually has headings to navigate. */}
+            {state.status === 'ready' && outlineEnabled && (
+              <button
+                type="button"
+                onClick={() => setOutlineOpen((v) => !v)}
+                aria-pressed={outlineOpen}
+                title={t('tools.markdown.outline')}
+                aria-label={t('tools.markdown.outline')}
+                className={`flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-lg border transition-colors duration-150 ${
+                  outlineOpen
+                    ? 'border-primary/40 bg-primary/10 text-primary'
+                    : 'border-line bg-panel text-muted hover:border-primary hover:text-primary'
+                }`}
+              >
+                <ListTree size={13} />
+              </button>
+            )}
+          </div>
           {/* Restrained on purpose: the shared document is the hero, so the
               funnel CTA uses the app's quiet brand tint instead of a heavy
               filled button — present, but it never competes with the content. */}
@@ -152,7 +174,7 @@ function ShareApp() {
             href={LAB_URL}
             target="_blank"
             rel="noreferrer"
-            className="flex items-center gap-1.5 rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary transition-colors duration-150 hover:bg-primary/15"
+            className="flex shrink-0 items-center gap-1.5 rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary transition-colors duration-150 hover:bg-primary/15"
           >
             {t('share.backHome')}
             <ArrowUpRight size={13} />
@@ -161,6 +183,18 @@ function ShareApp() {
       </header>
 
       <main className="flex min-h-0 flex-1">
+        {/* Outline rail — LEFT of the document (Lark-style), so the document's
+            native scrollbar never sits between the two. Always mounted once the
+            doc is ready, so the header toggle stays truthful about whether the
+            doc has headings; hidden on small screens (the sheet takes over). */}
+        {state.status === 'ready' && (
+          <DocOutline
+            containerRef={scrollerRef}
+            source={state.source}
+            onItemsChange={handleOutlineItems}
+            className={`h-full ${outlineOpen ? 'hidden lg:block' : 'hidden'}`}
+          />
+        )}
         <div ref={scrollerRef} className="app-scroller min-h-0 min-w-0 flex-1 overflow-y-auto">
         {/* The document is the hero, rendered flat on the same white surface
             and measure as the workbench's preview pane — preview and share
@@ -218,45 +252,23 @@ function ShareApp() {
           )}
         </div>
         </div>
-
-        {/* Desktop outline rail — fixed beside the scroller while the document
-            scrolls; hidden on small screens (the sheet below takes over). */}
-        {state.status === 'ready' && (
-          <DocOutline
-            containerRef={scrollerRef}
-            source={state.source}
-            onItemsChange={handleOutlineItems}
-            className="hidden h-full lg:block"
-          />
-        )}
       </main>
 
-      {/* Mobile outline: a floating toggle + slide-in sheet (below lg only) —
-          shared links are opened on phones at least as often as on desktops. */}
-      {state.status === 'ready' && isMobile && outlineEnabled && !sheetOpen && (
-        <button
-          type="button"
-          onClick={() => setSheetOpen(true)}
-          aria-label={t('tools.markdown.outline')}
-          title={t('tools.markdown.outline')}
-          className="fixed bottom-5 right-5 z-40 flex size-11 cursor-pointer items-center justify-center rounded-full border border-line bg-panel text-muted shadow-lg transition-colors duration-150 hover:text-primary"
-        >
-          <ListTree size={18} />
-        </button>
-      )}
-      {state.status === 'ready' && isMobile && sheetOpen && (
+      {/* Mobile outline: slide-in sheet from the left (below lg only), opened
+          by the same header toggle as the desktop rail. */}
+      {state.status === 'ready' && isMobile && outlineOpen && (
         <div
           className="fixed inset-0 z-40 bg-black/30 backdrop-blur-[2px]"
-          onClick={() => setSheetOpen(false)}
+          onClick={() => setOutlineOpen(false)}
           aria-hidden="true"
         />
       )}
-      {state.status === 'ready' && isMobile && sheetOpen && (
-        <div className="fixed inset-y-0 right-0 z-50 flex w-56 border-l border-line bg-panel shadow-2xl">
+      {state.status === 'ready' && isMobile && outlineOpen && (
+        <div className="fixed inset-y-0 left-0 z-50 flex bg-panel shadow-2xl">
           <DocOutline
             containerRef={scrollerRef}
             source={state.source}
-            onClose={() => setSheetOpen(false)}
+            onClose={() => setOutlineOpen(false)}
             onItemsChange={handleOutlineItems}
             className="h-full w-full"
           />
