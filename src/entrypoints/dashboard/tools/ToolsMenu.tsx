@@ -6,7 +6,7 @@ import { GROUPS, TOOLS, type Tool } from './registry';
 
 interface ToolsMenuProps {
   activeTool: string | null;
-  view: 'loadtest' | 'tools';
+  view: 'loadtest' | 'tools' | 'markdown';
   onSelect: (id: string) => void;
 }
 
@@ -60,20 +60,24 @@ export function ToolsMenu({ activeTool, view, onSelect }: ToolsMenuProps) {
     };
   }, [open]);
 
+  // Markdown has its own top-level tab now, so it leaves the tools menu —
+  // the tab is its single entry point.
+  const GALLERY_TOOLS = TOOLS.filter((tool) => tool.id !== 'markdown');
+
   const q = query.trim().toLowerCase();
   const filtered = q
-    ? TOOLS.filter(
+    ? GALLERY_TOOLS.filter(
         (tool) =>
           tool.id.includes(q) ||
           tool.keywords.some((k) => k.includes(q)) ||
           t(tool.nameKey).toLowerCase().includes(q),
       )
-    : TOOLS;
+    : GALLERY_TOOLS;
 
   // Inline tools: recent first (deduped), then fill with defaults.
-  const inline = [...new Set([...recent, ...TOOLS.slice(0, 4).map((tool) => tool.id)])].slice(0, 4);
+  const inline = [...new Set([...recent, ...GALLERY_TOOLS.slice(0, 4).map((tool) => tool.id)])].slice(0, 4);
   const inlineTools = inline
-    .map((id) => TOOLS.find((tool) => tool.id === id))
+    .map((id) => GALLERY_TOOLS.find((tool) => tool.id === id))
     .filter((tool): tool is Tool => Boolean(tool));
 
   return (

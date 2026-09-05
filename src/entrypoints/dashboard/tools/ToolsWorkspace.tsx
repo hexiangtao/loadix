@@ -44,7 +44,7 @@ export function ToolsWorkspace({ activeTool, onSelect, children }: ToolsWorkspac
       tool.keywords.some((k) => k.includes(q)) ||
       t(tool.nameKey).toLowerCase().includes(q)
     );
-  });
+  }).filter((tool) => tool.id !== 'markdown'); // Markdown lives in its own top-level view now.
 
   // Slide direction follows list order so switching feels spatial, not random.
   const handleSelect = (id: string) => {

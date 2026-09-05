@@ -30,7 +30,7 @@ import {
   Workflow,
   type LucideIcon,
 } from 'lucide-react';
-import { useUiStore } from '../../store/ui-store';
+import { useUiStore } from '../store/ui-store';
 import { markdownSmartInput } from './markdownSmartInput';
 
 interface MarkdownEditorProps {

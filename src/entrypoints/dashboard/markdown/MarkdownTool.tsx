@@ -13,13 +13,12 @@ import {
   PencilLine,
   Share2,
   Sparkles,
-  TextQuote,
   X,
   type LucideIcon,
 } from 'lucide-react';
-import { ToolShell } from '../ToolShell';
-import { CopyButton } from '../CopyButton';
-import { usePersistedState } from '../usePersistedState';
+import { CopyButton } from '../tools/CopyButton';
+import { usePersistedState } from '../tools/usePersistedState';
+import { useAutoHideHeader } from '../useAutoHideHeader';
 import { MarkdownPreview } from './MarkdownPreview';
 import { MarkdownEditor } from './MarkdownEditor';
 import { flattenForExport, svgToPng } from './MermaidBlock';
@@ -27,6 +26,10 @@ import sample from './markdown-sample.md?raw';
 
 interface MarkdownToolProps {
   initialPayload?: string;
+  /** Fullscreen reading (preview mode): hides all chrome and widens the
+      document to the viewport. Toggled by double-click or Ctrl/Cmd+Shift+F. */
+  fullscreen?: boolean;
+  onToggleFullscreen?: () => void;
 }
 
 type ViewMode = 'split' | 'edit' | 'preview';
@@ -62,10 +65,36 @@ function useViewMode(): [ViewMode, (m: ViewMode) => void] {
   return [mode, setMode];
 }
 
-export function MarkdownTool({ initialPayload }: MarkdownToolProps) {
+export function MarkdownTool({ initialPayload, fullscreen = false, onToggleFullscreen }: MarkdownToolProps) {
   const { t } = useTranslation();
   const [input, setInput] = usePersistedState('markdown.input', initialPayload ?? '');
   const [mode, setMode] = useViewMode();
+  // Reading mode is immersive: scrolling the rendered document collapses the
+  // action toolbar (and the app header, driven from App.tsx) so the page
+  // becomes pure content. While editing the toolbar stays put. Fullscreen
+  // reading forces the toolbar away regardless of scroll.
+  const chromeHidden = useAutoHideHeader(mode === 'preview' && !fullscreen);
+
+  // Fullscreen toggles: double-click on the document, Ctrl/Cmd+Shift+F (only
+  // meaningful while previewing), Esc to leave.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (mode !== 'preview') return;
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'f') {
+        e.preventDefault();
+        onToggleFullscreen?.();
+      } else if (e.key === 'Escape' && fullscreen) {
+        onToggleFullscreen?.();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [mode, fullscreen, onToggleFullscreen]);
+
+  // Entering fullscreen starts the read from the top of the document.
+  useEffect(() => {
+    if (fullscreen) window.scrollTo(0, 0);
+  }, [fullscreen]);
   const [scale, setScale] = useState(2);
   const [exporting, setExporting] = useState(false);
   const [exportFailed, setExportFailed] = useState(false);
@@ -215,10 +244,21 @@ export function MarkdownTool({ initialPayload }: MarkdownToolProps) {
   };
 
   return (
-    <ToolShell icon={TextQuote} title={t('tools.markdown.name')}>
+    <div
+      className={`flex flex-col transition-all duration-300 ${
+        fullscreen ? 'min-h-screen p-0' : 'min-h-[calc(100vh-8.5rem)] p-4'
+      }`}
+    >
       <div ref={areaRef} className="flex min-h-0 flex-1 flex-col">
-        {/* Toolbar: view mode + source actions (available in every mode). */}
-        <div className="mb-3 flex items-center justify-between gap-2">
+        {/* Toolbar: view mode + source actions (available in every mode).
+            Collapses away while scrolling the rendered document in preview
+            mode — the toolbar is for doing things, not for reading. */}
+        <div
+          className={`overflow-hidden transition-all duration-300 ${
+            chromeHidden || fullscreen ? 'mb-0 max-h-0 opacity-0' : 'mb-2 max-h-12 opacity-100'
+          }`}
+        >
+        <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-0.5 rounded-lg border border-line bg-hover p-0.5">
             {VIEW_MODES.map(({ id, icon: Icon, labelKey }) => (
               <button
@@ -290,10 +330,10 @@ export function MarkdownTool({ initialPayload }: MarkdownToolProps) {
             )}
           </div>
         </div>
+        </div>
 
         {mode === 'edit' ? (
           <div className="flex min-h-0 flex-1 flex-col">
-            <label className="mb-1.5 text-xs font-semibold text-muted">{t('tools.markdown.source')}</label>
             <div className="min-h-[320px] min-h-0 flex-1 overflow-hidden rounded-lg border border-line bg-panel">
               <MarkdownEditor
                 value={input}
@@ -312,15 +352,20 @@ flowchart LR
           </div>
         ) : mode === 'preview' ? (
           <div className="flex min-h-0 flex-1 flex-col">
-            <label className="mb-1.5 text-xs font-semibold text-muted">{t('tools.markdown.preview')}</label>
-            <div className="min-h-[320px] flex-1 overflow-auto rounded-lg border border-line bg-panel px-6 py-4 sm:px-8 sm:py-6 md:px-10 md:py-8">
+            <div
+              onDoubleClick={() => onToggleFullscreen?.()}
+              className={`${
+                fullscreen
+                  ? 'min-h-screen overflow-auto bg-panel'
+                  : 'min-h-[320px] flex-1 overflow-auto rounded-lg border border-line bg-panel px-6 py-4 sm:px-8 sm:py-6 md:px-10 md:py-8'
+              }`}
+            >
               {preview}
             </div>
           </div>
         ) : (
           <div className="grid min-h-0 flex-1 grid-cols-2 gap-3 max-lg:grid-cols-1">
             <div className="flex min-h-0 flex-col">
-              <label className="mb-1.5 text-xs font-semibold text-muted">{t('tools.markdown.source')}</label>
               <div className="min-h-[260px] min-h-0 flex-1 overflow-hidden rounded-lg border border-line bg-panel">
                 <MarkdownEditor
                   value={input}
@@ -337,7 +382,6 @@ flowchart LR
               </div>
             </div>
             <div className="flex min-h-0 flex-col">
-              <label className="mb-1.5 text-xs font-semibold text-muted">{t('tools.markdown.preview')}</label>
               <div className="min-h-[260px] flex-1 overflow-auto rounded-lg border border-line bg-panel px-6 py-4">
                 {preview}
               </div>
@@ -356,7 +400,7 @@ flowchart LR
           }}
         />
       )}
-    </ToolShell>
+    </div>
   );
 }
 

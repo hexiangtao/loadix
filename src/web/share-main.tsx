@@ -5,29 +5,19 @@
 // and re-renders with the same MarkdownPreview the tool uses — mermaid,
 // KaTeX, GFM tables and highlighting all work with zero extra code.
 //
-// The page doubles as a funnel: the workbench's real tool sidebar is mounted
-// (collapsed by default) so a visitor can jump straight into any Loadix tool
-// on the main site — see `toolFromUrl` in the dashboard App for the deep link.
+// Immersive by design: the header retreats on scroll and there is no other
+// chrome — the document is the page. The header keeps a single funnel link
+// back to the workbench (打开工具箱).
 import { createRoot } from 'react-dom/client';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, ArrowUpRight, FileQuestion, Loader2, RotateCw } from 'lucide-react';
 import { initI18n } from '@/entrypoints/dashboard/i18n';
-import { ToolsWorkspace } from '@/entrypoints/dashboard/tools/ToolsWorkspace';
-import { MarkdownPreview } from '@/entrypoints/dashboard/tools/tools/MarkdownPreview';
+import { useAutoHideHeader } from '@/entrypoints/dashboard/useAutoHideHeader';
+import { MarkdownPreview } from '@/entrypoints/dashboard/markdown/MarkdownPreview';
 import '@/entrypoints/dashboard/app.css';
 
 const HOME_URL = 'https://loadix.dev';
-const SIDEBAR_KEY = 'loadix-tools.sidebarCollapsed';
-
-// First-time visitors should see the tool rail collapsed: the document is the
-// hero, the icons are the discovery trail. The same key the workbench uses, so
-// a returning visitor keeps whatever state they chose there.
-try {
-  if (localStorage.getItem(SIDEBAR_KEY) == null) localStorage.setItem(SIDEBAR_KEY, '1');
-} catch {
-  // Storage unavailable (private mode) — the workbench defaults to expanded.
-}
 
 type ViewState =
   | { status: 'loading' }
@@ -63,6 +53,8 @@ function useSystemTheme() {
 
 function ShareApp() {
   useSystemTheme();
+  // Immersive reading: the sticky header retreats while the document scrolls.
+  const headerHidden = useAutoHideHeader(true);
   const { t } = useTranslation();
   const [id] = useState(shareIdFromUrl);
   const [state, setState] = useState<ViewState>(() =>
@@ -104,14 +96,11 @@ function ShareApp() {
     }
   }, [state]);
 
-  const openTool = (toolId: string) => {
-    // Same-tab navigation into the real workbench (deep link: ?tool=<id>).
-    window.location.assign(`/?tool=${encodeURIComponent(toolId)}`);
-  };
-
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="sticky top-0 z-30 border-b border-line bg-panel/80 backdrop-blur-md">
+      <header
+        className={`sticky top-0 z-30 border-b border-line bg-panel/80 backdrop-blur-md transition-transform duration-300 ${headerHidden ? '-translate-y-full' : ''}`}
+      >
         <div className="flex h-14 items-center justify-between px-4 sm:px-6">
           <a
             href={HOME_URL}
@@ -134,64 +123,60 @@ function ShareApp() {
       </header>
 
       <main className="flex-1 px-4 py-5 sm:px-6 sm:py-6">
-        <ToolsWorkspace activeTool="__share_doc__" onSelect={openTool}>
-          {/* Fluid document column: fills the space right of the tool rail so
-              wide diagrams/tables/code actually use the monitor. */}
-          <div className="w-full md-prose-wide">
-            {/* The document reads as a composed page, not a wall of text: a
-                bordered canvas (like the workbench preview pane) that still
-                fills the column fluidly on wide monitors. */}
-            {(state.status === 'loading' || state.status === 'ready') && (
-              <div className="rounded-xl border border-line bg-panel px-6 py-4 shadow-sm sm:px-8 sm:py-6 md:px-10 md:py-8">
-                {state.status === 'loading' && (
-                  <div aria-label={t('share.loading')} className="space-y-3" role="status">
-                    <div className="h-6 w-1/2 animate-pulse rounded-md bg-hover" />
-                    <div className="h-3 w-full animate-pulse rounded bg-hover" />
-                    <div className="h-3 w-5/6 animate-pulse rounded bg-hover" />
-                    <div className="h-3 w-4/6 animate-pulse rounded bg-hover" />
-                    <div className="flex items-center gap-2 pt-2 text-xs text-muted">
-                      <Loader2 size={13} className="animate-spin" />
-                      {t('share.loading')}
-                    </div>
+        {/* Immersive reading column: the document is the hero — no tool rail,
+            no other chrome. Text follows the prose measure; wide tables and
+            diagrams overflow-scroll inside their own wrappers. */}
+        <div className="mx-auto w-full max-w-[960px]">
+          {(state.status === 'loading' || state.status === 'ready') && (
+            <div className="rounded-xl border border-line bg-panel px-6 py-4 shadow-sm sm:px-8 sm:py-6 md:px-10 md:py-8">
+              {state.status === 'loading' && (
+                <div aria-label={t('share.loading')} className="space-y-3" role="status">
+                  <div className="h-6 w-1/2 animate-pulse rounded-md bg-hover" />
+                  <div className="h-3 w-full animate-pulse rounded bg-hover" />
+                  <div className="h-3 w-5/6 animate-pulse rounded bg-hover" />
+                  <div className="h-3 w-4/6 animate-pulse rounded bg-hover" />
+                  <div className="flex items-center gap-2 pt-2 text-xs text-muted">
+                    <Loader2 size={13} className="animate-spin" />
+                    {t('share.loading')}
                   </div>
+                </div>
+              )}
+
+              {state.status === 'ready' && <MarkdownPreview source={state.source} />}
+            </div>
+          )}
+
+          {(state.status === 'not-found' || state.status === 'error') && (
+            <div className="flex flex-col items-center gap-4 pt-20 text-center">
+              <div className="flex size-12 items-center justify-center rounded-full bg-hover">
+                {state.status === 'not-found' ? (
+                  <FileQuestion size={22} className="text-muted" />
+                ) : (
+                  <AlertTriangle size={22} className="text-danger" />
                 )}
-
-                {state.status === 'ready' && <MarkdownPreview source={state.source} />}
               </div>
-            )}
-
-            {(state.status === 'not-found' || state.status === 'error') && (
-              <div className="flex flex-col items-center gap-4 pt-20 text-center">
-                <div className="flex size-12 items-center justify-center rounded-full bg-hover">
-                  {state.status === 'not-found' ? (
-                    <FileQuestion size={22} className="text-muted" />
-                  ) : (
-                    <AlertTriangle size={22} className="text-danger" />
-                  )}
-                </div>
-                <p className="max-w-md text-sm text-muted">
-                  {state.status === 'not-found' ? t('share.notFound') : t('share.loadError')}
-                </p>
-                <div className="flex items-center gap-2">
-                  {state.status === 'error' && (
-                    <button className="ghost-btn flex items-center gap-1.5" onClick={retry}>
-                      <RotateCw size={13} />
-                      {t('share.retry')}
-                    </button>
-                  )}
-                  <a
-                    className="ghost-btn flex items-center gap-1.5"
-                    href={HOME_URL}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    {t('share.openToolbox')}
-                  </a>
-                </div>
+              <p className="max-w-md text-sm text-muted">
+                {state.status === 'not-found' ? t('share.notFound') : t('share.loadError')}
+              </p>
+              <div className="flex items-center gap-2">
+                {state.status === 'error' && (
+                  <button className="ghost-btn flex items-center gap-1.5" onClick={retry}>
+                    <RotateCw size={13} />
+                    {t('share.retry')}
+                  </button>
+                )}
+                <a
+                  className="ghost-btn flex items-center gap-1.5"
+                  href={HOME_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {t('share.openToolbox')}
+                </a>
               </div>
-            )}
-          </div>
-        </ToolsWorkspace>
+            </div>
+          )}
+        </div>
       </main>
 
       <footer className="border-t border-line py-5">

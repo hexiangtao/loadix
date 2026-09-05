@@ -33,7 +33,7 @@ import { CronTool } from './tools/CronTool';
 import { SqlTool } from './tools/SqlTool';
 import { HashTool } from './tools/HashTool';
 import { ColorTool } from './tools/ColorTool';
-import { MarkdownTool } from './tools/MarkdownTool';
+import { MarkdownTool } from '../markdown/MarkdownTool';
 import { JsonPathTool } from './tools/JsonPathTool';
 import { UrlParserTool } from './tools/UrlParserTool';
 import { DiffTool } from './tools/DiffTool';
@@ -71,6 +71,9 @@ export const GROUPS: { id: ToolGroup; labelKey: string }[] = [
 
 export const TOOLS: Tool[] = [
   {
+    // Markdown is a first-class top-level view (own nav tab) — it's filtered
+    // out of the gallery sidebar and tools menu, but kept here so the Ctrl+K
+    // palette and the ?tool=markdown deep link still route to it.
     id: 'markdown',
     nameKey: 'tools.markdown.name',
     descKey: 'tools.markdown.desc',

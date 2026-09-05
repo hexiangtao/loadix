@@ -27,6 +27,8 @@ import { CommandPalette } from './tools/CommandPalette';
 import { ToolsWorkspace } from './tools/ToolsWorkspace';
 import { ToolsMenu } from './tools/ToolsMenu';
 import { findTool } from './tools/registry';
+import { MarkdownTool } from './markdown/MarkdownTool';
+import { useAutoHideHeader } from './useAutoHideHeader';
 import { PresetMenu } from './PresetMenu';
 import { generateReport } from '@/shared/report';
 
@@ -87,7 +89,8 @@ const LANGUAGE_LABELS: Record<SupportedLanguage, string> = {
 
 /**
  * Deep link: /?tool=<id> (used by the share viewer's tool rail) opens the
- * tools workspace with that tool active on first load.
+ * tools workspace with that tool active on first load. The special id
+ * `markdown` opens the top-level Markdown view instead.
  */
 function toolFromUrl(): string | null {
   try {
@@ -103,9 +106,25 @@ export default function App({ host }: { host: EngineHost }) {
   const { activeSection, engineState, resultMessage, metrics, setActiveSection, setEngineState, setMetrics, theme, setTheme, selectedRequest, setSelectedRequest } =
     useUiStore();
 
-  const [view, setView] = useState<'loadtest' | 'tools'>(() =>
-    toolFromUrl() ? 'tools' : localStorage.getItem('loadix-view') === 'tools' ? 'tools' : 'loadtest',
-  );
+  const [view, setView] = useState<'loadtest' | 'tools' | 'markdown'>(() => {
+    const tool = toolFromUrl();
+    if (tool === 'markdown') return 'markdown';
+    if (tool) return 'tools';
+    const saved = localStorage.getItem('loadix-view');
+    return saved === 'tools' || saved === 'markdown' ? saved : 'loadtest';
+  });
+
+  // Immersive mode: on the Markdown page the sticky header retreats while the
+  // user scrolls the document, so reading/editing reclaims the full viewport.
+  // Fullscreen reading (preview mode) forces the header away entirely.
+  const [markdownFullscreen, setMarkdownFullscreen] = useState(false);
+  const headerHidden = useAutoHideHeader(view === 'markdown' && !markdownFullscreen);
+  const markdownChromeGone = view === 'markdown' && (markdownFullscreen || headerHidden);
+
+  // Fullscreen reading only lives on the Markdown page — leaving it resets.
+  useEffect(() => {
+    if (view !== 'markdown') setMarkdownFullscreen(false);
+  }, [view]);
   const [request, setRequest] = useState<RequestFormValue>(DEFAULT_REQUEST);
   const [load, setLoad] = useState<LoadFormValue>(DEFAULT_LOAD);
   const [assertions, setAssertions] = useState<Assertion[]>(DEFAULT_ASSERTIONS);
@@ -121,14 +140,14 @@ export default function App({ host }: { host: EngineHost }) {
   }, [view]);
 
   const openTool = (id: string, payload?: string) => {
-    setActiveTool(id);
+    setActiveTool(id === 'markdown' ? null : id);
     setToolPayload(payload);
-    setView('tools');
+    setView(id === 'markdown' ? 'markdown' : 'tools');
   };
 
-  const switchView = (v: 'loadtest' | 'tools') => {
+  const switchView = (v: 'loadtest' | 'tools' | 'markdown') => {
     setView(v);
-    if (v === 'loadtest') setActiveTool(null);
+    if (v !== 'tools') setActiveTool(null);
   };
 
   // Row-click handler used by Recent / Slowest / Error Groups to open the
@@ -345,7 +364,9 @@ export default function App({ host }: { host: EngineHost }) {
 
   return (
     <>
-      <header className="toolbar flex h-14 items-center justify-between px-6">
+      <header
+        className={`toolbar flex h-14 items-center justify-between px-6 transition-transform duration-300 ${markdownChromeGone ? '-translate-y-full' : 'translate-y-0'}`}
+      >
         <div className="flex items-center gap-8">
           <a
             href="https://loadix.dev"
@@ -368,6 +389,18 @@ export default function App({ host }: { host: EngineHost }) {
                 <motion.span layoutId="view-active" className="absolute inset-0 rounded-lg bg-primary/10" />
               )}
               <span className="relative">{t('views.loadtest')}</span>
+            </button>
+
+            <button
+              onClick={() => switchView('markdown')}
+              className={`relative rounded-lg px-3 py-2 text-sm transition-colors duration-150 ${
+                view === 'markdown' ? 'font-bold text-primary' : 'text-muted hover:bg-hover hover:text-ink'
+              }`}
+            >
+              {view === 'markdown' && (
+                <motion.span layoutId="view-active" className="absolute inset-0 rounded-lg bg-primary/10" />
+              )}
+              <span className="relative">{t('tools.markdown.name')}</span>
             </button>
 
             <span className="mx-1 h-6 w-px bg-line" />
@@ -557,6 +590,18 @@ export default function App({ host }: { host: EngineHost }) {
               </div>
             </div>
           </aside>
+        </main>
+      ) : view === 'markdown' ? (
+        <main
+          className={`mx-auto w-full transition-all duration-300 ${
+            markdownFullscreen ? 'px-0 py-0' : 'px-7 py-4'
+          } ${markdownChromeGone ? '-mt-14' : ''}`}
+        >
+          <MarkdownTool
+            initialPayload={toolPayload}
+            fullscreen={markdownFullscreen}
+            onToggleFullscreen={() => setMarkdownFullscreen((v) => !v)}
+          />
         </main>
       ) : (
         <main className="mx-auto w-full px-7 py-7">

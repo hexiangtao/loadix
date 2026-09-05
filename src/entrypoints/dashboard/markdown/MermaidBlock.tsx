@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, Download } from 'lucide-react';
-import { useUiStore } from '../../store/ui-store';
+import { useUiStore } from '../store/ui-store';
 
 interface MermaidBlockProps {
   source: string;
