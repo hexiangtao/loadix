@@ -1,3 +1,10 @@
+# [1.49.0](https://github.com/hexiangtao/loadix/compare/v1.48.3...v1.49.0) (2026-09-06)
+
+
+### Features
+
+* **ui:** persist drag ordering in workspace sidebars ([5893a93](https://github.com/hexiangtao/loadix/commit/5893a939153428a7483ddaae93b1151fdb160327))
+
 ## [1.48.3](https://github.com/hexiangtao/loadix/compare/v1.48.2...v1.48.3) (2026-09-06)
 
 
