@@ -16,11 +16,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Braces, Folder, Play, Square, Terminal, X } from 'lucide-react';
-import { parseCurl } from '@/shared/curl';
 import type { ApiAuthType, ApiBodyType, ApiMethod, ApiRequest } from './apiTypes';
 import { METHOD_TEXT, requestDisplayTitle } from './apiTypes';
 import { Popover } from '../components/Popover';
 import { buildQueryString, currentQuery, parseQueryParams, replaceQuery } from './urlUtil';
+import { requestPatchFromCurl } from './requestImport';
 
 interface RequestEditorProps {
   request: ApiRequest;
@@ -92,19 +92,7 @@ export function RequestEditor({ request, onChange, onSend, onCancel, sending, co
 
   const applyCurl = () => {
     try {
-      const parsed = parseCurl(curlInput);
-      const isForm = parsed.contentType === 'application/x-www-form-urlencoded';
-      onChange({
-        method: parsed.method as ApiMethod,
-        url: parsed.url,
-        params: parseQueryParams(parsed.url),
-        headers: parsed.headers,
-        body: {
-          type: parsed.contentType === 'application/json' ? 'json' : isForm ? 'form' : 'text',
-          content: isForm ? '' : parsed.body,
-          form: isForm ? Array.from(new URLSearchParams(parsed.body).entries()) : [],
-        },
-      });
+      onChange(requestPatchFromCurl(curlInput));
       setCurlOpen(false);
       setCurlInput('');
       setCurlError('');

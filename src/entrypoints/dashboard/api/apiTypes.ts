@@ -87,11 +87,22 @@ export interface ApiCollection {
   order?: number;
 }
 
+/** What the Requests module's UI consumes — same shape the executor returns. */
+export type ApiResponse = RawResponse;
+
+/** A bounded response snapshot kept with a History run for comparison. */
+export type ApiResponseSnapshot = Omit<ApiResponse, 'body'> & {
+  body: string;
+  bodyTruncated: boolean;
+};
+
 /** A sent request, kept so History can reopen it as a fresh draft. */
 export interface ApiHistoryEntry {
   id: string;
   /** Snapshot of the request as sent. */
   request: ApiRequest;
+  /** Bounded response snapshot from this run, when one was received. */
+  response?: ApiResponseSnapshot;
   sentAt: number;
   status: number;
   ms: number;
@@ -99,8 +110,14 @@ export interface ApiHistoryEntry {
   error: string;
 }
 
-/** What the Requests module's UI consumes — same shape the executor returns. */
-export type ApiResponse = RawResponse;
+export function snapshotResponse(response: ApiResponse, maxBody = 120_000): ApiResponseSnapshot {
+  const bodyTruncated = response.body.length > maxBody;
+  return {
+    ...response,
+    body: bodyTruncated ? response.body.slice(0, maxBody) : response.body,
+    bodyTruncated,
+  };
+}
 
 /** Default request timeout (ms) for Requests sends. Kept off the UI on
  *  purpose — a fixed sane default is part of "no bookkeeping". */
@@ -135,6 +152,11 @@ export function uid(): string {
     /* fall through */
   }
   return `req-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+/** Stable identity for comparing response runs without including local metadata. */
+export function requestFingerprint(req: Pick<ApiRequest, 'method' | 'url' | 'params' | 'headers' | 'body' | 'auth'>): string {
+  return JSON.stringify({ method: req.method, url: req.url, params: req.params, headers: req.headers, body: req.body, auth: req.auth });
 }
 
 /** The title shown in lists: manual name wins, else "GET /path" from the URL. */

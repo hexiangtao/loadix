@@ -153,6 +153,12 @@ export default function App({ host }: { host: EngineHost }) {
     setView(id === 'markdown' ? 'markdown' : id === 'api' ? 'api' : 'tools');
   };
 
+  const openInMarkdown = useCallback((markdown: string) => {
+    setActiveTool(null);
+    setToolPayload(markdown);
+    setView('markdown');
+  }, []);
+
   const switchView = (v: 'loadtest' | 'tools' | 'markdown' | 'api') => {
     setView(v);
     if (v !== 'tools') setActiveTool(null);
@@ -678,7 +684,10 @@ export default function App({ host }: { host: EngineHost }) {
         </main>
       ) : view === 'api' ? (
         <main className="h-[calc(100vh-3.5rem)] w-full overflow-hidden">
-          <ApiClientTool onOpenInLoadTest={openInLoadTest} />
+          <ApiClientTool
+            onOpenInLoadTest={openInLoadTest}
+            onOpenInMarkdown={openInMarkdown}
+          />
         </main>
       ) : (
         <main className="mx-auto w-full px-7 py-7">

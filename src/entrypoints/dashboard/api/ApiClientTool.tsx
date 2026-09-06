@@ -16,7 +16,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { storageGet, storageSet } from '../storage';
 import type { ApiCollection, ApiHistoryEntry, ApiRequest, ApiResponse } from './apiTypes';
-import { createApiRequest, requestDisplayTitle, uid } from './apiTypes';
+import { createApiRequest, requestDisplayTitle, requestFingerprint, snapshotResponse, uid } from './apiTypes';
 import {
   addHistoryEntry,
   clearHistory,
@@ -49,15 +49,19 @@ interface ApiClientToolProps {
    *  Optional because the Ctrl+K palette mounts the tool without App-level
    *  wiring (the bridge is a no-op there). */
   onOpenInLoadTest?: (request: ApiRequest) => void;
+  /** Open the current request/response as a new Markdown document. */
+  onOpenInMarkdown?: (markdown: string) => void;
 }
 
-export function ApiClientTool({ onOpenInLoadTest }: ApiClientToolProps) {
+export function ApiClientTool({ onOpenInLoadTest, onOpenInMarkdown }: ApiClientToolProps) {
   const { t } = useTranslation();
   const [requests, setRequests] = useState<ApiRequest[]>([]);
   const [collections, setCollections] = useState<ApiCollection[]>([]);
   const [history, setHistory] = useState<ApiHistoryEntry[]>([]);
   const [currentId, setCurrentId] = useState<string | null>(null);
   const [response, setResponse] = useState<ApiResponse | null>(null);
+  const [previousResponse, setPreviousResponse] = useState<ApiResponse | null>(null);
+  const [responseRequest, setResponseRequest] = useState<ApiRequest | null>(null);
   const [sending, setSending] = useState(false);
   const [vars, setVars] = useState<[string, string][]>([]);
   // Split-divider preference: null = editor at natural height, otherwise px.
@@ -109,6 +113,16 @@ export function ApiClientTool({ onOpenInLoadTest }: ApiClientToolProps) {
           ? lastId
           : (requestsList.find((r) => r.collectionId == null)?.id ?? requestsList[0]!.id);
       setCurrentId(initial);
+      const initialRequest = requestsList.find((r) => r.id === initial);
+      const initialFingerprint = initialRequest ? requestFingerprint(initialRequest) : '';
+      const runs = [...workspace.history]
+        .filter((entry) => entry.response && requestFingerprint(entry.request) === initialFingerprint)
+        .sort((a, b) => b.sentAt - a.sentAt);
+      if (runs[0]?.response) {
+        setResponse(runs[0].response);
+        setResponseRequest(runs[0].request);
+        setPreviousResponse(runs[1]?.response ?? null);
+      }
     })();
     return () => {
       cancelled = true;
@@ -141,6 +155,9 @@ export function ApiClientTool({ onOpenInLoadTest }: ApiClientToolProps) {
       if (id === currentId) return;
       if (current) void saveRequest({ ...current, updatedAt: Date.now() });
       setCurrentId(id);
+      setResponse(null);
+      setPreviousResponse(null);
+      setResponseRequest(null);
     },
     [current, currentId],
   );
@@ -158,31 +175,58 @@ export function ApiClientTool({ onOpenInLoadTest }: ApiClientToolProps) {
   /* ——— Send / cancel ——— */
 
   const sendHandleRef = useRef<SendHandle | null>(null);
-  const handleSend = useCallback(async () => {
-    if (!current || sending) return;
-    if (!current.url.trim()) return;
-    setSending(true);
-    const handle = sendRequest(buildRawRequest(current, Object.fromEntries(varsRef.current)));
-    sendHandleRef.current = handle;
-    try {
-      const res = await handle.promise;
-      setResponse(res);
-      const entry: ApiHistoryEntry = {
-        id: uid(),
-        request: { ...current, updatedAt: Date.now() },
-        sentAt: Date.now(),
-        status: res.status,
-        ms: res.ms,
-        ok: res.ok,
-        error: res.error,
-      };
-      setHistory((prev) => [entry, ...prev].slice(0, 100));
-      void addHistoryEntry(entry);
-    } finally {
-      setSending(false);
-      sendHandleRef.current = null;
-    }
-  }, [current, sending]);
+  const runRequest = useCallback(
+    async (request: ApiRequest) => {
+      if (sending || !request.url.trim()) return;
+      const fingerprint = requestFingerprint(request);
+      const baseline = [...history]
+        .filter((entry) => entry.response && requestFingerprint(entry.request) === fingerprint)
+        .sort((a, b) => b.sentAt - a.sentAt)[0]?.response ?? null;
+      setPreviousResponse(baseline);
+      setResponse(null);
+      setResponseRequest(request);
+      setSending(true);
+      const handle = sendRequest(buildRawRequest(request, Object.fromEntries(varsRef.current)));
+      sendHandleRef.current = handle;
+      try {
+        const res = await handle.promise;
+        setResponse(res);
+        const entry: ApiHistoryEntry = {
+          id: uid(),
+          request: { ...request, updatedAt: Date.now() },
+          response: snapshotResponse(res),
+          sentAt: Date.now(),
+          status: res.status,
+          ms: res.ms,
+          ok: res.ok,
+          error: res.error,
+        };
+        setHistory((prev) => [entry, ...prev].slice(0, 100));
+        void addHistoryEntry(entry);
+      } finally {
+        setSending(false);
+        sendHandleRef.current = null;
+      }
+    },
+    [history, sending],
+  );
+
+  const handleSend = useCallback(() => {
+    if (current) void runRequest(current);
+  }, [current, runRequest]);
+
+  const handleLaunch = useCallback(
+    (patch: Partial<ApiRequest>, shouldSend: boolean) => {
+      if (!current) return;
+      const updated = { ...current, ...patch, updatedAt: Date.now() };
+      setRequests((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
+      setResponse(null);
+      setPreviousResponse(null);
+      setResponseRequest(null);
+      if (shouldSend) void runRequest(updated);
+    },
+    [current, runRequest],
+  );
 
   const handleCancel = useCallback(() => {
     sendHandleRef.current?.abort();
@@ -196,6 +240,8 @@ export function ApiClientTool({ onOpenInLoadTest }: ApiClientToolProps) {
     setRequests((prev) => [...prev, draft]);
     setCurrentId(draft.id);
     setResponse(null);
+    setPreviousResponse(null);
+    setResponseRequest(null);
   }, []);
 
   const handleNewRequestIn = useCallback(
@@ -206,6 +252,8 @@ export function ApiClientTool({ onOpenInLoadTest }: ApiClientToolProps) {
       setRequests((prev) => [...prev, draft]);
       setCurrentId(draft.id);
       setResponse(null);
+      setPreviousResponse(null);
+      setResponseRequest(null);
     },
     [],
   );
@@ -280,6 +328,8 @@ export function ApiClientTool({ onOpenInLoadTest }: ApiClientToolProps) {
       void saveRequest(copy);
       setRequests((prev) => [copy, ...prev]);
       setCurrentId(copy.id);
+      setResponse(null);
+      setPreviousResponse(null);
     },
     [requests],
   );
@@ -339,7 +389,12 @@ export function ApiClientTool({ onOpenInLoadTest }: ApiClientToolProps) {
         for (const c of result.collections) void saveCollection(c);
         for (const r of result.requests) void saveRequest(r);
         const first = result.requests[0];
-        if (first) setCurrentId(first.id);
+        if (first) {
+          setCurrentId(first.id);
+          setResponse(null);
+          setPreviousResponse(null);
+          setResponseRequest(null);
+        }
         if (!importedOnceRef.current) {
           importedOnceRef.current = true;
           localStorage.setItem('loadix-api:imported', '1');
@@ -369,6 +424,9 @@ export function ApiClientTool({ onOpenInLoadTest }: ApiClientToolProps) {
       void saveRequest(draft);
       setRequests((prev) => [draft, ...prev]);
       setCurrentId(draft.id);
+      setResponse(null);
+      setPreviousResponse(null);
+      setResponseRequest(null);
     },
     [],
   );
@@ -434,7 +492,16 @@ export function ApiClientTool({ onOpenInLoadTest }: ApiClientToolProps) {
           <>
             <RequestEditor request={current} onChange={patchCurrent} onSend={handleSend} onCancel={handleCancel} sending={sending} collectionName={collectionName} vars={vars} onVarsChange={handleVarsChange} editorHeight={editorHeight} />
             <SplitDivider onResize={handleResizeEditor} onReset={handleResetEditor} />
-            <ResponseView response={response} sending={sending} request={current} vars={vars} onLoadTest={onOpenInLoadTest ?? (() => {})} />
+            <ResponseView
+              response={response}
+              previousResponse={previousResponse}
+              sending={sending}
+              request={responseRequest ?? current}
+              vars={vars}
+              onLoadTest={onOpenInLoadTest ?? (() => {})}
+              onOpenInMarkdown={onOpenInMarkdown ?? (() => {})}
+              onLaunch={handleLaunch}
+            />
           </>
         ) : (
           <div className="flex flex-1 flex-col items-center justify-center gap-2">
