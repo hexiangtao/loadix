@@ -1,3 +1,10 @@
+## [1.48.3](https://github.com/hexiangtao/loadix/compare/v1.48.2...v1.48.3) (2026-09-06)
+
+
+### Bug Fixes
+
+* **ui:** stable header, unclipped preset menu, hairline root scrollbar, styled confirms ([dbfc401](https://github.com/hexiangtao/loadix/commit/dbfc4012409a4909bad0a5329a9d78afd9c83ab0))
+
 ## [1.48.2](https://github.com/hexiangtao/loadix/compare/v1.48.1...v1.48.2) (2026-09-06)
 
 ## [1.48.1](https://github.com/hexiangtao/loadix/compare/v1.48.0...v1.48.1) (2026-09-06)
