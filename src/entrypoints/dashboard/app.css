@@ -48,6 +48,29 @@ body {
   letter-spacing: -0.011em;
 }
 
+/* The ROOT page scrollbar (html/body) in stacked layouts — style it as a
+   hairline so the page-level rail doesn't read as a fat native gutter next
+   to the app's custom in-pane scrollbars. In-app panes keep their own
+   .app-scroller rules below. */
+html::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+html::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+html::-webkit-scrollbar-thumb {
+  background: var(--color-line);
+  border-radius: 999px;
+  transition: background 150ms ease;
+}
+
+html::-webkit-scrollbar-thumb:hover {
+  background: var(--color-muted);
+}
+
 /* Reusable component classes (via @apply) for elements used many times. */
 .nav-btn {
   @apply cursor-pointer rounded-md px-3 py-1.5 text-[13px] text-muted transition-colors duration-150 hover:bg-hover hover:text-ink;
@@ -133,12 +156,13 @@ body {
 
 .app-scroller::-webkit-scrollbar-thumb:hover {
   background: var(--color-muted);
-}/* Firefox: thin + matched colour, no gutter reservation needed
-   (the `scrollbar-width: thin` already accounts for it). */
-.app-scroller {
-  scrollbar-width: thin;
-  scrollbar-color: var(--color-line) transparent;
 }
+
+/* IMPORTANT: the standard `scrollbar-width` / `scrollbar-color` properties
+   are NOT set on .app-scroller outside the Firefox block below. In Chrome
+   121+ any non-auto standard property DISABLES the ::-webkit-scrollbar
+   customization above, falling back to the fat native scrollbar — the
+   opposite of the intended macOS-like look. */
 
 /* ------------------------------------------------------------- */
 /* Hairline scrollbars for READING surfaces (document outline,  */
@@ -166,13 +190,29 @@ body {
   background: var(--color-muted);
 }
 
-.app-scroller.sb-hairline {
-  scrollbar-color: var(--color-line) transparent;
+/* Firefox has no ::-webkit-scrollbar support, so give it the standard
+   thin scrollbar there — and ONLY there. Chromium must keep the standard
+   properties unset (see the note above the webkit rules). */
+@supports not selector(::-webkit-scrollbar) {
+  .app-scroller {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-line) transparent;
+  }
+
+  .app-scroller.sb-hairline {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-line) transparent;
+  }
+
+  /* CodeMirror (the markdown source editor) scrolls through its own
+     .cm-scroller rather than an .app-scroller — style it the same hairline
+     so the editor pane matches the surrounding reading surfaces. */
+  .cm-scroller {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-line) transparent;
+  }
 }
 
-/* CodeMirror (the markdown source editor) scrolls through its own
-   .cm-scroller rather than an .app-scroller — style it the same hairline
-   so the editor pane matches the surrounding reading surfaces. */
 .cm-scroller::-webkit-scrollbar {
   width: 4px;
   height: 4px;
@@ -264,7 +304,4 @@ body {
   .stop-pulse { animation: none; }
 }
 
-.cm-scroller {
-  scrollbar-width: thin;
-  scrollbar-color: var(--color-line) transparent;
-}
+

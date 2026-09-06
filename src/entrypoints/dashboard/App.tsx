@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { Search } from 'lucide-react';
+import { FileCode, FileJson, Plus, Save } from 'lucide-react';
 import type { Assertion, ContentType, HttpMethod, TestConfig } from '@/shared/types';
 import type { EngineHost } from '@/engine/engine-host';
 import type { ApiRequest } from './api/apiTypes';
@@ -408,7 +409,9 @@ export default function App({ host }: { host: EngineHost }) {
 
         {/* Push the primary destinations to the right of the brand — the
             familiar brand-left / actions-right header — instead of crowding
-            the Loadix wordmark. Contextual actions follow at the far right. */}
+            the Loadix wordmark. Each module owns its own actions (e.g. the
+            load-test toolbar in its sidebar), so the header itself stays
+            identical across views. */}
         <div className="flex-1" />
 
         <nav className="mr-2 flex items-center gap-1">
@@ -470,17 +473,6 @@ export default function App({ host }: { host: EngineHost }) {
           </nav>
 
         <div className="flex items-center gap-1">
-          {view === 'loadtest' && (
-            <>
-              {/* Start / Stop live in <TargetBar /> next to the URL they
-                  act on, so the toolbar stays focused on document-level
-                  actions (preset, theme, language, save, export). No
-                  duplicate Stop here. */}
-              <span className="mx-2 h-6 w-px bg-line" />
-              <PresetMenu onApply={setLoad} />
-            </>
-          )}
-
           <button className="nav-btn" onClick={toggleTheme} title={theme === 'dark' ? 'Light' : 'Dark'} aria-label="Toggle theme">
             {theme === 'dark' ? (
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -504,22 +496,6 @@ export default function App({ host }: { host: EngineHost }) {
               </option>
             ))}
           </select>
-          {view === 'loadtest' && (
-            <>
-              <button className="nav-btn" onClick={handleNew}>
-                {t('app.newTest')}
-              </button>
-              <button className="nav-btn" onClick={handleSave}>
-                {t('app.saveConfig')}
-              </button>
-              <button className="nav-btn" onClick={handleExport} title={t('app.exportJson')}>
-                {t('app.exportJson')}
-              </button>
-              <button className="nav-btn" onClick={handleExportHtml} title={t('app.exportHtml')}>
-                {t('app.exportHtml')}
-              </button>
-            </>
-          )}
         </div>
       </header>
 
@@ -528,8 +504,48 @@ export default function App({ host }: { host: EngineHost }) {
           className="bg-panel max-xl:flex max-xl:flex-col max-xl:gap-6 max-xl:px-4 max-xl:py-5 xl:h-[calc(100vh-3.5rem)] xl:grid xl:grid-cols-[380px_minmax(0,1fr)] xl:overflow-hidden"
           data-screenshot-target="loadtest"
         >
-          {/* ——— Left: step navigation + active configuration section ——— */}
+          {/* ——— Left: module toolbar + step navigation + active section ———
+              The load-test actions (preset / new / save / export) live HERE,
+              inside the module, not in the global header — so switching
+              views never reshuffles the header. */}
           <aside className="flex min-w-0 flex-col max-xl:gap-4 xl:min-h-0 xl:overflow-hidden xl:border-r xl:border-line">
+            <div className="flex shrink-0 items-center justify-between gap-1 pl-2 pr-2 pt-2 xl:pl-3 xl:pr-3 xl:pt-2.5">
+              <PresetMenu onApply={setLoad} />
+              <div className="flex items-center gap-0.5">
+                <button
+                  className="rounded-lg p-2 text-muted transition-colors duration-150 hover:bg-hover hover:text-ink"
+                  onClick={handleNew}
+                  title={t('app.newTest')}
+                  aria-label={t('app.newTest')}
+                >
+                  <Plus size={15} />
+                </button>
+                <button
+                  className="rounded-lg p-2 text-muted transition-colors duration-150 hover:bg-hover hover:text-ink"
+                  onClick={handleSave}
+                  title={t('app.saveConfig')}
+                  aria-label={t('app.saveConfig')}
+                >
+                  <Save size={15} />
+                </button>
+                <button
+                  className="rounded-lg p-2 text-muted transition-colors duration-150 hover:bg-hover hover:text-ink"
+                  onClick={handleExport}
+                  title={t('app.exportJson')}
+                  aria-label={t('app.exportJson')}
+                >
+                  <FileJson size={15} />
+                </button>
+                <button
+                  className="rounded-lg p-2 text-muted transition-colors duration-150 hover:bg-hover hover:text-ink"
+                  onClick={handleExportHtml}
+                  title={t('app.exportHtml')}
+                  aria-label={t('app.exportHtml')}
+                >
+                  <FileCode size={15} />
+                </button>
+              </div>
+            </div>
             <nav className="shrink-0 px-1 pb-2 pt-1 xl:px-2 xl:pb-2 xl:pt-2.5">
               <div className="px-2.5 pb-1.5 pt-1 text-[11px] font-bold uppercase tracking-wide text-muted xl:px-1.5">
                 {t('nav.title')}

@@ -19,7 +19,7 @@ import { Braces, Folder, Play, Square, Terminal, X } from 'lucide-react';
 import { parseCurl } from '@/shared/curl';
 import type { ApiAuthType, ApiBodyType, ApiMethod, ApiRequest } from './apiTypes';
 import { METHOD_TEXT, requestDisplayTitle } from './apiTypes';
-import { Popover } from './popover';
+import { Popover } from '../components/Popover';
 import { buildQueryString, currentQuery, parseQueryParams, replaceQuery } from './urlUtil';
 
 interface RequestEditorProps {

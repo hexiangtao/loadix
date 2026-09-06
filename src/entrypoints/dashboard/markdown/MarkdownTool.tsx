@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { CopyButton } from '../tools/CopyButton';
 import { useAutoHideHeader } from '../useAutoHideHeader';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import { DocOutline } from './DocOutline';
 import { MarkdownPreview } from './MarkdownPreview';
 import { MarkdownEditor } from './MarkdownEditor';
@@ -926,61 +927,6 @@ function ShareDialog({
             </div>
           </>
         )}
-      </div>
-    </div>
-  );
-}
-
-/** In-app replacement for window.confirm: styled to match the app, Escape
-    cancels, and clicking the backdrop closes without choosing. */
-function ConfirmDialog({
-  title,
-  message,
-  confirmLabel,
-  cancelLabel,
-  onConfirm,
-  onClose,
-}: {
-  title: string;
-  message: string;
-  confirmLabel: string;
-  cancelLabel: string;
-  onConfirm: () => void;
-  onClose: () => void;
-}) {
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-[2px]"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <div
-        role="alertdialog"
-        aria-modal="true"
-        className="w-[min(380px,92vw)] rounded-xl border border-line bg-panel p-4 shadow-2xl"
-      >
-        <h3 className="text-[14px] font-bold">{title}</h3>
-        <p className="mt-1.5 text-[13px] leading-relaxed text-muted">{message}</p>
-        <div className="mt-4 flex justify-end gap-2">
-          <button className="ghost-btn" onClick={onClose} autoFocus>
-            {cancelLabel}
-          </button>
-          <button
-            onClick={onConfirm}
-            className="cursor-pointer rounded-lg bg-danger px-3.5 py-1.5 text-[13px] font-semibold text-white transition-colors duration-150 hover:bg-danger/90"
-          >
-            {confirmLabel}
-          </button>
-        </div>
       </div>
     </div>
   );

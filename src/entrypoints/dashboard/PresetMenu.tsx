@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChevronDown, Zap } from 'lucide-react';
+import { Popover } from './components/Popover';
 import type { LoadFormValue, LoadModelKind } from './panels/LoadPanel';
 
 interface PresetMenuProps {
@@ -13,27 +14,14 @@ interface PresetMenuProps {
  * request (method / URL / headers / body) untouched — that's the whole point:
  * "apply a workload, keep my request". Each preset uses the most appropriate
  * load model (e.g. spike preset switches loadModel to 'spike').
+ *
+ * The list renders in a portal (shared Popover), so it can never be clipped
+ * in half by the sidebar's `overflow` the way the old in-flow dropdown was.
  */
 export function PresetMenu({ onApply }: PresetMenuProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const onDocClick = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    const onEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false);
-    };
-    document.addEventListener('mousedown', onDocClick);
-    document.addEventListener('keydown', onEsc);
-    return () => {
-      document.removeEventListener('mousedown', onDocClick);
-      document.removeEventListener('keydown', onEsc);
-    };
-  }, [open]);
+  const [btnRef, setBtnRef] = useState<HTMLButtonElement | null>(null);
 
   const presets: Array<{
     id: 'smoke' | 'normal' | 'stress' | 'spike' | 'soak';
@@ -128,11 +116,13 @@ export function PresetMenu({ onApply }: PresetMenuProps) {
   ];
 
   return (
-    <div className="relative" ref={ref}>
+    <>
       <button
+        ref={setBtnRef}
         type="button"
         onClick={() => setOpen((v) => !v)}
         title={t('app.preset_hint')}
+        aria-expanded={open}
         className="nav-btn flex items-center gap-1"
       >
         <Zap size={13} />
@@ -140,7 +130,7 @@ export function PresetMenu({ onApply }: PresetMenuProps) {
         <ChevronDown size={12} className={`transition-transform duration-150 ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (
-        <div className="absolute right-0 top-full z-40 mt-1 min-w-[180px] overflow-hidden rounded-xl border border-line bg-panel shadow-lg">
+        <Popover anchor={btnRef} onClose={() => setOpen(false)} width="w-44" matchAnchorWidth>
           {presets.map((p) => (
             <button
               key={p.id}
@@ -153,9 +143,9 @@ export function PresetMenu({ onApply }: PresetMenuProps) {
               {t(p.labelKey)}
             </button>
           ))}
-        </div>
+        </Popover>
       )}
-    </div>
+    </>
   );
 }
 

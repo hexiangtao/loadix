@@ -32,6 +32,7 @@ import { ApiSidebar } from './ApiSidebar';
 import { RequestEditor } from './RequestEditor';
 import { ResponseView } from './ResponseView';
 import { SplitDivider } from './SplitDivider';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 
 const CURRENT_KEY = 'loadix-api:current';
 const VARS_KEY = 'loadix-api:vars';
@@ -67,6 +68,9 @@ export function ApiClientTool({ onOpenInLoadTest }: ApiClientToolProps) {
   const [importedOnce, setImportedOnce] = useState(() => localStorage.getItem('loadix-api:imported') === '1');
   const importedOnceRef = useRef(importedOnce);
   importedOnceRef.current = importedOnce;
+  // Destructive actions confirm through the shared styled dialog, not
+  // window.confirm (unstyled, clipped, and off-brand).
+  const [confirm, setConfirm] = useState<{ message: string; confirmLabel: string; onConfirm: () => void } | null>(null);
 
   const current = requests.find((r) => r.id === currentId) ?? null;
   const varsRef = useRef(vars);
@@ -253,10 +257,15 @@ export function ApiClientTool({ onOpenInLoadTest }: ApiClientToolProps) {
     (id: string) => {
       const target = requests.find((r) => r.id === id);
       if (!target) return;
-      if (!window.confirm(t('api.confirmDeleteRequest', { name: requestDisplayTitle(target, t('api.untitled')) }))) return;
-      setRequests((prev) => prev.filter((r) => r.id !== id));
-      void deleteRequestInStore(id);
-      if (currentId === id) setCurrentId(null);
+      setConfirm({
+        message: t('api.confirmDeleteRequest', { name: requestDisplayTitle(target, t('api.untitled')) }),
+        confirmLabel: t('api.deleteRequest'),
+        onConfirm: () => {
+          setRequests((prev) => prev.filter((r) => r.id !== id));
+          void deleteRequestInStore(id);
+          if (currentId === id) setCurrentId(null);
+        },
+      });
     },
     [requests, currentId, t],
   );
@@ -265,16 +274,21 @@ export function ApiClientTool({ onOpenInLoadTest }: ApiClientToolProps) {
     (id: string) => {
       const target = collections.find((c) => c.id === id);
       if (!target) return;
-      if (!window.confirm(t('api.confirmDeleteCollection', { name: target.name }))) return;
-      const doomed = new Set<string>();
-      const walk = (cid: string) => {
-        doomed.add(cid);
-        for (const c of collections) if (c.parentId === cid) walk(c.id);
-      };
-      walk(id);
-      setCollections((prev) => prev.filter((c) => !doomed.has(c.id)));
-      setRequests((prev) => prev.map((r) => (r.collectionId && doomed.has(r.collectionId) ? { ...r, collectionId: null, updatedAt: Date.now() } : r)));
-      void deleteCollectionInStore(id);
+      setConfirm({
+        message: t('api.confirmDeleteCollection', { name: target.name }),
+        confirmLabel: t('api.deleteCollection'),
+        onConfirm: () => {
+          const doomed = new Set<string>();
+          const walk = (cid: string) => {
+            doomed.add(cid);
+            for (const c of collections) if (c.parentId === cid) walk(c.id);
+          };
+          walk(id);
+          setCollections((prev) => prev.filter((c) => !doomed.has(c.id)));
+          setRequests((prev) => prev.map((r) => (r.collectionId && doomed.has(r.collectionId) ? { ...r, collectionId: null, updatedAt: Date.now() } : r)));
+          void deleteCollectionInStore(id);
+        },
+      });
     },
     [collections, t],
   );
@@ -323,9 +337,14 @@ export function ApiClientTool({ onOpenInLoadTest }: ApiClientToolProps) {
   );
 
   const handleClearHistory = useCallback(() => {
-    if (!window.confirm(t('api.confirmClearHistory'))) return;
-    setHistory([]);
-    void clearHistory();
+    setConfirm({
+      message: t('api.confirmClearHistory'),
+      confirmLabel: t('api.clearHistory'),
+      onConfirm: () => {
+        setHistory([]);
+        void clearHistory();
+      },
+    });
   }, [t]);
 
   const handleVarsChange = useCallback((next: [string, string][]) => {
@@ -388,6 +407,20 @@ export function ApiClientTool({ onOpenInLoadTest }: ApiClientToolProps) {
           </div>
         )}
       </div>
+      {confirm && (
+        <ConfirmDialog
+          title={confirm.confirmLabel}
+          message={confirm.message}
+          confirmLabel={confirm.confirmLabel}
+          cancelLabel={t('api.cancel')}
+          onConfirm={() => {
+            const action = confirm.onConfirm;
+            setConfirm(null);
+            action();
+          }}
+          onClose={() => setConfirm(null)}
+        />
+      )}
     </div>
   );
 }

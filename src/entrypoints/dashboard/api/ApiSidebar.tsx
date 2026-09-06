@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 import type { ApiCollection, ApiHistoryEntry, ApiMethod, ApiRequest } from './apiTypes';
 import { METHOD_CHIP, requestDisplayTitle } from './apiTypes';
-import { MenuItem, Popover } from './popover';
+import { MenuItem, Popover } from '../components/Popover';
 import { timeAgo } from './time';
 
 const COLLAPSED_KEY = 'loadix-api:sidebarCollapsed';
