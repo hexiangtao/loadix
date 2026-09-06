@@ -1,3 +1,10 @@
+# [1.50.0](https://github.com/hexiangtao/loadix/compare/v1.49.0...v1.50.0) (2026-09-06)
+
+
+### Features
+
+* **api:** launchpad, response insights, and one-click Markdown capture ([0a0b8bb](https://github.com/hexiangtao/loadix/commit/0a0b8bb4c4fcf52414b851d3beb113a637a0586d))
+
 # [1.49.0](https://github.com/hexiangtao/loadix/compare/v1.48.3...v1.49.0) (2026-09-06)
 
 
