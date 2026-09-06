@@ -315,6 +315,9 @@
       "preview": "ライブプレビュー"
     },
     "searchTools": "検索…",
+    "hintNavigate": "移動",
+    "hintOpen": "開く",
+    "hintClose": "閉じる",
     "requests": {
       "name": "リクエスト",
       "desc": "HTTP API リクエストを送信・整理・デバッグ"

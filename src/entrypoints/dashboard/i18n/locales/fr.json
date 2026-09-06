@@ -314,6 +314,9 @@
       "preview": "Aperçu"
     },
     "searchTools": "Rechercher…",
+    "hintNavigate": "naviguer",
+    "hintOpen": "ouvrir",
+    "hintClose": "fermer",
     "requests": {
       "name": "Requêtes",
       "desc": "Envoyez, organisez et déboguez vos requêtes API HTTP"

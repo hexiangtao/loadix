@@ -8,7 +8,9 @@ interface CommandPaletteProps {
   onSelect: (id: string) => void;
 }
 
-/** Ctrl/Cmd+K fuzzy tool picker. */
+/** Ctrl/Cmd+K fuzzy tool picker — Spotlight-style: the backdrop fades, the
+    panel drops in with the shared spring pop, and a quiet keycap footer
+    teaches the interaction without a word of explanation. */
 export function CommandPalette({ open, onClose, onSelect }: CommandPaletteProps) {
   const { t } = useTranslation();
   const [query, setQuery] = useState('');
@@ -42,6 +44,11 @@ export function CommandPalette({ open, onClose, onSelect }: CommandPaletteProps)
     setActiveIdx(0);
   }, [query]);
 
+  // Keep the active row in view while arrowing through the list.
+  useEffect(() => {
+    listRef.current?.querySelectorAll('button')[activeIdx]?.scrollIntoView({ block: 'nearest' });
+  }, [activeIdx]);
+
   if (!open) return null;
 
   const pick = (tool: Tool) => {
@@ -68,12 +75,12 @@ export function CommandPalette({ open, onClose, onSelect }: CommandPaletteProps)
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 pt-[15vh] backdrop-blur-[2px]"
+      className="anim-fade fixed inset-0 z-50 flex items-start justify-center bg-black/40 pt-[14vh] backdrop-blur-[2px]"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="w-[min(560px,90vw)] overflow-hidden rounded-xl border border-line bg-panel shadow-2xl">
+      <div className="anim-pop origin-top w-[min(560px,90vw)] overflow-hidden rounded-xl border border-line bg-panel shadow-2xl">
         <input
           ref={inputRef}
           className="w-full border-b border-line bg-transparent px-4 py-3.5 text-[15px] outline-none placeholder:text-muted"
@@ -82,29 +89,49 @@ export function CommandPalette({ open, onClose, onSelect }: CommandPaletteProps)
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={onKeyDown}
         />
-        <div ref={listRef} className="max-h-[40vh] overflow-auto py-2">
+        <div ref={listRef} className="app-scroller sb-hairline max-h-[40vh] overflow-auto py-1.5">
           {results.length === 0 && <p className="px-4 py-6 text-center text-sm text-muted">{t('tools.noResults')}</p>}
           {results.map((tool, i) => {
             const group = GROUPS.find((g) => g.id === tool.group);
             const Icon = tool.icon;
+            const active = i === activeIdx;
             return (
               <button
                 key={tool.id}
                 onMouseEnter={() => setActiveIdx(i)}
                 onClick={() => pick(tool)}
-                className={`flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors duration-100 ${
-                  i === activeIdx ? 'bg-hover' : ''
+                className={`relative flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors duration-100 ${
+                  active ? 'bg-hover' : ''
                 }`}
               >
-                <Icon size={18} className="shrink-0 text-primary" />
-                <span className="flex-1">
-                  <span className="block text-sm font-semibold">{t(tool.nameKey)}</span>
-                  <span className="block text-xs text-muted">{t(tool.descKey)}</span>
+                {active && <span className="absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full bg-primary" />}
+                <span className={`flex size-8 shrink-0 items-center justify-center rounded-lg transition-colors duration-150 ${active ? 'bg-primary/12 text-primary' : 'bg-hover text-primary'}`}>
+                  <Icon size={15} />
                 </span>
-                {group && <span className="text-[11px] text-muted">{t(group.labelKey)}</span>}
+                <span className="min-w-0 flex-1">
+                  <span className={`block truncate text-sm ${active ? 'font-semibold text-ink' : 'text-ink/90'}`}>{t(tool.nameKey)}</span>
+                  <span className="block truncate text-xs text-muted">{t(tool.descKey)}</span>
+                </span>
+                {group && <span className="shrink-0 text-[11px] text-muted/70">{t(group.labelKey)}</span>}
               </button>
             );
           })}
+        </div>
+        {/* Keycap footer — the interaction is taught by the chrome itself. */}
+        <div className="flex items-center gap-3 border-t border-line bg-surface/60 px-4 py-2 text-[11px] text-muted">
+          <span className="flex items-center gap-1">
+            <kbd className="keycap">↑</kbd>
+            <kbd className="keycap">↓</kbd>
+            {t('tools.hintNavigate')}
+          </span>
+          <span className="flex items-center gap-1">
+            <kbd className="keycap">↵</kbd>
+            {t('tools.hintOpen')}
+          </span>
+          <span className="ml-auto flex items-center gap-1">
+            <kbd className="keycap">esc</kbd>
+            {t('tools.hintClose')}
+          </span>
         </div>
       </div>
     </div>

@@ -9,7 +9,7 @@
 
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Check, Copy, Gauge, Inbox } from 'lucide-react';
+import { Check, Copy, Gauge, Inbox, Zap } from 'lucide-react';
 import { toCurl } from '@/shared/curl';
 import type { RawResponse } from '@/engine/runner';
 import type { ApiRequest } from './apiTypes';
@@ -33,6 +33,9 @@ const STATUS_COLOR = (status: number): string => {
   if (status < 500) return 'bg-warning/15 text-warning';
   return 'bg-danger/15 text-danger';
 };
+
+/** Latency reads at a glance: green fast, amber slow, red crawling. */
+const MS_COLOR = (ms: number): string => (ms < 300 ? 'text-success' : ms < 1000 ? 'text-warning' : 'text-danger');
 
 export function ResponseView({ response, sending, request, vars, onLoadTest }: ResponseViewProps) {
   const { t } = useTranslation();
@@ -89,8 +92,10 @@ export function ResponseView({ response, sending, request, vars, onLoadTest }: R
   if (!response && !sending) {
     return (
       <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 bg-panel">
-        <Inbox size={22} className="text-muted/50" />
-        <p className="text-[13px] text-muted">{t('api.emptyResponse')}</p>
+        <div className="flex size-11 items-center justify-center rounded-2xl border border-line bg-surface">
+          <Zap size={18} className="text-muted/40" />
+        </div>
+        <p className="text-[13px] font-medium text-muted">{t('api.emptyResponse')}</p>
         <p className="text-[11px] text-muted/70">{t('api.emptyResponseHint')}</p>
       </div>
     );
@@ -108,7 +113,7 @@ export function ResponseView({ response, sending, request, vars, onLoadTest }: R
             </span>
           ) : (
             <>
-              <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-bold ${response ? STATUS_COLOR(response.status) : ''}`}>
+              <span className={`anim-pop shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-bold ${response ? STATUS_COLOR(response.status) : ''}`}>
                 {response && response.status > 0
                   ? `${response.status} ${response.statusText}`
                   : response?.errorKind === 'aborted'
@@ -117,7 +122,7 @@ export function ResponseView({ response, sending, request, vars, onLoadTest }: R
               </span>
               {response && (
                 <>
-                  <span className="text-[11px] text-muted">{response.ms.toFixed(0)} ms</span>
+                  <span className={`text-[11px] font-semibold tabular-nums ${MS_COLOR(response.ms)}`}>{response.ms.toFixed(0)} ms</span>
                   <span className="text-[11px] text-muted">· {formatBytes(response.bytes)}</span>
                   {response.finalUrl !== raw.url && (
                     <span className="min-w-0 truncate text-[11px] text-muted" title={response.finalUrl}>
@@ -171,7 +176,7 @@ export function ResponseView({ response, sending, request, vars, onLoadTest }: R
       </div>
 
       {/* Body */}
-      <div className="app-scroller min-h-0 flex-1 overflow-auto px-3 py-2">
+      <div className="app-scroller sb-hairline anim-fade min-h-0 flex-1 overflow-auto px-3 py-2">
         {view === 'headers' && response && (
           <table className="w-full text-left text-[12px]">
             <tbody>

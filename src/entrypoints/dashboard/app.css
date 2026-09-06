@@ -14,6 +14,7 @@
   --color-danger: #ff3b30;
   --color-success: #1f8a44;
   --color-warning: #c2410c;
+  --color-violet: #af52de;
   --color-surface: #f5f5f7;
   --color-panel: #ffffff;
   --color-hover: #ececef;
@@ -29,6 +30,7 @@
   --color-danger: #ff453a;
   --color-success: #30d158;
   --color-warning: #ff9f0a;
+  --color-violet: #bf5af2;
   --color-surface: #1c1c1e;
   --color-panel: #2c2c2e;
   --color-hover: #3a3a3c;
@@ -190,7 +192,79 @@ body {
   background: var(--color-muted);
 }
 
+/* Requests module — motion primitives. Snappy, Apple-ish timing; fully
+   disabled for users who prefer reduced motion. */
+@keyframes api-pop {
+  from { opacity: 0; transform: scale(0.96) translateY(2px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes api-rise {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes api-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.anim-pop { animation: api-pop 200ms cubic-bezier(0.22, 1.1, 0.32, 1); transform-origin: top right; }
+.anim-rise { animation: api-rise 220ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+.anim-fade { animation: api-fade 240ms ease-out; }
+@media (prefers-reduced-motion: reduce) {
+  .anim-pop, .anim-rise, .anim-fade { animation: none; }
+}
+
+/* Spotlight-style keycap — the little bordered chip used in the Ctrl+K
+   palette footer. Quiet by design: it labels the interaction, never shouts. */
+.keycap {
+  display: inline-flex;
+  min-width: 16px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  border-radius: 4px;
+  border: 1px solid var(--color-line);
+  background: var(--color-panel);
+  box-shadow: 0 1px 0 var(--color-line);
+  font-family: inherit;
+  font-size: 10px;
+  line-height: 14px;
+  color: var(--color-muted);
+}
+
+/* Command bar (the Requests hero row) — one quiet island that wakes up on
+   focus: a primary-tinted hairline ring plus a soft lift, nothing loud. */
+.command-bar {
+  border: 1px solid var(--color-line);
+  border-radius: 12px;
+  transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+.command-bar:focus-within {
+  border-color: color-mix(in srgb, var(--color-primary) 45%, var(--color-line));
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--color-primary) 12%, transparent),
+    0 4px 16px color-mix(in srgb, var(--color-primary) 9%, transparent);
+}
+
+/* Send button glow — a whisper of the accent, deepening on hover. */
+.send-glow {
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.1), 0 2px 10px color-mix(in srgb, var(--color-primary) 26%, transparent);
+}
+.send-glow:hover {
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.1), 0 3px 14px color-mix(in srgb, var(--color-primary) 38%, transparent);
+}
+
+/* Stop state — a breathing danger ring so the in-flight request reads as
+   alive and the Stop button invites the click. */
+.stop-pulse { animation: stop-pulse 1.5s ease-in-out infinite; }
+@keyframes stop-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-danger) 32%, transparent); }
+  50% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-danger) 10%, transparent); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .stop-pulse { animation: none; }
+}
+
 .cm-scroller {
   scrollbar-width: thin;
   scrollbar-color: var(--color-line) transparent;
-}
+}

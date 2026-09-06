@@ -105,11 +105,11 @@ export function ToolsMenu({ activeTool, view, onSelect }: ToolsMenuProps) {
       <AnimatePresence>
         {open && (
           <motion.div
-            initial={{ opacity: 0, y: -6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.14, ease: 'easeOut' }}
-            style={pos ? { left: pos.left, top: pos.top, width: pos.width } : undefined}
+            initial={{ opacity: 0, y: -6, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -4, scale: 0.985 }}
+            transition={{ duration: 0.18, ease: [0.22, 1.1, 0.32, 1] }}
+            style={{ transformOrigin: 'top left', ...(pos ? { left: pos.left, top: pos.top, width: pos.width } : {}) }}
             className="app-scroller fixed z-50 max-h-[calc(100vh-5rem)] max-w-[calc(100vw-1rem)] overflow-y-auto rounded-xl border border-line bg-panel shadow-2xl"
           >
             {/* Search */}
@@ -126,11 +126,16 @@ export function ToolsMenu({ activeTool, view, onSelect }: ToolsMenuProps) {
             {/* Mega-menu body: grouped columns. No max-height / no scrolling —
                 every tool visible at once. */}
             <div className="p-4">
-              {GROUPS.map((group) => {
+              {GROUPS.map((group, gi) => {
                 const tools = filtered.filter((tool) => tool.group === group.id);
                 if (!tools.length) return null;
                 return (
-                  <div key={group.id} className="mb-4 last:mb-1">
+                  <motion.div
+                    key={group.id}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.03 + gi * 0.035, duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                    className="mb-4 last:mb-1">
                     <div className="mb-2 text-[11px] font-bold uppercase tracking-wide text-muted/70">
                       {t(group.labelKey)}
                     </div>
@@ -160,7 +165,7 @@ export function ToolsMenu({ activeTool, view, onSelect }: ToolsMenuProps) {
                         );
                       })}
                     </div>
-                  </div>
+                  </motion.div>
                 );
               })}
               {filtered.length === 0 && <p className="px-4 py-8 text-center text-xs text-muted">{t('tools.noResults')}</p>}

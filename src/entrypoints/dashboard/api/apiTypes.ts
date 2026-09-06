@@ -11,6 +11,28 @@ import type { RawResponse } from '@/engine/runner';
 
 export type ApiMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD' | 'OPTIONS';
 
+/** Shared method colour language — text tones (editor hero bar, title row). */
+export const METHOD_TEXT: Record<ApiMethod, string> = {
+  GET: 'text-success',
+  POST: 'text-primary',
+  PUT: 'text-warning',
+  PATCH: 'text-violet',
+  DELETE: 'text-danger',
+  HEAD: 'text-muted',
+  OPTIONS: 'text-muted',
+};
+
+/** Tinted chip variant for list rows (sidebar tree, history). */
+export const METHOD_CHIP: Record<ApiMethod, string> = {
+  GET: 'bg-success/10 text-success',
+  POST: 'bg-primary/10 text-primary',
+  PUT: 'bg-warning/10 text-warning',
+  PATCH: 'bg-violet/10 text-violet',
+  DELETE: 'bg-danger/10 text-danger',
+  HEAD: 'bg-muted/10 text-muted',
+  OPTIONS: 'bg-muted/10 text-muted',
+};
+
 export type ApiBodyType = 'none' | 'json' | 'form' | 'text';
 
 export type ApiAuthType = 'none' | 'bearer' | 'basic' | 'apikey';

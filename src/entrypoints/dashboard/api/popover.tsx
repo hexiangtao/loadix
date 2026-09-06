@@ -46,7 +46,7 @@ export function Popover({
       <div
         ref={menuRef}
         style={pos ?? { visibility: 'hidden' }}
-        className={`fixed z-50 ${width} overflow-hidden rounded-lg border border-line bg-panel py-1 shadow-2xl`}
+        className={`anim-pop fixed z-50 ${width} origin-top-right overflow-hidden rounded-lg border border-line bg-panel py-1 shadow-2xl`}
       >
         {children}
       </div>

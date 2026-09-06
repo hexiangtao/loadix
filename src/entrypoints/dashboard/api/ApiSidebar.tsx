@@ -24,8 +24,8 @@ import {
   Trash2,
   Upload,
 } from 'lucide-react';
-import type { ApiCollection, ApiHistoryEntry, ApiRequest } from './apiTypes';
-import { requestDisplayTitle } from './apiTypes';
+import type { ApiCollection, ApiHistoryEntry, ApiMethod, ApiRequest } from './apiTypes';
+import { METHOD_CHIP, requestDisplayTitle } from './apiTypes';
 import { MenuItem, Popover } from './popover';
 import { timeAgo } from './time';
 
@@ -303,7 +303,7 @@ function CollectionRow({
         className="group relative flex cursor-pointer items-center gap-1 rounded-lg px-2 py-1.5 transition-colors duration-150 hover:bg-hover"
       >
         <ChevronDown size={13} className={`shrink-0 text-muted transition-transform duration-200 ${open ? '' : '-rotate-90'}`} />
-        <Folder size={14} className="shrink-0 text-primary" />
+        <Folder size={14} className={`shrink-0 transition-colors duration-150 ${open ? 'text-primary' : 'text-muted/60'}`} />
         {renaming ? (
           <NameInput
             initial={collection.name}
@@ -364,7 +364,7 @@ function CollectionRow({
           </Popover>
         )}
       </div>
-      {open && children && <div className="ml-2.5 border-l border-line pl-1">{children}</div>}
+      {open && children && <div className="ml-2.5 border-l border-line/70 pl-1">{children}</div>}
     </div>
   );
 }
@@ -402,14 +402,6 @@ function RequestRow({
     setDialog(null);
   };
 
-  const methodClass: Record<string, string> = {
-    GET: 'text-success',
-    POST: 'text-primary',
-    PUT: 'text-warning',
-    PATCH: 'text-primary',
-    DELETE: 'text-danger',
-  };
-
   return (
     <div
       ref={rowRef}
@@ -418,8 +410,9 @@ function RequestRow({
       }`}
     >
       <Globe size={13} className={`shrink-0 ${active ? 'text-primary' : 'text-muted/70'}`} />
+      {active && <span className="absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full bg-primary" />}
       <button onClick={onOpen} className={`flex min-w-0 flex-1 items-center gap-1.5 text-left text-[13px] ${active ? 'font-semibold text-primary' : 'text-ink'}`}>
-        <span className={`shrink-0 text-[10px] font-bold ${methodClass[request.method] ?? 'text-muted'}`}>{request.method}</span>
+        <span className={`shrink-0 rounded px-1 py-px text-[9.5px] font-bold leading-4 ${METHOD_CHIP[request.method as ApiMethod] ?? 'bg-muted/10 text-muted'}`}>{request.method}</span>
         <span className="truncate">{title}</span>
       </button>
       <button
@@ -542,13 +535,6 @@ function RequestRow({
 function HistoryRow({ entry, onOpen }: { entry: ApiHistoryEntry; onOpen: () => void }) {
   const { t, i18n } = useTranslation();
   const method = entry.request.method;
-  const methodClass: Record<string, string> = {
-    GET: 'text-success',
-    POST: 'text-primary',
-    PUT: 'text-warning',
-    PATCH: 'text-primary',
-    DELETE: 'text-danger',
-  };
   const statusClass =
     entry.status === 0
       ? 'bg-danger/15 text-danger'
@@ -563,8 +549,7 @@ function HistoryRow({ entry, onOpen }: { entry: ApiHistoryEntry; onOpen: () => v
       title={t('api.historyOpen')}
       className="group flex w-full cursor-pointer items-center gap-1.5 rounded-lg px-2 py-1.5 text-left transition-colors duration-150 hover:bg-hover"
     >
-      <HistoryIcon size={12} className="shrink-0 text-muted/60" />
-      <span className={`shrink-0 text-[10px] font-bold ${methodClass[method] ?? 'text-muted'}`}>{method}</span>
+      <HistoryIcon size={12} className="shrink-0 text-muted/60" />      <span className={`shrink-0 rounded px-1 py-px text-[9.5px] font-bold leading-4 ${METHOD_CHIP[method]}`}>{method}</span>
       <span className="min-w-0 flex-1 truncate text-[12px] text-ink/80">{requestDisplayTitle(entry.request, t('api.untitled'))}</span>
       <span className="shrink-0 text-[10px] text-muted/50">{timeAgo(entry.sentAt, i18n.language)}</span>
       <span className={`shrink-0 rounded px-1.5 py-px text-[10px] font-bold ${statusClass}`}>

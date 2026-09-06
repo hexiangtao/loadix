@@ -18,7 +18,7 @@ import { useTranslation } from 'react-i18next';
 import { Braces, Folder, Play, Square, Terminal, X } from 'lucide-react';
 import { parseCurl } from '@/shared/curl';
 import type { ApiAuthType, ApiBodyType, ApiMethod, ApiRequest } from './apiTypes';
-import { requestDisplayTitle } from './apiTypes';
+import { METHOD_TEXT, requestDisplayTitle } from './apiTypes';
 import { Popover } from './popover';
 import { buildQueryString, currentQuery, parseQueryParams, replaceQuery } from './urlUtil';
 
@@ -38,16 +38,6 @@ interface RequestEditorProps {
 }
 
 const METHODS: ApiMethod[] = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'];
-
-const METHOD_COLOR: Record<ApiMethod, string> = {
-  GET: 'text-success',
-  POST: 'text-primary',
-  PUT: 'text-warning',
-  PATCH: 'text-primary',
-  DELETE: 'text-danger',
-  HEAD: 'text-muted',
-  OPTIONS: 'text-muted',
-};
 
 type Tab = 'params' | 'headers' | 'body' | 'auth';
 
@@ -136,7 +126,7 @@ export function RequestEditor({ request, onChange, onSend, onCancel, sending, co
     <div style={{ height: locked ? editorHeight : undefined }} className="flex min-h-0 flex-col">
       {/* ——— Request identity: inline-rename the name, see where it lives ——— */}
       <div className="flex shrink-0 items-center gap-2 border-b border-line px-3 pb-1.5 pt-2">
-        <span className={`shrink-0 text-[10px] font-bold ${METHOD_COLOR[request.method]}`}>{request.method}</span>
+        <span className={`shrink-0 text-[10px] font-bold ${METHOD_TEXT[request.method]}`}>{request.method}</span>
         <input
           value={request.name}
           onChange={(e) => onChange({ name: e.target.value })}
@@ -156,53 +146,55 @@ export function RequestEditor({ request, onChange, onSend, onCancel, sending, co
         )}
       </div>
 
-      {/* ——— Hero row ——— */}
-      <div className="flex shrink-0 items-center gap-1.5 px-3 py-2">
-        <select
-          value={request.method}
-          onChange={(e) => onChange({ method: e.target.value as ApiMethod })}
-          title={t('api.method')}
-          className={`cursor-pointer rounded-lg border border-line bg-panel py-1.5 pl-2.5 pr-2 text-[13px] font-bold outline-none transition-colors duration-150 hover:border-primary/40 ${METHOD_COLOR[request.method]}`}
-        >
-          {METHODS.map((m) => (
-            <option key={m} value={m}>
-              {m}
-            </option>
-          ))}
-        </select>
+      {/* ——— Hero command bar — one quiet island that wakes on focus ——— */}
+      <div className="px-3 pb-1 pt-2">
+        <div className="command-bar flex items-center gap-1 p-1 pl-1.5">
+          <select
+            value={request.method}
+            onChange={(e) => onChange({ method: e.target.value as ApiMethod })}
+            title={t('api.method')}
+            className={`h-7 shrink-0 cursor-pointer appearance-none rounded-lg bg-hover px-2 text-[12px] font-bold outline-none transition-colors duration-150 hover:bg-hover/70 ${METHOD_TEXT[request.method]}`}
+          >
+            {METHODS.map((m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ))}
+          </select>
 
-        <input
-          ref={urlRef}
-          value={request.url}
-          onChange={(e) => onChange({ url: e.target.value })}
-          onKeyDown={(e) => {
-            if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') send();
-          }}
-          placeholder={t('api.urlPlaceholder')}
-          spellCheck={false}
-          className="field min-w-0 flex-1 font-mono text-[12.5px]"
-        />
+          <input
+            ref={urlRef}
+            value={request.url}
+            onChange={(e) => onChange({ url: e.target.value })}
+            onKeyDown={(e) => {
+              if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') send();
+            }}
+            placeholder={t('api.urlPlaceholder')}
+            spellCheck={false}
+            className="min-h-7 min-w-0 flex-1 bg-transparent px-1 font-mono text-[12.5px] text-ink outline-none placeholder:text-muted/60"
+          />
 
-        <button
-          ref={curlBtnRef}
-          onClick={() => setCurlOpen((v) => !v)}
-          title={t('api.pasteCurl')}
-          className={`flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-line bg-panel transition-colors duration-150 hover:border-primary/40 hover:text-primary ${
-            curlOpen ? 'border-primary/40 text-primary' : 'text-muted'
-          }`}
-        >
-          <Terminal size={14} />
-        </button>
+          <button
+            ref={curlBtnRef}
+            onClick={() => setCurlOpen((v) => !v)}
+            title={t('api.pasteCurl')}
+            className={`flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-lg transition-colors duration-150 hover:bg-hover hover:text-primary ${
+              curlOpen ? 'bg-hover text-primary' : 'text-muted'
+            }`}
+          >
+            <Terminal size={14} />
+          </button>
 
-        <button
-          onClick={sending ? onCancel : send}
-          className={`flex shrink-0 items-center gap-1.5 !px-4 ${
-            sending ? 'danger-btn !bg-danger !text-white' : 'primary-btn'
-          }`}
-        >
-          {sending ? <Square size={12} className="fill-current" /> : <Play size={13} className="fill-current" />}
-          {sending ? t('api.stop') : t('api.send')}
-        </button>
+          <button
+            onClick={sending ? onCancel : send}
+            className={`flex shrink-0 items-center gap-1.5 !rounded-lg !px-3.5 ${
+              sending ? 'danger-btn !bg-danger !text-white stop-pulse' : 'primary-btn send-glow'
+            }`}
+          >
+            {sending ? <Square size={12} className="fill-current" /> : <Play size={13} className="fill-current" />}
+            {sending ? t('api.stop') : t('api.send')}
+          </button>
+        </div>
       </div>
 
       {/* Paste-cURL popover — floating so the editor height never jumps */}
@@ -273,7 +265,7 @@ export function RequestEditor({ request, onChange, onSend, onCancel, sending, co
           Natural mode: capped at 176px so the editor never outgrows the
           window. Locked mode (drag splitter): flex-1 fills the assigned
           editor height and scrolls instead of pushing the response away. */}
-      <div className={`min-h-0 border-t border-line bg-surface/40 px-3 py-2 ${locked ? 'flex-1 overflow-y-auto' : 'max-h-44 overflow-y-auto'}`}>
+      <div key={tab} className={`anim-fade min-h-0 border-t border-line bg-surface/40 px-3 py-2 ${locked ? 'flex-1 overflow-y-auto' : 'max-h-44 overflow-y-auto'}`}>
         {tab === 'params' && (
           <KvRows rows={request.params} onChange={(params) => onChange({ params })} addLabel={t('api.addRow')} placeholderKey={t('api.paramKey')} placeholderValue={t('api.paramValue')} />
         )}

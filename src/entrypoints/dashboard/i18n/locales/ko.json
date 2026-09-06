@@ -314,6 +314,9 @@
       "preview": "실시간 미리보기"
     },
     "searchTools": "검색…",
+    "hintNavigate": "이동",
+    "hintOpen": "열기",
+    "hintClose": "닫기",
     "requests": {
       "name": "요청",
       "desc": "HTTP API 요청 전송, 정리, 디버깅"
