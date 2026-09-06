@@ -2,8 +2,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { Search } from 'lucide-react';
-import type { Assertion, TestConfig } from '@/shared/types';
+import type { Assertion, ContentType, HttpMethod, TestConfig } from '@/shared/types';
 import type { EngineHost } from '@/engine/engine-host';
+import type { ApiRequest } from './api/apiTypes';
+import { ApiClientTool } from './api/ApiClientTool';
 import { changeLanguage, SUPPORTED_LANGUAGES, type SupportedLanguage } from './i18n';
 import { Breakdown } from './components/Breakdown';
 import { LineChart } from './components/LineChart';
@@ -110,12 +112,13 @@ export default function App({ host }: { host: EngineHost }) {
   const { activeSection, engineState, resultMessage, metrics, setActiveSection, setEngineState, setMetrics, theme, setTheme, selectedRequest, setSelectedRequest } =
     useUiStore();
 
-  const [view, setView] = useState<'loadtest' | 'tools' | 'markdown'>(() => {
+  const [view, setView] = useState<'loadtest' | 'tools' | 'markdown' | 'api'>(() => {
     const tool = toolFromUrl();
     if (tool === 'markdown') return 'markdown';
+    if (tool === 'api') return 'api';
     if (tool) return 'tools';
     const saved = localStorage.getItem('loadix-view');
-    return saved === 'tools' || saved === 'markdown' ? saved : 'loadtest';
+    return saved === 'tools' || saved === 'markdown' || saved === 'api' ? saved : 'loadtest';
   });
 
   // Immersive mode: on the Markdown page the sticky header retreats while the
@@ -144,15 +147,37 @@ export default function App({ host }: { host: EngineHost }) {
   }, [view]);
 
   const openTool = (id: string, payload?: string) => {
-    setActiveTool(id === 'markdown' ? null : id);
+    setActiveTool(id === 'markdown' || id === 'api' ? null : id);
     setToolPayload(payload);
-    setView(id === 'markdown' ? 'markdown' : 'tools');
+    setView(id === 'markdown' ? 'markdown' : id === 'api' ? 'api' : 'tools');
   };
 
-  const switchView = (v: 'loadtest' | 'tools' | 'markdown') => {
+  const switchView = (v: 'loadtest' | 'tools' | 'markdown' | 'api') => {
     setView(v);
     if (v !== 'tools') setActiveTool(null);
   };
+
+  // The load-test bridge: hand the current request to the load-test view
+  // (method/URL/headers/body), so debugging flows into stress testing.
+  const openInLoadTest = useCallback((request: ApiRequest) => {
+    const isForm = request.body.type === 'form';
+    const contentType: ContentType = request.body.type === 'json'
+      ? 'application/json'
+      : isForm
+        ? 'application/x-www-form-urlencoded'
+        : 'text/plain';
+    setRequest({
+      method: (request.method === 'OPTIONS' ? 'POST' : request.method) as HttpMethod,
+      url: request.url,
+      timeout: 10000,
+      headers: request.headers,
+      body: isForm
+        ? new URLSearchParams(request.body.form.filter(([k]) => k.trim())).toString()
+        : request.body.content,
+      contentType,
+    });
+    setView('loadtest');
+  }, []);
 
   // Row-click handler used by Recent / Slowest / Error Groups to open the
   // request drawer. Wraps the store setter so children only need to know
@@ -400,6 +425,18 @@ export default function App({ host }: { host: EngineHost }) {
             </button>
 
             <button
+              onClick={() => switchView('api')}
+              className={`relative rounded-lg px-3 py-2 text-sm transition-colors duration-150 ${
+                view === 'api' ? 'font-bold text-primary' : 'text-muted hover:bg-hover hover:text-ink'
+              }`}
+            >
+              {view === 'api' && (
+                <motion.span layoutId="view-active" className="absolute inset-0 rounded-lg bg-primary/10" />
+              )}
+              <span className="relative">{t('tools.requests.name')}</span>
+            </button>
+
+            <button
               onClick={() => switchView('loadtest')}
               className={`relative rounded-lg px-3 py-2 text-sm transition-colors duration-150 ${
                 view === 'loadtest' ? 'font-bold text-primary' : 'text-muted hover:bg-hover hover:text-ink'
@@ -622,6 +659,10 @@ export default function App({ host }: { host: EngineHost }) {
             chromeGone={markdownChromeGone}
             onToggleFullscreen={() => setMarkdownFullscreen((v) => !v)}
           />
+        </main>
+      ) : view === 'api' ? (
+        <main className="h-[calc(100vh-3.5rem)] w-full overflow-hidden">
+          <ApiClientTool onOpenInLoadTest={openInLoadTest} />
         </main>
       ) : (
         <main className="mx-auto w-full px-7 py-7">

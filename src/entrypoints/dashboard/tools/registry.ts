@@ -34,6 +34,7 @@ import { SqlTool } from './tools/SqlTool';
 import { HashTool } from './tools/HashTool';
 import { ColorTool } from './tools/ColorTool';
 import { MarkdownTool } from '../markdown/MarkdownTool';
+import { ApiClientTool } from '../api/ApiClientTool';
 import { JsonPathTool } from './tools/JsonPathTool';
 import { UrlParserTool } from './tools/UrlParserTool';
 import { DiffTool } from './tools/DiffTool';
@@ -81,6 +82,18 @@ export const TOOLS: Tool[] = [
     group: 'format',
     icon: TextQuote,
     component: MarkdownTool,
+  },
+  {
+    // The Requests API client is a first-class top-level view too — same
+    // treatment as markdown: hidden from the menus, reachable via Ctrl+K
+    // and the ?tool=api deep link.
+    id: 'api',
+    nameKey: 'tools.requests.name',
+    descKey: 'tools.requests.desc',
+    keywords: ['api', 'request', 'http', 'rest', 'postman', 'curl', '接口', '请求', '调试'],
+    group: 'format',
+    icon: Globe,
+    component: ApiClientTool,
   },
   {
     id: 'base64',

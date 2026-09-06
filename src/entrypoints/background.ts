@@ -18,6 +18,7 @@
 
 import { defineBackground } from 'wxt/sandbox';
 import { LoadEngine } from '@/engine/load-engine';
+import { executeRawRequest, type RawRequest } from '@/engine/runner';
 import type { EngineCommand, EngineEvent, EngineState, MetricsSnapshot } from '@/shared/types';
 import type { CaptureRequest, CaptureResult, PickedElement, PickedRegion, PickerResult } from '@/shared/capture';
 
@@ -563,6 +564,31 @@ export default defineBackground(() => {
       }
     });
     return true; // tell Chrome we'll respond asynchronously
+  });
+
+  // Requests module: execute a single API request in the SW. Running the
+  // fetch here (instead of the dashboard page) exempts it from CORS via
+  // host_permissions — the same trick that powers the load engine. Each
+  // request gets its own AbortController so the dashboard's Stop button can
+  // cancel it mid-flight (API_ABORT).
+  const pendingApiRequests = new Map<string, AbortController>();
+  chrome.runtime.onMessage.addListener((msg: unknown, _sender, sendResponse) => {
+    if (!msg || typeof msg !== 'object') return false;
+    const { type } = msg as { type?: string };
+    if (type === 'API_REQUEST') {
+      const { id, request } = msg as { id: string; request: RawRequest };
+      const controller = new AbortController();
+      pendingApiRequests.set(id, controller);
+      executeRawRequest(request, { signal: controller.signal }).then((res) => {
+        pendingApiRequests.delete(id);
+        sendResponse(res);
+      });
+      return true; // respond asynchronously
+    }
+    if (type === 'API_ABORT') {
+      pendingApiRequests.get((msg as { id: string }).id)?.abort();
+    }
+    return false;
   });
 
   // Content-script replies routed back to the right tab.

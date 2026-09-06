@@ -19,18 +19,135 @@ export interface ProbeResult {
   finalUrl: string;
 }
 
+/* ————————————————————————————————————————————————————————————————
+ * Raw single-request execution — shared with the Requests module
+ * (an API client). The load engine wraps it in TestConfig/RequestResult
+ * semantics; the Requests module calls it directly through the
+ * background service worker (CORS-free) or in-page on the web build.
+ *
+ * Deliberately dumb about everything except HTTP: it performs the fetch
+ * with a timeout and returns a flat RawResponse. Variable interpolation
+ * and header/body assembly are the caller's job (see executeRequest).
+ * ———————————————————————————————————————————————————————————————— */
+
+export type RawErrorKind = '' | 'timeout' | 'network' | 'dns' | 'cors' | 'aborted' | 'http';
+
+export interface RawRequest {
+  method: string;
+  url: string;
+  /** Already-interpolated key/value pairs. */
+  headers: [string, string][];
+  /** Already-interpolated body; only sent for non-GET/HEAD methods. */
+  body?: string;
+  timeout: number;
+}
+
+export interface RawResponse {
+  status: number;
+  statusText: string;
+  ok: boolean;
+  /** One row per header name; duplicate values are already joined by the
+   *  Fetch API (`, `) the same way captureResponseHeaders used to do. */
+  headers: [string, string][];
+  body: string;
+  ms: number;
+  bytes: number;
+  finalUrl: string;
+  error: string;
+  errorKind: RawErrorKind;
+}
+
 /**
- * Capture response headers into a plain object. Multi-value headers (e.g.
- * Set-Cookie) are joined with `, ` — enough for inspection in the drawer,
- * not a faithful wire-format replay.
+ * Heuristic failure classification — the Fetch API doesn't expose a stable
+ * error type, so we sniff the message. Each branch maps to a stable UI
+ * colour/icon so users can diagnose at a glance.
  */
-function captureResponseHeaders(res: Response): Record<string, string> {
-  const out: Record<string, string> = {};
-  res.headers.forEach((value, key) => {
-    const prev = out[key];
-    out[key] = prev ? `${prev}, ${value}` : value;
-  });
-  return out;
+export function classifyError(e: unknown): RawErrorKind {
+  const err = e as Error & { cause?: unknown };
+  const message = err.message || String(err);
+  if (err.name === 'AbortError') return 'timeout';
+  if (/Failed to fetch|NetworkError|network/i.test(message)) return 'network';
+  if (/DNS|getaddrinfo|ENOTFOUND|hostname/i.test(message)) return 'dns';
+  if (/CORS|cors|Access-Control/i.test(message)) return 'cors';
+  if (/aborted/i.test(message)) return 'aborted';
+  return 'network';
+}
+
+/**
+ * Execute a single HTTP request. No interpolation, no assertions — the
+ * caller resolves variables and builds headers before calling.
+ *
+ * An optional external signal lets the caller cancel in-flight requests
+ * (the Requests module's Stop button); cancels are classified as `aborted`
+ * to distinguish them from internal timeout aborts.
+ */
+export async function executeRawRequest(raw: RawRequest, opts?: { signal?: AbortSignal }): Promise<RawResponse> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), Math.max(100, raw.timeout));
+  const external = opts?.signal;
+  const onExternalAbort = () => controller.abort();
+  if (external) {
+    if (external.aborted) controller.abort();
+    else external.addEventListener('abort', onExternalAbort);
+  }
+  const started = performance.now();
+  const method = raw.method.toUpperCase();
+  const headers: Record<string, string> = {};
+  for (const [key, value] of raw.headers) headers[key] = value;
+  const body = raw.body && method !== 'GET' && method !== 'HEAD' ? raw.body : undefined;
+
+  try {
+    // Wipe the previous run's entries — getEntriesByName would otherwise
+    // return every historical entry matching the URL and we'd mis-attribute
+    // them to the latest request.
+    performance.clearResourceTimings();
+  } catch {
+    /* not supported everywhere */
+  }
+
+  try {
+    const res = await fetch(raw.url, {
+      method,
+      headers,
+      body,
+      signal: controller.signal,
+      cache: 'no-store',
+    });
+    const text = await res.text();
+    const ms = performance.now() - started;
+    return {
+      status: res.status,
+      statusText: res.statusText,
+      ok: res.ok,
+      headers: Array.from(res.headers.entries()),
+      body: text,
+      ms,
+      bytes: new TextEncoder().encode(text).length,
+      finalUrl: res.url,
+      error: '',
+      errorKind: '',
+    };
+  } catch (e) {
+    const ms = performance.now() - started;
+    const err = e instanceof Error ? e : new Error(String(e));
+    return {
+      status: 0,
+      statusText: '',
+      ok: false,
+      headers: [],
+      body: '',
+      ms,
+      bytes: 0,
+      finalUrl: raw.url,
+      error: err.message,
+      // An external cancel reads as "aborted", an internal timeout as
+      // "timeout" — the UI labels them differently.
+      errorKind: external?.aborted ? 'aborted' : classifyError(e),
+    };
+  } finally {
+    clearTimeout(timer);
+    if (external) external.removeEventListener('abort', onExternalAbort);
+  }
 }
 
 /**
@@ -71,64 +188,29 @@ function captureTiming(url: string, totalMs: number): RequestResult['timing'] {
 }
 
 export async function executeRequest(config: TestConfig, vars: Record<string, string>): Promise<RequestResult> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), config.timeout);
-  const started = performance.now();
-  // Clear any stale entries from a previous request to the same URL —
-  // Performance API keeps them around and `getEntriesByName` would return
-  // all of them, which we'd then confuse for one request.
+  // Interpolation happens here (not in executeRawRequest) so the raw
+  // executor stays a pure HTTP pass-through.
   const url = interpolate(config.url, vars);
-  try {
-    // Wipe the previous run's entries — getEntriesByName would otherwise
-    // return every historical entry matching the URL and we'd mis-attribute
-    // them to the latest request.
-    performance.clearResourceTimings();
-  } catch {
-    /* not supported everywhere; the clamp in captureTiming still guards
-       against absurd numbers if stale entries slip through. */
-  }
-
-  try {
-    const res = await fetch(url, {
-      method: config.method,
-      headers: buildHeaders(config, vars),
-      body: config.method === 'GET' || config.method === 'HEAD' ? undefined : interpolate(config.body, vars),
-      signal: controller.signal,
-      cache: 'no-store',
-    });
-    const body = await res.text();
-    const ms = performance.now() - started;
-    return {
-      status: res.status,
-      ms,
-      body,
-      ok: res.ok,
-      error: '',
-      pass: false,
-      ts: Date.now(),
-      responseHeaders: captureResponseHeaders(res),
-      finalUrl: res.url,
-      bytes: new TextEncoder().encode(body).length,
-      timing: captureTiming(url, ms),
-    };
-  } catch (e) {
-    const err = e as Error;
-    const ms = performance.now() - started;
-    return {
-      status: 0,
-      ms,
-      body: '',
-      ok: false,
-      error: err.name === 'AbortError' ? 'TIMEOUT' : err.message,
-      pass: false,
-      ts: Date.now(),
-      // Best-effort: if the request hit the network at all before failing,
-      // surface whatever timing was captured.
-      timing: captureTiming(url, ms),
-    };
-  } finally {
-    clearTimeout(timer);
-  }
+  const res = await executeRawRequest({
+    method: config.method,
+    url,
+    headers: Object.entries(buildHeaders(config, vars)),
+    body: config.method === 'GET' || config.method === 'HEAD' ? undefined : interpolate(config.body, vars),
+    timeout: config.timeout,
+  });
+  return {
+    status: res.status,
+    ms: res.ms,
+    body: res.body,
+    ok: res.ok,
+    error: res.error,
+    pass: false,
+    ts: Date.now(),
+    responseHeaders: Object.fromEntries(res.headers),
+    finalUrl: res.finalUrl,
+    bytes: res.bytes,
+    timing: captureTiming(url, res.ms),
+  };
 }
 
 export async function executeAndAssert(config: TestConfig, vars: Record<string, string>): Promise<RequestResult> {
@@ -179,28 +261,18 @@ export async function probeRequest(config: TestConfig): Promise<ProbeResult> {
       finalUrl: res.url,
     };
   } catch (e) {
-    const err = e as Error & { cause?: unknown };
+    const err = e as Error;
     const ms = performance.now() - started;
-    const message = err.message || String(err);
-    // Heuristic classification — the Fetch API doesn't expose a stable
-    // error type, so we sniff the message. Each branch maps to a stable
-    // UI colour/icon so users can diagnose at a glance.
-    let errorKind: ProbeResult['errorKind'] = 'network';
-    if (err.name === 'AbortError') errorKind = 'timeout';
-    else if (/Failed to fetch|NetworkError|network/i.test(message)) errorKind = 'network';
-    else if (/DNS|getaddrinfo|ENOTFOUND|hostname/i.test(message)) errorKind = 'dns';
-    else if (/CORS|cors|Access-Control/i.test(message)) errorKind = 'cors';
-    else if (/aborted/i.test(message)) errorKind = 'aborted';
     return {
       ok: false,
       status: 0,
       ms,
       bytes: 0,
-      error: message,
-      errorKind,
+      error: err.message || String(err),
+      errorKind: classifyError(e),
       finalUrl: url,
     };
   } finally {
     clearTimeout(timer);
   }
-}
+}

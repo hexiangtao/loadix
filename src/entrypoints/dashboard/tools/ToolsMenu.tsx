@@ -10,7 +10,7 @@ const MENU_MAX_W = 760;
 
 interface ToolsMenuProps {
   activeTool: string | null;
-  view: 'loadtest' | 'tools' | 'markdown';
+  view: 'loadtest' | 'tools' | 'markdown' | 'api';
   onSelect: (id: string) => void;
 }
 
@@ -31,8 +31,9 @@ export function ToolsMenu({ activeTool, view, onSelect }: ToolsMenuProps) {
   // A tool is open → the trigger reads as the active destination.
   const inTools = view === 'tools';
 
-  // Markdown lives on its own top-level tab — it stays out of the menu.
-  const gallery = TOOLS.filter((tool) => tool.id !== 'markdown');
+  // Markdown and the Requests API client live on their own top-level tabs —
+  // they stay out of the menu (but remain in the Ctrl+K palette).
+  const gallery = TOOLS.filter((tool) => tool.id !== 'markdown' && tool.id !== 'api');
 
   useEffect(() => {
     if (!open) setQuery('');
