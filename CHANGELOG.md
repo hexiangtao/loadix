@@ -1,3 +1,5 @@
+## [1.48.1](https://github.com/hexiangtao/loadix/compare/v1.48.0...v1.48.1) (2026-09-06)
+
 # [1.48.0](https://github.com/hexiangtao/loadix/compare/v1.47.0...v1.48.0) (2026-09-06)
 
 
