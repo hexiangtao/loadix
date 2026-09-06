@@ -264,7 +264,7 @@
     "deleteRequest": "Delete",
     "deleteCollection": "Delete collection",
     "confirmDeleteRequest": "Delete “{{name}}”? This cannot be undone.",
-    "confirmDeleteCollection": "Delete “{{name}}” and everything inside it? Its requests become drafts.",
+    "confirmDeleteCollection": "Delete \"{{name}}\" and everything inside it? Its requests are deleted too.",
     "history": "History",
     "historyEmpty": "No history yet",
     "historyOpen": "Reopen this request as a draft",

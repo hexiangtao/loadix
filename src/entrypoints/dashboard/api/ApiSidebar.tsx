@@ -30,6 +30,11 @@ import { MenuItem, Popover } from '../components/Popover';
 import { timeAgo } from './time';
 
 const COLLAPSED_KEY = 'loadix-api:sidebarCollapsed';
+/** DnD payload type — same convention as the markdown sidebar. */
+const MIME_REQUEST = 'application/x-loadix-request';
+
+/** What is currently being dragged (kept in state for drop-target styling). */
+type DragState = { id: string } | null;
 
 interface ApiSidebarProps {
   requests: ApiRequest[];
@@ -52,6 +57,25 @@ interface ApiSidebarProps {
   onExport: () => void;
   onOpenHistory: (entry: ApiHistoryEntry) => void;
   onClearHistory: () => void;
+}
+
+/**
+ * Double-click detection on a row: fires `onDoubleClick` only when both
+ * clicks land within the system double-click threshold (time + distance),
+ * so two slow, far-apart clicks never trigger a rename.
+ */
+function useDoubleClick(onDoubleClick: () => void) {
+  const last = useRef<{ t: number; x: number; y: number } | null>(null);
+  const onClick = (e: React.MouseEvent) => {
+    const now = performance.now();
+    const prev = last.current;
+    last.current = { t: now, x: e.clientX, y: e.clientY };
+    if (prev && now - prev.t < 500 && Math.hypot(e.clientX - prev.x, e.clientY - prev.y) < 6) {
+      last.current = null;
+      onDoubleClick();
+    }
+  };
+  return onClick;
 }
 
 /** Inline text input used for naming a collection. */
@@ -88,6 +112,8 @@ export function ApiSidebar(props: ApiSidebarProps) {
   const { t } = useTranslation();
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(COLLAPSED_KEY) === '1');
   const [namingCollection, setNamingCollection] = useState(false);
+  const [dragState, setDragState] = useState<DragState>(null);
+  const [dropTarget, setDropTarget] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -110,13 +136,50 @@ export function ApiSidebar(props: ApiSidebarProps) {
       title={requestDisplayTitle(request, untitled)}
       active={request.id === props.currentId}
       collections={props.collections}
+      dragging={dragState?.id === request.id}
       onOpen={() => props.onOpenRequest(request.id)}
       onKeep={(name, cid) => props.onKeepRequest(request.id, name, cid)}
       onMove={(cid) => props.onMoveRequest(request.id, cid)}
       onDuplicate={() => props.onDuplicateRequest(request.id)}
       onDelete={() => props.onDeleteRequest(request.id)}
+      onDragStart={(e) => {
+        e.dataTransfer.setData(MIME_REQUEST, request.id);
+        e.dataTransfer.effectAllowed = 'move';
+        setDragState({ id: request.id });
+        setDropTarget(null);
+      }}
+      onDragEnd={() => {
+        setDragState(null);
+        setDropTarget(null);
+      }}
     />
   );
+
+  /* ——— Drag & drop: move requests between collections and Drafts ——— */
+
+  /** Whether `target` (collection id or 'drafts') accepts the dragged row. */
+  const canDrop = (target: string): boolean => {
+    if (!dragState) return false;
+    const dragged = props.requests.find((r) => r.id === dragState.id);
+    if (!dragged) return false;
+    // Only a change of place counts (dropping back into its own bucket is a no-op).
+    return target === 'drafts' ? dragged.collectionId != null : dragged.collectionId !== target;
+  };
+
+  const dragOver = (e: React.DragEvent, target: string) => {
+    if (!canDrop(target)) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDropTarget(target);
+  };
+
+  const drop = (e: React.DragEvent, target: string) => {
+    e.preventDefault();
+    if (!dragState || !canDrop(target)) return;
+    props.onMoveRequest(dragState.id, target === 'drafts' ? null : target);
+    setDragState(null);
+    setDropTarget(null);
+  };
 
   const collectionRows = (parentId: string | null, depth: number) =>
     byParent(parentId).map((collection) => (
@@ -125,9 +188,12 @@ export function ApiSidebar(props: ApiSidebarProps) {
         collection={collection}
         count={requestsIn(collection.id).length}
         depth={depth}
+        over={dropTarget === collection.id}
         onNewRequest={() => props.onNewRequestIn(collection.id)}
         onRename={(name) => props.onRenameCollection(collection.id, name)}
         onDelete={() => props.onDeleteCollection(collection.id)}
+        onDragOver={(e) => dragOver(e, collection.id)}
+        onDrop={(e) => drop(e, collection.id)}
       >
         {requestsIn(collection.id).map(requestRow)}
         {collectionRows(collection.id, depth + 1)}
@@ -230,7 +296,11 @@ export function ApiSidebar(props: ApiSidebarProps) {
 
         {/* Drafts */}
         {drafts.length > 0 && (
-          <div className="border-t border-line pt-2">
+          <div
+            className={`border-t border-line pt-2 ${dropTarget === 'drafts' ? 'rounded-lg bg-primary/10 ring-1 ring-primary' : ''}`}
+            onDragOver={(e) => dragOver(e, 'drafts')}
+            onDrop={(e) => drop(e, 'drafts')}
+          >
             <div className="px-2 pb-1 text-[11px] font-bold uppercase tracking-wide text-muted/70">
               {t('api.drafts')}
               <span className="ml-1.5 text-[10px] font-normal text-muted/50">{drafts.length}</span>
@@ -275,17 +345,24 @@ function CollectionRow({
   collection,
   count,
   depth,
+  over,
   onNewRequest,
   onRename,
   onDelete,
+  onDragOver,
+  onDrop,
   children,
 }: {
   collection: ApiCollection;
   count: number;
   depth: number;
+  /** True while a valid drag hovers this row — drop-target highlight. */
+  over: boolean;
   onNewRequest: () => void;
   onRename: (name: string) => void;
   onDelete: () => void;
+  onDragOver: (e: React.DragEvent) => void;
+  onDrop: (e: React.DragEvent) => void;
   children: React.ReactNode;
 }) {
   const { t } = useTranslation();
@@ -293,14 +370,23 @@ function CollectionRow({
   const [menuOpen, setMenuOpen] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const rowRef = useRef<HTMLDivElement>(null);
+  // Double-click the name to rename (single click still toggles open/closed).
+  const handleNameClick = useDoubleClick(() => {
+    setOpen(true);
+    setRenaming(true);
+  });
 
   return (
     <div>
       <div
         ref={rowRef}
         onClick={() => setOpen((v) => !v)}
+        onDragOver={onDragOver}
+        onDrop={onDrop}
         style={{ paddingLeft: 8 + depth * 12 }}
-        className="group relative flex cursor-pointer items-center gap-1 rounded-lg px-2 py-1.5 transition-colors duration-150 hover:bg-hover"
+        className={`group relative flex cursor-pointer items-center gap-1 rounded-lg px-2 py-1.5 transition-colors duration-150 hover:bg-hover ${
+          over ? 'bg-primary/10 ring-1 ring-primary' : ''
+        }`}
       >
         <ChevronDown size={13} className={`shrink-0 text-muted transition-transform duration-200 ${open ? '' : '-rotate-90'}`} />
         <Folder size={14} className={`shrink-0 transition-colors duration-150 ${open ? 'text-primary' : 'text-muted/60'}`} />
@@ -315,7 +401,7 @@ function CollectionRow({
             onCancel={() => setRenaming(false)}
           />
         ) : (
-          <span className="min-w-0 flex-1 truncate text-[13px] text-ink">
+          <span className="min-w-0 flex-1 cursor-text truncate text-[13px] text-ink" onClick={handleNameClick} onDoubleClick={(e) => e.stopPropagation()} title={collection.name}>
             {collection.name}
             {count > 0 && <span className="ml-1.5 text-[11px] text-muted/60">{count}</span>}
           </span>
@@ -374,28 +460,40 @@ function RequestRow({
   title,
   active,
   collections,
+  dragging,
   onOpen,
   onKeep,
   onMove,
   onDuplicate,
   onDelete,
+  onDragStart,
+  onDragEnd,
 }: {
   request: ApiRequest;
   title: string;
   active: boolean;
   collections: ApiCollection[];
+  /** True while this row is the one being dragged. */
+  dragging: boolean;
   onOpen: () => void;
   onKeep: (name: string, collectionId: string | null) => void;
   onMove: (collectionId: string | null) => void;
   onDuplicate: () => void;
   onDelete: () => void;
+  onDragStart: (e: React.DragEvent) => void;
+  onDragEnd: () => void;
 }) {
   const { t } = useTranslation();
   const rowRef = useRef<HTMLDivElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [dialog, setDialog] = useState<'keep' | 'move' | null>(null);
+  const [renaming, setRenaming] = useState(false);
   const [name, setName] = useState(request.name);
   const [target, setTarget] = useState(request.collectionId ?? '');
+  // Double-click the title to rename inline — commits as a Keep that keeps
+  // the request's current place (name + existing collection). A draft stays
+  // a draft until it is deliberately kept into a collection.
+  const handleTitleClick = useDoubleClick(() => setRenaming(true));
 
   const close = () => {
     setMenuOpen(false);
@@ -405,16 +503,34 @@ function RequestRow({
   return (
     <div
       ref={rowRef}
+      draggable
+      onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
       className={`group relative flex cursor-pointer items-center gap-1.5 rounded-lg px-2 py-1.5 transition-colors duration-150 hover:bg-hover ${
         active ? 'bg-primary/5' : ''
-      }`}
+      } ${dragging ? 'opacity-40' : ''}`}
     >
       <Globe size={13} className={`shrink-0 ${active ? 'text-primary' : 'text-muted/70'}`} />
       {active && <span className="absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full bg-primary" />}
-      <button onClick={onOpen} className={`flex min-w-0 flex-1 items-center gap-1.5 text-left text-[13px] ${active ? 'font-semibold text-primary' : 'text-ink'}`}>
-        <span className={`shrink-0 rounded px-1 py-px text-[9.5px] font-bold leading-4 ${METHOD_CHIP[request.method as ApiMethod] ?? 'bg-muted/10 text-muted'}`}>{request.method}</span>
-        <span className="truncate">{title}</span>
-      </button>
+      {renaming ? (
+        <div className="flex min-w-0 flex-1 items-center gap-1.5">
+          <span className={`shrink-0 rounded px-1 py-px text-[9.5px] font-bold leading-4 ${METHOD_CHIP[request.method as ApiMethod] ?? 'bg-muted/10 text-muted'}`}>{request.method}</span>
+          <NameInput
+            initial={request.name}
+            placeholder={t('api.requestNamePlaceholder')}
+            onCommit={(v) => {
+              setRenaming(false);
+              if (v.trim() !== request.name) onKeep(v.trim(), request.collectionId);
+            }}
+            onCancel={() => setRenaming(false)}
+          />
+        </div>
+      ) : (
+        <button onClick={(e) => { if (e.detail === 1) onOpen(); }} onDoubleClick={handleTitleClick} title={title} className={`flex min-w-0 flex-1 cursor-text items-center gap-1.5 text-left text-[13px] ${active ? 'font-semibold text-primary' : 'text-ink'}`}>
+          <span className={`shrink-0 rounded px-1 py-px text-[9.5px] font-bold leading-4 ${METHOD_CHIP[request.method as ApiMethod] ?? 'bg-muted/10 text-muted'}`}>{request.method}</span>
+          <span className="truncate">{title}</span>
+        </button>
+      )}
       <button
         onClick={(e) => {
           e.stopPropagation();

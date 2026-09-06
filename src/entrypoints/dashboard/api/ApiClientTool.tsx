@@ -284,8 +284,14 @@ export function ApiClientTool({ onOpenInLoadTest }: ApiClientToolProps) {
             for (const c of collections) if (c.parentId === cid) walk(c.id);
           };
           walk(id);
+          // Deletion is total: the collections AND the requests they held
+          // all go away together (the store mirrors this in one transaction).
           setCollections((prev) => prev.filter((c) => !doomed.has(c.id)));
-          setRequests((prev) => prev.map((r) => (r.collectionId && doomed.has(r.collectionId) ? { ...r, collectionId: null, updatedAt: Date.now() } : r)));
+          setRequests((prev) => {
+            const removed = prev.filter((r) => r.collectionId != null && doomed.has(r.collectionId));
+            for (const r of removed) void deleteRequestInStore(r.id);
+            return prev.filter((r) => !(r.collectionId != null && doomed.has(r.collectionId)));
+          });
           void deleteCollectionInStore(id);
         },
       });

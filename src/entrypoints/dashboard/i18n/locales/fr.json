@@ -262,7 +262,7 @@
     "deleteRequest": "Supprimer",
     "deleteCollection": "Supprimer la collection",
     "confirmDeleteRequest": "Supprimer « {{name}} » ? Cette action est irréversible.",
-    "confirmDeleteCollection": "Supprimer « {{name}} » et tout son contenu ? Ses requêtes deviendront des brouillons.",
+    "confirmDeleteCollection": "Supprimer « {{name}} » et tout son contenu ? Ses requêtes seront également supprimées.",
     "history": "Historique",
     "historyEmpty": "Aucun historique",
     "historyOpen": "Rouvrir cette requête en brouillon",

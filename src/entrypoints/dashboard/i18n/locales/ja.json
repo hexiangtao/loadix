@@ -263,7 +263,7 @@
     "deleteRequest": "削除",
     "deleteCollection": "コレクションを削除",
     "confirmDeleteRequest": "「{{name}}」を削除しますか？この操作は元に戻せません。",
-    "confirmDeleteCollection": "「{{name}}」とその中身を削除しますか？中のリクエストは下書きになります。",
+    "confirmDeleteCollection": "「{{name}}」とその中身を削除しますか？中のリクエストも削除されます。",
     "history": "履歴",
     "historyEmpty": "履歴はまだありません",
     "historyOpen": "このリクエストを下書きとして開き直す",

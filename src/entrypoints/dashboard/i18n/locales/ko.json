@@ -262,7 +262,7 @@
     "deleteRequest": "삭제",
     "deleteCollection": "컬렉션 삭제",
     "confirmDeleteRequest": "「{{name}}」을(를) 삭제할까요? 되돌릴 수 없습니다.",
-    "confirmDeleteCollection": "「{{name}}」과(와) 그 안의 모든 항목을 삭제할까요? 요청은 초안이 됩니다.",
+    "confirmDeleteCollection": "\"{{name}}\"과(와) 그 안의 모든 항목을 삭제할까요? 안의 요청도 함께 삭제됩니다.",
     "history": "기록",
     "historyEmpty": "아직 기록이 없습니다",
     "historyOpen": "이 요청을 초안으로 다시 열기",

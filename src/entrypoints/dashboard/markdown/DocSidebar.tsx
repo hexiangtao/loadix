@@ -50,6 +50,25 @@ const MIME_FOLDER = 'application/x-loadix-folder';
 type DragState = { type: 'doc' | 'folder'; id: string } | null;
 
 /** Inline rename input shared by doc and folder rows. */
+/**
+ * Double-click detection on a row: fires `onDoubleClick` only when both
+ * clicks land within the system double-click threshold (time + distance),
+ * so two slow, far-apart clicks never trigger a rename.
+ */
+function useDoubleClick(onDoubleClick: () => void) {
+  const last = useRef<{ t: number; x: number; y: number } | null>(null);
+  const onClick = (e: React.MouseEvent) => {
+    const now = performance.now();
+    const prev = last.current;
+    last.current = { t: now, x: e.clientX, y: e.clientY };
+    if (prev && now - prev.t < 500 && Math.hypot(e.clientX - prev.x, e.clientY - prev.y) < 6) {
+      last.current = null;
+      onDoubleClick();
+    }
+  };
+  return onClick;
+}
+
 function RenameInput({
   initial,
   placeholder,
@@ -212,6 +231,8 @@ function DocRow({
     setMenuOpen(false);
     setMoveOpen(false);
   };
+  // Double-click the title to rename inline (single click still opens).
+  const onDblClickTitle = useDoubleClick(() => setRenaming(true));
 
   return (
     <div
@@ -236,8 +257,12 @@ function DocRow({
         />
       ) : (
         <button
-          onClick={onOpen}
-          className={`flex min-w-0 flex-1 items-center gap-1.5 text-left text-[13px] transition-colors duration-150 ${
+          onClick={(e) => {
+            if (e.detail === 1) onOpen();
+          }}
+          onDoubleClick={onDblClickTitle}
+          title={title}
+          className={`flex min-w-0 flex-1 cursor-text items-center gap-1.5 text-left text-[13px] transition-colors duration-150 ${
             active ? 'font-semibold text-primary' : 'text-ink'
           }`}
         >
@@ -390,6 +415,8 @@ function FolderRow({
   const [menuOpen, setMenuOpen] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const close = () => setMenuOpen(false);
+  // Double-click the name to rename (single click still toggles open/closed).
+  const handleNameClick = useDoubleClick(() => setRenaming(true));
 
   return (
     <div
@@ -421,7 +448,12 @@ function FolderRow({
           onCancel={() => setRenaming(false)}
         />
       ) : (
-        <span className="min-w-0 flex-1 truncate text-[13px] text-ink">
+        <span
+          className="min-w-0 flex-1 cursor-text truncate text-[13px] text-ink"
+          onClick={handleNameClick}
+          onDoubleClick={(e) => e.stopPropagation()}
+          title={folder.name}
+        >
           {folder.name}
           {count > 0 && <span className="ml-1.5 text-[11px] text-muted/60">{count}</span>}
         </span>

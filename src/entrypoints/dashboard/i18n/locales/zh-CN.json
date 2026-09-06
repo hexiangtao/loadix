@@ -264,7 +264,7 @@
     "deleteRequest": "删除",
     "deleteCollection": "删除集合",
     "confirmDeleteRequest": "删除“{{name}}”？此操作不可撤销。",
-    "confirmDeleteCollection": "删除“{{name}}”及其全部内容？其中的请求会变为草稿。",
+    "confirmDeleteCollection": "删除“{{name}}”及其全部内容？其中的请求会一并删除。",
     "history": "历史",
     "historyEmpty": "暂无历史",
     "historyOpen": "将此请求重新打开为草稿",

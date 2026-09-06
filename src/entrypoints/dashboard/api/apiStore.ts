@@ -69,8 +69,9 @@ export async function saveCollection(collection: ApiCollection): Promise<void> {
 }
 
 /**
- * Deletes a collection and its whole subtree; the requests they held become
- * drafts (collectionId reset) so nothing is lost.
+ * Deletes a collection and its whole subtree, together with every request
+ * they held — deletion is recursive and total, nothing is left behind as
+ * stray drafts.
  */
 export async function deleteCollection(id: string): Promise<void> {
   const db = await open();
@@ -85,12 +86,11 @@ export async function deleteCollection(id: string): Promise<void> {
   };
   walk(id);
   for (const cid of doomed) await req(collectionStore.delete(cid));
-  const requests = await req(tx.objectStore('requests').getAll() as IDBRequest<ApiRequest[]>);
+  const requestStore = tx.objectStore('requests');
+  const requests = await req(requestStore.getAll() as IDBRequest<ApiRequest[]>);
   for (const request of requests) {
     if (request.collectionId != null && doomed.has(request.collectionId)) {
-      await req(
-        tx.objectStore('requests').put({ ...request, collectionId: null, updatedAt: Date.now() }),
-      );
+      await req(requestStore.delete(request.id));
     }
   }
 }
