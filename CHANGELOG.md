@@ -1,3 +1,10 @@
+# [1.48.0](https://github.com/hexiangtao/loadix/compare/v1.47.0...v1.48.0) (2026-09-06)
+
+
+### Features
+
+* **api:** draggable split divider between editor and response ([b779218](https://github.com/hexiangtao/loadix/commit/b7792185bc9164b5f0a3d7e70fce629233dd5163))
+
 # [1.47.0](https://github.com/hexiangtao/loadix/compare/v1.46.0...v1.47.0) (2026-09-06)
 
 
