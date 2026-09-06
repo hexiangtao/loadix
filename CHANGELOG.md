@@ -1,3 +1,10 @@
+# [1.47.0](https://github.com/hexiangtao/loadix/compare/v1.46.0...v1.47.0) (2026-09-06)
+
+
+### Features
+
+* **api:** add Requests API client module with UX pass ([07d87a2](https://github.com/hexiangtao/loadix/commit/07d87a2a36c5e27e38a993c2f43e9ff54d7e9d58))
+
 # [1.46.0](https://github.com/hexiangtao/loadix/compare/v1.45.2...v1.46.0) (2026-09-05)
 
 
