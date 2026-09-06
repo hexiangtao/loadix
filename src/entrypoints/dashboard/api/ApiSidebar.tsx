@@ -5,6 +5,10 @@
  * Drafts automatically, and the only act of saving is the Keep dialog
  * (name + destination). History is a browser-like list — every send lands
  * here, one click reopens it as a fresh draft.
+ *
+ * Drag & drop is position-aware: row edges show an insertion line (reorder
+ * within the sibling group), folder middles show the drop ring (move inside),
+ * and container bodies append. All reorder math lives in ../ordering.
  */
 
 import { useEffect, useRef, useState } from 'react';
@@ -27,14 +31,23 @@ import {
 import type { ApiCollection, ApiHistoryEntry, ApiMethod, ApiRequest } from './apiTypes';
 import { METHOD_CHIP, requestDisplayTitle } from './apiTypes';
 import { MenuItem, Popover } from '../components/Popover';
+import { DropLine } from '../components/DropLine';
+import { byOrderCreated, byOrderRecency, zoneFromEvent, type ReorderZone } from '../ordering';
 import { timeAgo } from './time';
 
 const COLLAPSED_KEY = 'loadix-api:sidebarCollapsed';
-/** DnD payload type — same convention as the markdown sidebar. */
+/** DnD payload types — same convention as the markdown sidebar. */
 const MIME_REQUEST = 'application/x-loadix-request';
+const MIME_COLLECTION = 'application/x-loadix-collection';
+/** Container drop targets that are not rows. */
+const DRAFTS_TARGET = '__drafts__';
+const ROOT_TARGET = '__root__';
+type ContainerTarget = typeof DRAFTS_TARGET | typeof ROOT_TARGET;
 
 /** What is currently being dragged (kept in state for drop-target styling). */
-type DragState = { id: string } | null;
+type DragState = { type: 'request' | 'collection'; id: string } | null;
+/** Where a drag currently hovers: a row/collection id, or a container target. */
+type DropTarget = { id: string; zone: ReorderZone } | null;
 
 interface ApiSidebarProps {
   requests: ApiRequest[];
@@ -49,7 +62,10 @@ interface ApiSidebarProps {
   onNewCollection: (name: string) => void;
   onKeepRequest: (id: string, name: string, collectionId: string | null) => void;
   onRenameCollection: (id: string, name: string) => void;
-  onMoveRequest: (id: string, collectionId: string | null) => void;
+  /** Move + reorder in one: parent change (optional) plus position within
+      the target sibling group (anchor null = append at the end). */
+  onReorderRequest: (id: string, collectionId: string | null, anchorId: string | null, zone: 'before' | 'after') => void;
+  onReorderCollection: (id: string, parentId: string | null, anchorId: string | null, zone: 'before' | 'after') => void;
   onDuplicateRequest: (id: string) => void;
   onDeleteRequest: (id: string) => void;
   onDeleteCollection: (id: string) => void;
@@ -113,7 +129,7 @@ export function ApiSidebar(props: ApiSidebarProps) {
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(COLLAPSED_KEY) === '1');
   const [namingCollection, setNamingCollection] = useState(false);
   const [dragState, setDragState] = useState<DragState>(null);
-  const [dropTarget, setDropTarget] = useState<string | null>(null);
+  const [dropTarget, setDropTarget] = useState<DropTarget>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -123,11 +139,119 @@ export function ApiSidebar(props: ApiSidebarProps) {
   const untitled = t('api.untitled');
   const drafts = props.requests.filter((r) => r.collectionId == null);
   const saved = props.requests.filter((r) => r.collectionId != null);
-  const byParent = (parentId: string | null) =>
-    props.collections.filter((c) => (c.parentId ?? null) === parentId).sort((a, b) => a.createdAt - b.createdAt);
+  const collectionsUnder = (parentId: string | null) =>
+    props.collections.filter((c) => (c.parentId ?? null) === parentId).sort(byOrderCreated);
   const requestsIn = (collectionId: string | null) =>
-    props.requests.filter((r) => r.collectionId === collectionId).sort((a, b) => b.updatedAt - a.updatedAt);
+    props.requests.filter((r) => (r.collectionId ?? null) === collectionId).sort(byOrderRecency);
   const sortedHistory = [...props.history].sort((a, b) => b.sentAt - a.sentAt);
+
+  /* ——— Position-aware drag & drop ——— */
+
+  const startDrag = (e: React.DragEvent, type: 'request' | 'collection', id: string) => {
+    e.dataTransfer.setData(type === 'request' ? MIME_REQUEST : MIME_COLLECTION, id);
+    e.dataTransfer.effectAllowed = 'move';
+    setDragState({ type, id });
+    setDropTarget(null);
+  };
+
+  const endDrag = () => {
+    setDragState(null);
+    setDropTarget(null);
+  };
+
+  /** Whether dropping on `targetId` (a request/collection id) in `zone` is
+      meaningful. No-op drops (own bucket) stay unhighlighted. */
+  const canDropRow = (targetId: string, zone: ReorderZone): boolean => {
+    if (!dragState) return false;
+    if (dragState.type === 'request') {
+      const dragged = props.requests.find((r) => r.id === dragState.id);
+      if (!dragged) return false;
+      const target = props.requests.find((r) => r.id === targetId);
+      if (!target) {
+        // A collection row: edges = move/append into it, middle = same.
+        return zone === 'into' ? dragged.collectionId !== targetId : true;
+      }
+      // A request row: edges reorder within the anchor's group — always fine.
+      return true;
+    }
+    const dragged = props.collections.find((c) => c.id === dragState.id);
+    if (!dragged) return false;
+    const target = props.collections.find((c) => c.id === targetId);
+    if (!target) return false;
+    if (zone === 'into') {
+      if (target.id === dragged.id) return false;
+      // Never into the dragged collection's own subtree (cycles).
+      let cur = target.parentId != null ? props.collections.find((c) => c.id === target.parentId) : undefined;
+      while (cur) {
+        if (cur.id === dragged.id) return false;
+        const parentId = cur.parentId;
+        cur = parentId != null ? props.collections.find((c) => c.id === parentId) : undefined;
+      }
+      return true;
+    }
+    return target.id !== dragged.id;
+  };
+
+  const handleRowDragOver = (e: React.DragEvent, targetId: string, supportInto: boolean) => {
+    const zone = zoneFromEvent(e, supportInto);
+    if (!canDropRow(targetId, zone)) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDropTarget({ id: targetId, zone });
+  };
+
+  const handleRowDrop = (e: React.DragEvent, targetId: string, supportInto: boolean) => {
+    e.preventDefault();
+    const zone = zoneFromEvent(e, supportInto);
+    const ds = dragState;
+    endDrag();
+    if (!ds || !canDropRow(targetId, zone)) return;
+    if (ds.type === 'request') {
+      const target = props.requests.find((r) => r.id === targetId);
+      if (!target) {
+        // Dropped on a collection row (any zone) → move into it, appended.
+        props.onReorderRequest(ds.id, targetId, null, 'after');
+      } else {
+        props.onReorderRequest(ds.id, target.collectionId ?? null, target.id, zone === 'before' ? 'before' : 'after');
+      }
+    } else {
+      const target = props.collections.find((c) => c.id === targetId);
+      if (!target) return;
+      if (zone === 'into') props.onReorderCollection(ds.id, target.id, null, 'after');
+      else props.onReorderCollection(ds.id, target.parentId ?? null, target.id, zone === 'before' ? 'before' : 'after');
+    }
+  };
+
+  /** Container bodies (Drafts bucket, root list): pointer over a gap appends
+      to that group. The target guard keeps row-level zones from being
+      overridden by the bubbling container event. */
+  const canDropContainer = (container: ContainerTarget): boolean => {
+    if (!dragState) return false;
+    return container === DRAFTS_TARGET ? dragState.type === 'request' : dragState.type === 'collection';
+  };
+
+  const handleContainerDragOver = (e: React.DragEvent, container: ContainerTarget) => {
+    if (e.target !== e.currentTarget) return;
+    if (!canDropContainer(container)) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDropTarget({ id: container, zone: 'into' });
+  };
+
+  const handleContainerDrop = (e: React.DragEvent, container: ContainerTarget) => {
+    if (e.target !== e.currentTarget) return;
+    e.preventDefault();
+    const ds = dragState;
+    endDrag();
+    if (!ds || !canDropContainer(container)) return;
+    if (container === DRAFTS_TARGET) props.onReorderRequest(ds.id, null, null, 'after');
+    else props.onReorderCollection(ds.id, null, null, 'after');
+  };
+
+  /** Row visuals: insertion line at the hovered edge, ring for "into". */
+  const indicatorOf = (rowId: string): 'before' | 'after' | null =>
+    dropTarget?.id === rowId && dropTarget.zone !== 'into' ? dropTarget.zone : null;
+  const intoOf = (rowId: string) => dropTarget?.id === rowId && dropTarget.zone === 'into';
 
   const requestRow = (request: ApiRequest) => (
     <RequestRow
@@ -136,64 +260,39 @@ export function ApiSidebar(props: ApiSidebarProps) {
       title={requestDisplayTitle(request, untitled)}
       active={request.id === props.currentId}
       collections={props.collections}
-      dragging={dragState?.id === request.id}
+      dragging={dragState?.type === 'request' && dragState.id === request.id}
+      indicator={indicatorOf(request.id)}
       onOpen={() => props.onOpenRequest(request.id)}
       onKeep={(name, cid) => props.onKeepRequest(request.id, name, cid)}
-      onMove={(cid) => props.onMoveRequest(request.id, cid)}
+      onMove={(cid) => props.onReorderRequest(request.id, cid, null, 'after')}
       onDuplicate={() => props.onDuplicateRequest(request.id)}
       onDelete={() => props.onDeleteRequest(request.id)}
-      onDragStart={(e) => {
-        e.dataTransfer.setData(MIME_REQUEST, request.id);
-        e.dataTransfer.effectAllowed = 'move';
-        setDragState({ id: request.id });
-        setDropTarget(null);
-      }}
-      onDragEnd={() => {
-        setDragState(null);
-        setDropTarget(null);
-      }}
+      onDragStart={(e) => startDrag(e, 'request', request.id)}
+      onDragEnd={endDrag}
+      onDragOver={(e) => handleRowDragOver(e, request.id, false)}
+      onDrop={(e) => handleRowDrop(e, request.id, false)}
     />
   );
 
-  /* ——— Drag & drop: move requests between collections and Drafts ——— */
-
-  /** Whether `target` (collection id or 'drafts') accepts the dragged row. */
-  const canDrop = (target: string): boolean => {
-    if (!dragState) return false;
-    const dragged = props.requests.find((r) => r.id === dragState.id);
-    if (!dragged) return false;
-    // Only a change of place counts (dropping back into its own bucket is a no-op).
-    return target === 'drafts' ? dragged.collectionId != null : dragged.collectionId !== target;
-  };
-
-  const dragOver = (e: React.DragEvent, target: string) => {
-    if (!canDrop(target)) return;
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    setDropTarget(target);
-  };
-
-  const drop = (e: React.DragEvent, target: string) => {
-    e.preventDefault();
-    if (!dragState || !canDrop(target)) return;
-    props.onMoveRequest(dragState.id, target === 'drafts' ? null : target);
-    setDragState(null);
-    setDropTarget(null);
-  };
-
   const collectionRows = (parentId: string | null, depth: number) =>
-    byParent(parentId).map((collection) => (
+    collectionsUnder(parentId).map((collection) => (
       <CollectionRow
         key={collection.id}
         collection={collection}
         count={requestsIn(collection.id).length}
         depth={depth}
-        over={dropTarget === collection.id}
+        dragging={dragState?.type === 'collection' && dragState.id === collection.id}
+        over={intoOf(collection.id)}
+        indicator={indicatorOf(collection.id)}
         onNewRequest={() => props.onNewRequestIn(collection.id)}
         onRename={(name) => props.onRenameCollection(collection.id, name)}
         onDelete={() => props.onDeleteCollection(collection.id)}
-        onDragOver={(e) => dragOver(e, collection.id)}
-        onDrop={(e) => drop(e, collection.id)}
+        onDragStart={(e) => startDrag(e, 'collection', collection.id)}
+        onDragEnd={endDrag}
+        onDragOver={(e) => handleRowDragOver(e, collection.id, true)}
+        onDrop={(e) => handleRowDrop(e, collection.id, true)}
+        onChildDragOver={(e) => handleRowDragOver(e, collection.id, true)}
+        onChildDrop={(e) => handleRowDrop(e, collection.id, true)}
       >
         {requestsIn(collection.id).map(requestRow)}
         {collectionRows(collection.id, depth + 1)}
@@ -287,19 +386,26 @@ export function ApiSidebar(props: ApiSidebarProps) {
           </div>
         )}
 
-        {/* Collections tree */}
-        {byParent(null).length === 0 && saved.length === 0 ? (
+        {/* Collections tree — the root list is itself a drop container
+            (append to root); rows carry their own edge/into zones. */}
+        {collectionsUnder(null).length === 0 && saved.length === 0 ? (
           <p className="px-3 py-6 text-center text-xs leading-relaxed text-muted">{t('api.emptyCollections')}</p>
         ) : (
-          <div className="pt-1">{collectionRows(null, 0)}</div>
+          <div
+            onDragOver={(e) => handleContainerDragOver(e, ROOT_TARGET)}
+            onDrop={(e) => handleContainerDrop(e, ROOT_TARGET)}
+            className={`pt-1 ${dropTarget?.id === ROOT_TARGET ? 'rounded-lg ring-1 ring-primary/50' : ''}`}
+          >
+            {collectionRows(null, 0)}
+          </div>
         )}
 
         {/* Drafts */}
         {drafts.length > 0 && (
           <div
-            className={`border-t border-line pt-2 ${dropTarget === 'drafts' ? 'rounded-lg bg-primary/10 ring-1 ring-primary' : ''}`}
-            onDragOver={(e) => dragOver(e, 'drafts')}
-            onDrop={(e) => drop(e, 'drafts')}
+            onDragOver={(e) => handleContainerDragOver(e, DRAFTS_TARGET)}
+            onDrop={(e) => handleContainerDrop(e, DRAFTS_TARGET)}
+            className={`border-t border-line pt-2 ${dropTarget?.id === DRAFTS_TARGET ? 'rounded-lg bg-primary/10 ring-1 ring-primary' : ''}`}
           >
             <div className="px-2 pb-1 text-[11px] font-bold uppercase tracking-wide text-muted/70">
               {t('api.drafts')}
@@ -345,24 +451,39 @@ function CollectionRow({
   collection,
   count,
   depth,
+  dragging,
   over,
+  indicator,
   onNewRequest,
   onRename,
   onDelete,
+  onDragStart,
+  onDragEnd,
   onDragOver,
   onDrop,
+  onChildDragOver,
+  onChildDrop,
   children,
 }: {
   collection: ApiCollection;
   count: number;
   depth: number;
-  /** True while a valid drag hovers this row — drop-target highlight. */
+  /** True while this row is the one being dragged. */
+  dragging: boolean;
+  /** True while a valid drag hovers the row's middle — drop-inside highlight. */
   over: boolean;
+  /** Insertion line at the hovered edge ('before' | 'after' | none). */
+  indicator: 'before' | 'after' | null;
   onNewRequest: () => void;
   onRename: (name: string) => void;
   onDelete: () => void;
+  onDragStart: (e: React.DragEvent) => void;
+  onDragEnd: () => void;
   onDragOver: (e: React.DragEvent) => void;
   onDrop: (e: React.DragEvent) => void;
+  /** Body (children area) of the open collection: gap drops land inside. */
+  onChildDragOver: (e: React.DragEvent) => void;
+  onChildDrop: (e: React.DragEvent) => void;
   children: React.ReactNode;
 }) {
   const { t } = useTranslation();
@@ -380,14 +501,19 @@ function CollectionRow({
     <div>
       <div
         ref={rowRef}
-        onClick={() => setOpen((v) => !v)}
+        draggable
+        onDragStart={onDragStart}
+        onDragEnd={onDragEnd}
         onDragOver={onDragOver}
         onDrop={onDrop}
+        onClick={() => setOpen((v) => !v)}
         style={{ paddingLeft: 8 + depth * 12 }}
         className={`group relative flex cursor-pointer items-center gap-1 rounded-lg px-2 py-1.5 transition-colors duration-150 hover:bg-hover ${
-          over ? 'bg-primary/10 ring-1 ring-primary' : ''
-        }`}
+          dragging ? 'opacity-40' : ''
+        } ${over ? 'bg-primary/10 ring-1 ring-primary' : ''}`}
       >
+        {indicator === 'before' && <DropLine position="top" />}
+        {indicator === 'after' && <DropLine position="bottom" />}
         <ChevronDown size={13} className={`shrink-0 text-muted transition-transform duration-200 ${open ? '' : '-rotate-90'}`} />
         <Folder size={14} className={`shrink-0 transition-colors duration-150 ${open ? 'text-primary' : 'text-muted/60'}`} />
         {renaming ? (
@@ -450,7 +576,11 @@ function CollectionRow({
           </Popover>
         )}
       </div>
-      {open && children && <div className="ml-2.5 border-l border-line/70 pl-1">{children}</div>}
+      {open && children && (
+        <div className="ml-2.5 border-l border-line/70 pl-1" onDragOver={onChildDragOver} onDrop={onChildDrop}>
+          {children}
+        </div>
+      )}
     </div>
   );
 }
@@ -461,6 +591,7 @@ function RequestRow({
   active,
   collections,
   dragging,
+  indicator,
   onOpen,
   onKeep,
   onMove,
@@ -468,6 +599,8 @@ function RequestRow({
   onDelete,
   onDragStart,
   onDragEnd,
+  onDragOver,
+  onDrop,
 }: {
   request: ApiRequest;
   title: string;
@@ -475,6 +608,8 @@ function RequestRow({
   collections: ApiCollection[];
   /** True while this row is the one being dragged. */
   dragging: boolean;
+  /** Insertion line at the hovered edge ('before' | 'after' | none). */
+  indicator: 'before' | 'after' | null;
   onOpen: () => void;
   onKeep: (name: string, collectionId: string | null) => void;
   onMove: (collectionId: string | null) => void;
@@ -482,6 +617,8 @@ function RequestRow({
   onDelete: () => void;
   onDragStart: (e: React.DragEvent) => void;
   onDragEnd: () => void;
+  onDragOver: (e: React.DragEvent) => void;
+  onDrop: (e: React.DragEvent) => void;
 }) {
   const { t } = useTranslation();
   const rowRef = useRef<HTMLDivElement>(null);
@@ -506,10 +643,14 @@ function RequestRow({
       draggable
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
       className={`group relative flex cursor-pointer items-center gap-1.5 rounded-lg px-2 py-1.5 transition-colors duration-150 hover:bg-hover ${
         active ? 'bg-primary/5' : ''
       } ${dragging ? 'opacity-40' : ''}`}
     >
+      {indicator === 'before' && <DropLine position="top" />}
+      {indicator === 'after' && <DropLine position="bottom" />}
       <Globe size={13} className={`shrink-0 ${active ? 'text-primary' : 'text-muted/70'}`} />
       {active && <span className="absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full bg-primary" />}
       {renaming ? (

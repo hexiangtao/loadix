@@ -25,6 +25,7 @@ import { MarkdownPreview } from './MarkdownPreview';
 import { MarkdownEditor } from './MarkdownEditor';
 import { flattenForExport, svgToPng } from './MermaidBlock';
 import { DocSidebar } from './DocSidebar';
+import { byOrderCreated, byOrderRecency, planReorder } from '../ordering';
 import {
   createDoc,
   createFolder,
@@ -40,6 +41,8 @@ import {
   renameFolder,
   restoreDoc,
   saveDoc,
+  saveDocs,
+  saveFolders,
   trashDoc,
   type MarkdownDoc,
   type MarkdownFolder,
@@ -374,6 +377,42 @@ export function MarkdownTool({ initialPayload, fullscreen = false, chromeGone = 
     if (updated) setFolders((list) => list.map((f) => (f.id === id ? updated : f)));
   }, []);
 
+  /** Move + reorder a doc: parent change (optional) plus position in the
+      target group. Uses the sidebar's visible sort — orders first, then
+      recency — so the drag result matches what the user saw while dropping. */
+  const handleReorderDoc = useCallback(
+    (id: string, folderId: string | null, anchorId: string | null, zone: 'before' | 'after') => {
+      const moved = docsRef.current.find((d) => d.id === id);
+      if (!moved) return;
+      const group = docsRef.current
+        .filter((d) => (d.folderId ?? null) === folderId && d.id !== id)
+        .sort(byOrderRecency);
+      const movedInTarget = { ...moved, folderId };
+      const plan = planReorder(group, id, anchorId, zone, movedInTarget);
+      if (!plan) return;
+      setDocs((list) => list.map((d) => plan.ordered.find((x) => x.id === d.id) ?? d));
+      void saveDocs(plan.changed);
+    },
+    [],
+  );
+
+  /** Same for folders: reparent (nesting) plus position among siblings. */
+  const handleReorderFolder = useCallback(
+    (id: string, parentId: string | null, anchorId: string | null, zone: 'before' | 'after') => {
+      const moved = foldersRef.current.find((f) => f.id === id);
+      if (!moved) return;
+      const group = foldersRef.current
+        .filter((f) => (f.parentId ?? null) === parentId && f.id !== id)
+        .sort(byOrderCreated);
+      const movedInTarget = { ...moved, parentId };
+      const plan = planReorder(group, id, anchorId, zone, movedInTarget);
+      if (!plan) return;
+      setFolders((list) => list.map((f) => plan.ordered.find((x) => x.id === f.id) ?? f));
+      void saveFolders(plan.changed);
+    },
+    [],
+  );
+
 
   // Fullscreen toggles: double-click on the document, Ctrl/Cmd+Shift+F (only
   // meaningful while previewing), Esc to leave.
@@ -562,6 +601,8 @@ export function MarkdownTool({ initialPayload, fullscreen = false, chromeGone = 
         onCreateFolder={(name, parentId) => void handleCreateFolder(name, parentId)}
         onRenameDoc={(id, title) => void handleRenameDoc(id, title)}
         onMoveDoc={(id, folderId) => void handleMoveDoc(id, folderId)}
+        onReorderDoc={handleReorderDoc}
+        onReorderFolder={handleReorderFolder}
         onDeleteDoc={(id) => void handleDeleteDoc(id)}
         onRenameFolder={(id, name) => void handleRenameFolder(id, name)}
         onDeleteFolder={(id) => void handleDeleteFolder(id)}

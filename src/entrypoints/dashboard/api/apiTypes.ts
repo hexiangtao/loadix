@@ -73,6 +73,9 @@ export interface ApiRequest {
   auth: ApiAuth;
   createdAt: number;
   updatedAt: number;
+  /** Position within its sibling group (same collection / same parent).
+      Optional: legacy rows without it sort after ordered ones by age. */
+  order?: number;
 }
 
 export interface ApiCollection {
@@ -80,6 +83,8 @@ export interface ApiCollection {
   name: string;
   parentId: string | null;
   createdAt: number;
+  /** Position among sibling collections. */
+  order?: number;
 }
 
 /** A sent request, kept so History can reopen it as a fresh draft. */

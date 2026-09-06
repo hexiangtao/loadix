@@ -17,6 +17,9 @@ export interface MarkdownDoc {
   updatedAt: number;
   /** When set the doc sits in the recycle bin; null (or missing) means live. */
   deletedAt: number | null;
+  /** Position within its folder's sibling group. Optional: legacy docs
+      without it sort after ordered ones by recency. */
+  order?: number;
 }
 
 export interface MarkdownFolder {
@@ -24,6 +27,8 @@ export interface MarkdownFolder {
   name: string;
   parentId: string | null;
   createdAt: number;
+  /** Position among sibling folders. */
+  order?: number;
 }
 
 const DB_NAME = 'loadix-markdown';
@@ -141,6 +146,13 @@ export async function saveDoc(doc: MarkdownDoc): Promise<void> {
   await putOne('docs', doc);
 }
 
+/** Persists a batch of doc updates (reorders / moves) in one transaction. */
+export async function saveDocs(batch: MarkdownDoc[]): Promise<void> {
+  const db = await open();
+  const store = db.transaction('docs', 'readwrite').objectStore('docs');
+  for (const d of batch) store.put(d);
+}
+
 /** Updates title/folderId (and bumps updatedAt) without touching content. */
 export async function patchDocMeta(
   id: string,
@@ -217,6 +229,13 @@ export async function renameFolder(id: string, name: string): Promise<MarkdownFo
   const updated = { ...folder, name };
   await req(store.put(updated));
   return updated;
+}
+
+/** Persists a batch of folder updates (reorders / reparents) in one transaction. */
+export async function saveFolders(batch: MarkdownFolder[]): Promise<void> {
+  const db = await open();
+  const store = db.transaction('folders', 'readwrite').objectStore('folders');
+  for (const f of batch) store.put(f);
 }
 
 /** Moves a folder under another folder (parentId) or back to the root (null). */

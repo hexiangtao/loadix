@@ -24,9 +24,12 @@ import {
   deleteRequest as deleteRequestInStore,
   loadWorkspace,
   saveCollection,
+  saveCollections,
   saveRequest,
+  saveRequests,
 } from './apiStore';
 import { exportPostmanCollection, parsePostmanCollection } from './postmanImport';
+import { byOrderCreated, byOrderRecency, planReorder } from '../ordering';
 import { buildRawRequest, sendRequest, type SendHandle } from './requestRunner';
 import { ApiSidebar } from './ApiSidebar';
 import { RequestEditor } from './RequestEditor';
@@ -227,13 +230,41 @@ export function ApiClientTool({ onOpenInLoadTest }: ApiClientToolProps) {
     if (target) void saveCollection({ ...target, name });
   }, [collections]);
 
-  const handleMoveRequest = useCallback((id: string, collectionId: string | null) => {
-    setRequests((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, collectionId, updatedAt: Date.now() } : r)),
-    );
-    const target = requests.find((r) => r.id === id);
-    if (target) void saveRequest({ ...target, collectionId, updatedAt: Date.now() });
-  }, [requests]);
+  /** Move + reorder a request: parent change (optional) plus position in the
+      target group. Uses the sidebar's visible sort — orders first, then
+      recency — so the drag result matches what the user saw while dropping. */
+  const handleReorderRequest = useCallback(
+    (id: string, collectionId: string | null, anchorId: string | null, zone: 'before' | 'after') => {
+      const moved = requests.find((r) => r.id === id);
+      if (!moved) return;
+      const group = requests
+        .filter((r) => (r.collectionId ?? null) === collectionId && r.id !== id)
+        .sort(byOrderRecency);
+      const movedInTarget = { ...moved, collectionId, updatedAt: Date.now() };
+      const plan = planReorder(group, id, anchorId, zone, movedInTarget);
+      if (!plan) return;
+      setRequests((prev) => prev.map((r) => plan.ordered.find((x) => x.id === r.id) ?? r));
+      void saveRequests(plan.changed);
+    },
+    [requests],
+  );
+
+  /** Same for collections: reparent (nesting) plus position among siblings. */
+  const handleReorderCollection = useCallback(
+    (id: string, parentId: string | null, anchorId: string | null, zone: 'before' | 'after') => {
+      const moved = collections.find((c) => c.id === id);
+      if (!moved) return;
+      const group = collections
+        .filter((c) => (c.parentId ?? null) === parentId && c.id !== id)
+        .sort(byOrderCreated);
+      const movedInTarget = { ...moved, parentId };
+      const plan = planReorder(group, id, anchorId, zone, movedInTarget);
+      if (!plan) return;
+      setCollections((prev) => prev.map((c) => plan.ordered.find((x) => x.id === c.id) ?? c));
+      void saveCollections(plan.changed);
+    },
+    [collections],
+  );
 
   const handleDuplicateRequest = useCallback(
     (id: string) => {
@@ -388,7 +419,8 @@ export function ApiClientTool({ onOpenInLoadTest }: ApiClientToolProps) {
         onNewCollection={handleNewCollection}
         onKeepRequest={handleKeepRequest}
         onRenameCollection={handleRenameCollection}
-        onMoveRequest={handleMoveRequest}
+        onReorderRequest={handleReorderRequest}
+        onReorderCollection={handleReorderCollection}
         onDuplicateRequest={handleDuplicateRequest}
         onDeleteRequest={handleDeleteRequest}
         onDeleteCollection={handleDeleteCollection}

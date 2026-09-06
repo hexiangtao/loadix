@@ -56,6 +56,13 @@ export async function deleteRequest(id: string): Promise<void> {
   await req(db.transaction('requests', 'readwrite').objectStore('requests').delete(id));
 }
 
+/** Persists a batch of request updates (reorders / moves) in one transaction. */
+export async function saveRequests(batch: ApiRequest[]): Promise<void> {
+  const db = await open();
+  const store = db.transaction('requests', 'readwrite').objectStore('requests');
+  for (const r of batch) store.put(r);
+}
+
 /* ——— Collections ——— */
 
 export async function getAllCollections(): Promise<ApiCollection[]> {
@@ -66,6 +73,13 @@ export async function getAllCollections(): Promise<ApiCollection[]> {
 export async function saveCollection(collection: ApiCollection): Promise<void> {
   const db = await open();
   await req(db.transaction('collections', 'readwrite').objectStore('collections').put(collection));
+}
+
+/** Persists a batch of collection updates (reorders / reparents) in one transaction. */
+export async function saveCollections(batch: ApiCollection[]): Promise<void> {
+  const db = await open();
+  const store = db.transaction('collections', 'readwrite').objectStore('collections');
+  for (const c of batch) store.put(c);
 }
 
 /**

@@ -16,6 +16,8 @@ import {
   Trash2,
 } from 'lucide-react';
 import { docDisplayTitle, type MarkdownDoc, type MarkdownFolder } from './docStore';
+import { byOrderCreated, byOrderRecency, zoneFromEvent, type ReorderZone } from '../ordering';
+import { DropLine } from '../components/DropLine';
 
 interface DocSidebarProps {
   docs: MarkdownDoc[];
@@ -30,6 +32,10 @@ interface DocSidebarProps {
   onCreateFolder: (name: string, parentId: string | null) => void;
   onRenameDoc: (id: string, title: string) => void;
   onMoveDoc: (id: string, folderId: string | null) => void;
+  /** Move + reorder in one: parent change (optional) plus position within
+      the target sibling group (anchor null = append at the end). */
+  onReorderDoc: (id: string, folderId: string | null, anchorId: string | null, zone: 'before' | 'after') => void;
+  onReorderFolder: (id: string, parentId: string | null, anchorId: string | null, zone: 'before' | 'after') => void;
   onDeleteDoc: (id: string) => void;
   onRenameFolder: (id: string, name: string) => void;
   onDeleteFolder: (id: string) => void;
@@ -48,6 +54,8 @@ const MIME_FOLDER = 'application/x-loadix-folder';
 
 /** Drag payload shared by the whole rail: which row is being dragged. */
 type DragState = { type: 'doc' | 'folder'; id: string } | null;
+/** Row-level hover state: which row, and which band of it. */
+type RowHover = { id: string; zone: ReorderZone } | null;
 
 /** Inline rename input shared by doc and folder rows. */
 /**
@@ -200,9 +208,12 @@ function DocRow({
   active,
   folders,
   dragging,
+  indicator,
   onOpen,
   onDragStart,
   onDragEnd,
+  onDragOver,
+  onDrop,
   onRename,
   onMove,
   onDelete,
@@ -215,9 +226,13 @@ function DocRow({
   active: boolean;
   folders: MarkdownFolder[];
   dragging: boolean;
+  /** Insertion line at the hovered edge ('before' | 'after' | none). */
+  indicator: 'before' | 'after' | null;
   onOpen: () => void;
   onDragStart: (e: React.DragEvent) => void;
   onDragEnd: () => void;
+  onDragOver: (e: React.DragEvent) => void;
+  onDrop: (e: React.DragEvent) => void;
   onRename: (title: string) => void;
   onMove: (folderId: string | null) => void;
   onDelete: () => void;
@@ -240,10 +255,14 @@ function DocRow({
       draggable
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
       className={`group relative flex cursor-pointer items-center gap-1.5 rounded-lg px-2 py-1.5 transition-colors duration-150 hover:bg-hover ${
         dragging ? 'opacity-40' : ''
       }`}
     >
+      {indicator === 'before' && <DropLine position="top" />}
+      {indicator === 'after' && <DropLine position="bottom" />}
       <FileText size={13} className={`shrink-0 ${active ? 'text-primary' : 'text-muted/70'}`} />
       {renaming ? (
         <RenameInput
@@ -386,6 +405,7 @@ function FolderRow({
   indent,
   dragging,
   over,
+  indicator,
   onToggle,
   onDragStart,
   onDragEnd,
@@ -401,6 +421,8 @@ function FolderRow({
   indent: number;
   dragging: boolean;
   over: boolean;
+  /** Insertion line at the hovered edge ('before' | 'after' | none). */
+  indicator: 'before' | 'after' | null;
   onToggle: () => void;
   onDragStart: (e: React.DragEvent) => void;
   onDragEnd: () => void;
@@ -432,6 +454,8 @@ function FolderRow({
         dragging ? 'opacity-40' : ''
       } ${over ? 'bg-primary/10 ring-1 ring-primary' : ''}`}
     >
+      {indicator === 'before' && <DropLine position="top" />}
+      {indicator === 'after' && <DropLine position="bottom" />}
       <ChevronDown
         size={13}
         className={`shrink-0 text-muted transition-transform duration-200 ${open ? '' : '-rotate-90'}`}
@@ -603,6 +627,7 @@ export function DocSidebar(props: DocSidebarProps) {
   const [navPath, setNavPath] = useState<string[]>([]);
   const [namingFolder, setNamingFolder] = useState(false);
   const [dragState, setDragState] = useState<DragState>(null);
+  const [rowHover, setRowHover] = useState<RowHover>(null);
   const [dropTarget, setDropTarget] = useState<string | null>(null);
 
   // If the folder open in drill-down mode disappears (deleted), step up one
@@ -622,9 +647,10 @@ export function DocSidebar(props: DocSidebarProps) {
 
   const untitled = t('tools.markdown.untitled');
   const byUpdatedAt = (a: MarkdownDoc, b: MarkdownDoc) => b.updatedAt - a.updatedAt;
-  const byCreatedAt = (a: MarkdownFolder, b: MarkdownFolder) => a.createdAt - b.createdAt;
   const byFolder = (folderId: string | null) =>
-    docs.filter((d) => d.folderId === folderId).sort(byUpdatedAt);
+    docs.filter((d) => (d.folderId ?? null) === folderId).sort(byOrderRecency);
+  const foldersUnder = (parentId: string | null) =>
+    folders.filter((f) => (f.parentId ?? null) === parentId).sort(byOrderCreated);
   const toggleExpanded = (key: string) =>
     setExpanded((prev) => {
       const next = new Set(prev);
@@ -656,11 +682,13 @@ export function DocSidebar(props: DocSidebarProps) {
     e.dataTransfer.effectAllowed = 'move';
     setDragState({ type, id });
     setDropTarget(null);
+    setRowHover(null);
   };
 
   const endDrag = () => {
     setDragState(null);
     setDropTarget(null);
+    setRowHover(null);
   };
 
   /** Whether `target` ('root' | folder id | 'trash') accepts the current drag. */
@@ -700,10 +728,73 @@ export function DocSidebar(props: DocSidebarProps) {
     endDrag();
   };
 
+  /* ——— Position-aware row zones (reordering) ——— */
+
+  /** Whether hovering `targetId` (a doc/folder id) in `zone` is meaningful. */
+  const canDropRow = (targetId: string, zone: ReorderZone): boolean => {
+    if (!dragState) return false;
+    if (dragState.type === 'doc') {
+      const targetDoc = docs.find((d) => d.id === targetId);
+      if (targetDoc) return true; // edges reorder within the anchor's group
+      const targetFolder = folders.find((f) => f.id === targetId);
+      return targetFolder != null; // folder rows accept doc drops too
+    }
+    const dragged = folders.find((f) => f.id === dragState.id);
+    if (!dragged) return false;
+    const targetFolder = folders.find((f) => f.id === targetId);
+    if (!targetFolder) return false;
+    if (zone === 'into') {
+      if (targetFolder.id === dragged.id) return false;
+      let cur = targetFolder.parentId != null ? folders.find((f) => f.id === targetFolder.parentId) : undefined;
+      while (cur) {
+        if (cur.id === dragged.id) return false;
+        const parentId = cur.parentId;
+        cur = parentId != null ? folders.find((f) => f.id === parentId) : undefined;
+      }
+      return true;
+    }
+    return targetFolder.id !== dragged.id;
+  };
+
+  const handleRowDragOver = (e: React.DragEvent, targetId: string, supportInto: boolean) => {
+    const zone = zoneFromEvent(e, supportInto);
+    if (!canDropRow(targetId, zone)) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setRowHover({ id: targetId, zone });
+  };
+
+  const handleRowDrop = (e: React.DragEvent, targetId: string, supportInto: boolean) => {
+    e.preventDefault();
+    const zone = zoneFromEvent(e, supportInto);
+    const ds = dragState;
+    endDrag();
+    if (!ds || !canDropRow(targetId, zone)) return;
+    if (ds.type === 'doc') {
+      const targetDoc = docs.find((d) => d.id === targetId);
+      if (targetDoc) {
+        props.onReorderDoc(ds.id, targetDoc.folderId ?? null, targetDoc.id, zone === 'before' ? 'before' : 'after');
+      } else {
+        // Dropped on a folder row (any zone) → move into it, appended.
+        props.onReorderDoc(ds.id, targetId, null, 'after');
+      }
+    } else {
+      const targetFolder = folders.find((f) => f.id === targetId);
+      if (!targetFolder) return;
+      if (zone === 'into') props.onReorderFolder(ds.id, targetFolder.id, null, 'after');
+      else props.onReorderFolder(ds.id, targetFolder.parentId ?? null, targetFolder.id, zone === 'before' ? 'before' : 'after');
+    }
+  };
+
+  /** Row visuals: insertion line at the hovered edge, ring for "into". */
+  const indicatorOf = (rowId: string): 'before' | 'after' | null =>
+    rowHover?.id === rowId && rowHover.zone !== 'into' ? rowHover.zone : null;
+  const intoOf = (rowId: string) => rowHover?.id === rowId && rowHover.zone === 'into';
+
   /** One flat level of drill-down navigation: subfolders (tap to enter) then
       documents. Depth is carried by the breadcrumb path, never indentation. */
   const renderLevel = (folderId: string | null) => {
-    const subs = folders.filter((f) => (f.parentId ?? null) === folderId).sort(byCreatedAt);
+    const subs = foldersUnder(folderId);
     const items = byFolder(folderId);
     return (
       <div>
@@ -715,12 +806,13 @@ export function DocSidebar(props: DocSidebarProps) {
             open={false}
             indent={0}
             dragging={dragState?.type === 'folder' && dragState.id === f.id}
-            over={dropTarget === f.id}
+            over={intoOf(f.id)}
+            indicator={indicatorOf(f.id)}
             onToggle={() => navigateInto(f.id)}
             onDragStart={(e) => startDrag(e, 'folder', f.id)}
             onDragEnd={endDrag}
-            onDragOver={(e) => dragOver(e, f.id)}
-            onDrop={(e) => drop(e, f.id)}
+            onDragOver={(e) => handleRowDragOver(e, f.id, true)}
+            onDrop={(e) => handleRowDrop(e, f.id, true)}
             onCreateDoc={() => props.onCreateDoc(f.id)}
             onRename={(name) => props.onRenameFolder(f.id, name)}
             onDelete={() => props.onDeleteFolder(f.id)}
@@ -734,9 +826,12 @@ export function DocSidebar(props: DocSidebarProps) {
             active={doc.id === activeDocId}
             folders={folders}
             dragging={dragState?.type === 'doc' && dragState.id === doc.id}
+            indicator={indicatorOf(doc.id)}
             onOpen={() => onOpenDoc(doc.id)}
             onDragStart={(e) => startDrag(e, 'doc', doc.id)}
             onDragEnd={endDrag}
+            onDragOver={(e) => handleRowDragOver(e, doc.id, false)}
+            onDrop={(e) => handleRowDrop(e, doc.id, false)}
             onRename={(title) => props.onRenameDoc(doc.id, title)}
             onMove={(folderId) => props.onMoveDoc(doc.id, folderId)}
             onDelete={() => props.onDeleteDoc(doc.id)}
@@ -878,9 +973,12 @@ export function DocSidebar(props: DocSidebarProps) {
                           active={doc.id === activeDocId}
                           folders={folders}
                           dragging={dragState?.type === 'doc' && dragState.id === doc.id}
+                          indicator={indicatorOf(doc.id)}
                           onOpen={() => onOpenDoc(doc.id)}
                           onDragStart={(e) => startDrag(e, 'doc', doc.id)}
                           onDragEnd={endDrag}
+                          onDragOver={(e) => handleRowDragOver(e, doc.id, false)}
+                          onDrop={(e) => handleRowDrop(e, doc.id, false)}
                           onRename={(title) => props.onRenameDoc(doc.id, title)}
                           onMove={(folderId) => props.onMoveDoc(doc.id, folderId)}
                           onDelete={() => props.onDeleteDoc(doc.id)}
@@ -912,9 +1010,12 @@ export function DocSidebar(props: DocSidebarProps) {
                     active={doc.id === activeDocId}
                     folders={folders}
                     dragging={dragState?.type === 'doc' && dragState.id === doc.id}
+                    indicator={indicatorOf(doc.id)}
                     onOpen={() => onOpenDoc(doc.id)}
                     onDragStart={(e) => startDrag(e, 'doc', doc.id)}
                     onDragEnd={endDrag}
+                    onDragOver={(e) => handleRowDragOver(e, doc.id, false)}
+                    onDrop={(e) => handleRowDrop(e, doc.id, false)}
                     onRename={(title) => props.onRenameDoc(doc.id, title)}
                     onMove={(folderId) => props.onMoveDoc(doc.id, folderId)}
                     onDelete={() => props.onDeleteDoc(doc.id)}
