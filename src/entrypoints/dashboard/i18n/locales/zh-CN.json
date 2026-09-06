@@ -287,7 +287,8 @@
     "notJson": "响应不是合法 JSON，已显示原始内容。",
     "corsHint": "浏览器拦截了该请求（CORS）。使用扩展发送可不受此限制。",
     "exportName": "Loadix 请求",
-    "emptyEditor": "当前没有打开的请求，新建一个开始吧。"
+    "emptyEditor": "当前没有打开的请求，新建一个开始吧。",
+    "resizeSplit": "拖动调整大小 — 双击重置"
   },
   "common": {
     "delete": "删除",

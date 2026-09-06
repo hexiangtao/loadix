@@ -285,7 +285,8 @@
     "notJson": "La réponse n'est pas un JSON valide — affichage brut.",
     "corsHint": "Le navigateur a bloqué cette requête (CORS). Utilisez l'extension pour l'envoyer sans restriction.",
     "exportName": "Requêtes Loadix",
-    "emptyEditor": "Aucune requête ouverte — créez-en une pour commencer."
+    "emptyEditor": "Aucune requête ouverte — créez-en une pour commencer.",
+    "resizeSplit": "Glisser pour redimensionner — double-clic pour réinitialiser"
   },
   "common": {
     "delete": "Supprimer",

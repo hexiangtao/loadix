@@ -31,9 +31,11 @@ import { buildRawRequest, sendRequest, type SendHandle } from './requestRunner';
 import { ApiSidebar } from './ApiSidebar';
 import { RequestEditor } from './RequestEditor';
 import { ResponseView } from './ResponseView';
+import { SplitDivider } from './SplitDivider';
 
 const CURRENT_KEY = 'loadix-api:current';
 const VARS_KEY = 'loadix-api:vars';
+const EDITOR_HEIGHT_KEY = 'loadix-api:editor-height';
 const SAVE_DEBOUNCE_MS = 600;
 
 interface ApiClientToolProps {
@@ -54,6 +56,13 @@ export function ApiClientTool({ onOpenInLoadTest }: ApiClientToolProps) {
   const [response, setResponse] = useState<ApiResponse | null>(null);
   const [sending, setSending] = useState(false);
   const [vars, setVars] = useState<[string, string][]>([]);
+  // Split-divider preference: null = editor at natural height, otherwise px.
+  const [editorHeight, setEditorHeight] = useState<number | null>(() => {
+    const raw = localStorage.getItem(EDITOR_HEIGHT_KEY);
+    if (!raw) return null;
+    const n = Number.parseInt(raw, 10);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  });
   // The import hint is noise after the first successful import.
   const [importedOnce, setImportedOnce] = useState(() => localStorage.getItem('loadix-api:imported') === '1');
   const importedOnceRef = useRef(importedOnce);
@@ -324,6 +333,18 @@ export function ApiClientTool({ onOpenInLoadTest }: ApiClientToolProps) {
     void storageSet(VARS_KEY, next);
   }, []);
 
+  /* ——— Split divider ——— */
+
+  const handleResizeEditor = useCallback((px: number) => {
+    setEditorHeight(px);
+    localStorage.setItem(EDITOR_HEIGHT_KEY, String(px));
+  }, []);
+
+  const handleResetEditor = useCallback(() => {
+    setEditorHeight(null);
+    localStorage.removeItem(EDITOR_HEIGHT_KEY);
+  }, []);
+
   /* ——— Render ——— */
 
   const collectionName = current?.collectionId ? (collections.find((c) => c.id === current.collectionId)?.name ?? '') : '';
@@ -354,7 +375,8 @@ export function ApiClientTool({ onOpenInLoadTest }: ApiClientToolProps) {
       <div className="flex min-w-0 flex-1 flex-col bg-panel">
         {current ? (
           <>
-            <RequestEditor request={current} onChange={patchCurrent} onSend={handleSend} onCancel={handleCancel} sending={sending} collectionName={collectionName} vars={vars} onVarsChange={handleVarsChange} />
+            <RequestEditor request={current} onChange={patchCurrent} onSend={handleSend} onCancel={handleCancel} sending={sending} collectionName={collectionName} vars={vars} onVarsChange={handleVarsChange} editorHeight={editorHeight} />
+            <SplitDivider onResize={handleResizeEditor} onReset={handleResetEditor} />
             <ResponseView response={response} sending={sending} request={current} vars={vars} onLoadTest={onOpenInLoadTest ?? (() => {})} />
           </>
         ) : (

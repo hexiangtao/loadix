@@ -33,6 +33,8 @@ interface RequestEditorProps {
   collectionName?: string;
   vars: [string, string][];
   onVarsChange: (vars: [string, string][]) => void;
+  /** Fixed editor height from the split divider (null = natural size). */
+  editorHeight?: number | null;
 }
 
 const METHODS: ApiMethod[] = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'];
@@ -49,7 +51,7 @@ const METHOD_COLOR: Record<ApiMethod, string> = {
 
 type Tab = 'params' | 'headers' | 'body' | 'auth';
 
-export function RequestEditor({ request, onChange, onSend, onCancel, sending, collectionName, vars, onVarsChange }: RequestEditorProps) {
+export function RequestEditor({ request, onChange, onSend, onCancel, sending, collectionName, vars, onVarsChange, editorHeight }: RequestEditorProps) {
   const { t } = useTranslation();
   const [tab, setTab] = useState<Tab>('params');
   const [varsOpen, setVarsOpen] = useState(false);
@@ -128,10 +130,12 @@ export function RequestEditor({ request, onChange, onSend, onCancel, sending, co
     { id: 'auth', label: t('api.tabAuth') },
   ];
 
+  const locked = editorHeight != null;
+
   return (
-    <div className="flex min-h-0 flex-col border-b border-line">
+    <div style={{ height: locked ? editorHeight : undefined }} className="flex min-h-0 flex-col">
       {/* ——— Request identity: inline-rename the name, see where it lives ——— */}
-      <div className="flex items-center gap-2 border-b border-line px-3 pb-1.5 pt-2">
+      <div className="flex shrink-0 items-center gap-2 border-b border-line px-3 pb-1.5 pt-2">
         <span className={`shrink-0 text-[10px] font-bold ${METHOD_COLOR[request.method]}`}>{request.method}</span>
         <input
           value={request.name}
@@ -153,7 +157,7 @@ export function RequestEditor({ request, onChange, onSend, onCancel, sending, co
       </div>
 
       {/* ——— Hero row ——— */}
-      <div className="flex items-center gap-1.5 px-3 py-2">
+      <div className="flex shrink-0 items-center gap-1.5 px-3 py-2">
         <select
           value={request.method}
           onChange={(e) => onChange({ method: e.target.value as ApiMethod })}
@@ -232,7 +236,7 @@ export function RequestEditor({ request, onChange, onSend, onCancel, sending, co
       )}
 
       {/* ——— Tab strip ——— */}
-      <div className="flex items-center justify-between gap-2 border-t border-line px-3 py-1.5">
+      <div className="flex shrink-0 items-center justify-between gap-2 border-t border-line px-3 py-1.5">
         <div className="flex items-center gap-0.5 rounded-lg border border-line bg-hover p-0.5">
           {tabs.map(({ id, label }) => (
             <button
@@ -265,8 +269,11 @@ export function RequestEditor({ request, onChange, onSend, onCancel, sending, co
         </button>
       </div>
 
-      {/* ——— Tab body ——— */}
-      <div className="max-h-44 min-h-0 overflow-y-auto border-t border-line bg-surface/40 px-3 py-2">
+      {/* ——— Tab body ———
+          Natural mode: capped at 176px so the editor never outgrows the
+          window. Locked mode (drag splitter): flex-1 fills the assigned
+          editor height and scrolls instead of pushing the response away. */}
+      <div className={`min-h-0 border-t border-line bg-surface/40 px-3 py-2 ${locked ? 'flex-1 overflow-y-auto' : 'max-h-44 overflow-y-auto'}`}>
         {tab === 'params' && (
           <KvRows rows={request.params} onChange={(params) => onChange({ params })} addLabel={t('api.addRow')} placeholderKey={t('api.paramKey')} placeholderValue={t('api.paramValue')} />
         )}

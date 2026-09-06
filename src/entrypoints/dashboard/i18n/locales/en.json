@@ -287,7 +287,8 @@
     "notJson": "Response is not valid JSON — showing raw.",
     "corsHint": "The browser blocked this request (CORS). Use the extension to send it without restrictions.",
     "exportName": "Loadix Requests",
-    "emptyEditor": "No request open — create one to get started."
+    "emptyEditor": "No request open — create one to get started.",
+    "resizeSplit": "Drag to resize — double-click to reset"
   },
   "common": {
     "delete": "Delete",
