@@ -191,8 +191,144 @@
 .md-mermaid svg { max-width: 100%; height: auto; }
 .md-mermaid-svg { display: contents; } /* keep the svg itself as the centered flex item */
 
-/* Export button — hover-revealed ghost in the diagram corner */
+/* Zoom affordance — hover-revealed ghost in the opposite corner, only in
+   zoomable contexts (the share viewer). The whole diagram is also clickable. */
 .md-mermaid-wrap { position: relative; }
+.md-mermaid-wrap.zoomable { cursor: zoom-in; }
+.md-mermaid-zoom {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  border: 1px solid var(--color-line);
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--color-panel) 88%, transparent);
+  backdrop-filter: blur(6px);
+  color: var(--color-muted);
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(-2px);
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.md-mermaid-wrap:hover .md-mermaid-zoom,
+.md-mermaid-zoom:focus-visible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+.md-mermaid-zoom:hover {
+  color: var(--color-primary);
+  border-color: color-mix(in srgb, var(--color-primary) 45%, var(--color-line));
+}
+
+/* ——— Zoom lightbox (share viewer) ———
+   Fixed overlay above everything (z-100 beats the page nav z-20 and the
+   mobile outline z-50). The scrim itself is the scroll container with
+   overscroll-behavior: contain, so wheel/touch over it never scrolls the
+   document behind — the diagram is all there is to see. */
+.md-zoom {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgb(0 0 0 / 0.55);
+  backdrop-filter: blur(4px);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.md-zoom-box {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 96vw;
+  max-height: 94vh;
+}
+.md-zoom-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.md-zoom-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 1px solid rgb(255 255 255 / 0.22);
+  border-radius: 8px;
+  background: rgb(255 255 255 / 0.1);
+  backdrop-filter: blur(6px);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.md-zoom-btn:hover {
+  background: rgb(255 255 255 / 0.18);
+  border-color: rgb(255 255 255 / 0.35);
+}
+.md-zoom-btn:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+.md-zoom-scroll {
+  overflow: auto;
+  overscroll-behavior: contain;
+  max-width: 96vw;
+  max-height: 82vh;
+  padding: 22px 26px;
+  border: 1px solid var(--color-line);
+  border-radius: 14px;
+  background: var(--color-panel);
+  box-shadow: 0 24px 70px rgb(0 0 0 / 0.45);
+  display: flex;
+  justify-content: center;
+}
+/* The clone is sized explicitly (pixels from its viewBox ratio, set when the
+   lightbox opens and on resize) — no CSS rules needed here. The panel is a
+   flex row so the svg stays centered and shrinks under the panel max. */
+.md-zoom-svg {
+  display: flex;
+  justify-content: center;
+  min-width: 0;
+}
+
+/* Click-to-zoom images (share viewer) — same lightbox chrome as diagrams.
+   The image keeps its intrinsic ratio while capping to the viewport. */
+.md-zoomable-img {
+  cursor: zoom-in;
+}
+.md-zoom-img {
+  display: flex;
+  justify-content: center;
+  min-width: 0;
+}
+.md-zoom-img img {
+  display: block;
+  max-width: 90vw;
+  max-height: 76vh;
+  width: auto;
+  height: auto;
+  border-radius: 8px;
+  box-shadow: 0 8px 40px rgb(0 0 0 / 0.35);
+}
+.md-zoom-hint {
+  margin: 0;
+  text-align: center;
+  font-size: 11.5px;
+  color: rgb(255 255 255 / 0.65);
+}
+
+/* Export button — hover-revealed ghost in the diagram corner */
 .md-mermaid-export {
   position: absolute;
   top: 8px;

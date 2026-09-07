@@ -1,10 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, Download } from 'lucide-react';
+import { AlertTriangle, Download, Maximize2, X } from 'lucide-react';
 import { useUiStore } from '../store/ui-store';
 
 interface MermaidBlockProps {
   source: string;
+  /** When true, clicking the diagram opens a fullscreen zoom lightbox
+      (used by the read-only share viewer). The dashboard keeps the plain
+      inline rendering with just the hover export button. */
+  zoomable?: boolean;
 }
 
 type RenderState =
@@ -29,14 +33,16 @@ type RenderState =
  * rasterized as an image, so without that step every PNG would come out
  * missing its labels — then rasterizes the SVG to PNG at 2x for crisp text.
  */
-export function MermaidBlock({ source }: MermaidBlockProps) {
+export function MermaidBlock({ source, zoomable = false }: MermaidBlockProps) {
   const { t } = useTranslation();
   const theme = useUiStore((s) => s.theme);
   const [state, setState] = useState<RenderState>({ status: 'loading' });
   const [exporting, setExporting] = useState(false);
   const [exportFailed, setExportFailed] = useState(false);
+  const [zoomed, setZoomed] = useState(false);
   const tokenRef = useRef(0);
   const boxRef = useRef<HTMLDivElement>(null);
+  const zoomHostRef = useRef<HTMLDivElement>(null);
   const failTimerRef = useRef<number | undefined>(undefined);
 
   useEffect(() => {
@@ -81,13 +87,13 @@ export function MermaidBlock({ source }: MermaidBlockProps) {
 
   useEffect(() => () => window.clearTimeout(failTimerRef.current), []);
 
-  const exportPng = async () => {
-    const svg = boxRef.current?.querySelector('svg');
-    if (!svg || exporting) return;
+  /** Shared export path — runs on the inline diagram or the lightbox clone. */
+  const doExport = async (svg: SVGSVGElement) => {
+    if (exporting) return;
     setExporting(true);
     setExportFailed(false);
     try {
-      const flat = flattenForExport(svg as unknown as SVGSVGElement);
+      const flat = flattenForExport(svg);
       const blob = await svgToPng(flat);
       downloadBlob(blob, diagramFileName(flat, source));
     } catch (e) {
@@ -100,23 +106,152 @@ export function MermaidBlock({ source }: MermaidBlockProps) {
     }
   };
 
+  const exportPng = () => {
+    const svg = boxRef.current?.querySelector('svg');
+    if (svg) void doExport(svg as unknown as SVGSVGElement);
+  };
+
+  // Zoom lightbox lifecycle: clone the rendered SVG, lock page scroll, close
+  // on Esc. The clone is a detached copy — the inline diagram keeps rendering
+  // in the document behind the scrim. Mermaid svgs carry only a viewBox + a
+  // percentage width (no intrinsic size), so the clone gets explicit pixel
+  // dimensions computed from its viewBox ratio to fit the viewport — crisp at
+  // any size since the vector is re-scaled, never rasterized.
+  useEffect(() => {
+    if (!zoomed) return;
+    const host = zoomHostRef.current;
+    const src = boxRef.current?.querySelector('svg');
+    if (!host || !src) {
+      setZoomed(false);
+      return;
+    }
+    const clone = src.cloneNode(true) as SVGSVGElement;
+    // Drop mermaid's inline max-width (its natural size) and the percentage
+    // width so only our explicit pixel size drives the layout.
+    clone.removeAttribute('style');
+    clone.removeAttribute('width');
+    clone.removeAttribute('height');
+    host.replaceChildren(clone);
+
+    const fit = () => {
+      const vb = clone.viewBox.baseVal;
+      const ratio = vb.width > 0 && vb.height > 0 ? vb.width / vb.height : 16 / 9;
+      const availW = Math.max(200, Math.min(window.innerWidth - 80, window.innerWidth * 0.92));
+      const availH = Math.max(200, window.innerHeight * 0.76);
+      let w = availW;
+      let h = w / ratio;
+      if (h > availH) {
+        h = availH;
+        w = h * ratio;
+      }
+      clone.setAttribute('width', String(Math.round(w)));
+      clone.setAttribute('height', String(Math.round(h)));
+    };
+    fit();
+    window.addEventListener('resize', fit);
+
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setZoomed(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('resize', fit);
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prevOverflow;
+      host.replaceChildren();
+    };
+  }, [zoomed]);
+
+  const zoomExport = () => {
+    const svg = zoomHostRef.current?.querySelector('svg');
+    if (svg) void doExport(svg);
+  };
+
   if (state.status === 'ready') {
     return (
-      <div className="md-mermaid-wrap">
-        <div className="md-mermaid" ref={boxRef}>
-          <div className="md-mermaid-svg" dangerouslySetInnerHTML={{ __html: state.svg }} />
-        </div>
-        <button
-          type="button"
-          className={`md-mermaid-export${exportFailed ? ' failed' : ''}`}
-          onClick={exportPng}
-          disabled={exporting}
-          title={t('tools.markdown.exportImage')}
+      <>
+        <div
+          className={`md-mermaid-wrap${zoomable ? ' zoomable' : ''}`}
+          title={zoomable ? t('tools.markdown.zoomDiagram') : undefined}
+          onClick={
+            zoomable
+              ? (e) => {
+                  // The export button lives inside the wrap — don't zoom on it.
+                  if ((e.target as HTMLElement).closest('button')) return;
+                  setZoomed(true);
+                }
+              : undefined
+          }
         >
-          {exporting ? <span className="md-mermaid-export-spin" /> : <Download size={13} />}
-          {exportFailed ? t('tools.markdown.exportFailed') : t('tools.markdown.exportImage')}
-        </button>
-      </div>
+          <div className="md-mermaid" ref={boxRef}>
+            <div className="md-mermaid-svg" dangerouslySetInnerHTML={{ __html: state.svg }} />
+          </div>
+          {zoomable && (
+            <button
+              type="button"
+              className="md-mermaid-zoom"
+              onClick={() => setZoomed(true)}
+              aria-label={t('tools.markdown.zoomDiagram')}
+              title={t('tools.markdown.zoomDiagram')}
+            >
+              <Maximize2 size={13} />
+            </button>
+          )}
+          <button
+            type="button"
+            className={`md-mermaid-export${exportFailed ? ' failed' : ''}`}
+            onClick={exportPng}
+            disabled={exporting}
+            title={t('tools.markdown.exportImage')}
+          >
+            {exporting ? <span className="md-mermaid-export-spin" /> : <Download size={13} />}
+            {exportFailed ? t('tools.markdown.exportFailed') : t('tools.markdown.exportImage')}
+          </button>
+        </div>
+
+        {zoomed && (
+          <div
+            className="md-zoom"
+            role="dialog"
+            aria-modal="true"
+            aria-label={t('tools.markdown.zoomDiagram')}
+            onMouseDown={(e) => {
+              if (e.target === e.currentTarget) setZoomed(false);
+            }}
+          >
+            <div className="md-zoom-box">
+              <div className="md-zoom-toolbar">
+                <button
+                  type="button"
+                  className="md-zoom-btn"
+                  onClick={() => void zoomExport()}
+                  disabled={exporting}
+                  title={t('tools.markdown.exportImage')}
+                >
+                  {exporting ? <span className="md-mermaid-export-spin" /> : <Download size={14} />}
+                  {t('tools.markdown.exportImage')}
+                </button>
+                <button
+                  type="button"
+                  className="md-zoom-btn"
+                  onClick={() => setZoomed(false)}
+                  autoFocus
+                  aria-label={t('tools.markdown.zoomClose')}
+                  title={t('tools.markdown.zoomClose')}
+                >
+                  <X size={16} />
+                </button>
+              </div>
+              <div className="md-zoom-scroll">
+                <div className="md-zoom-svg" ref={zoomHostRef} />
+              </div>
+              <p className="md-zoom-hint">{t('tools.markdown.zoomHint')}</p>
+            </div>
+          </div>
+        )}
+      </>
     );
   }
 

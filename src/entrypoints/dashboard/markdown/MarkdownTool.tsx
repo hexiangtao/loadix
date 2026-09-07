@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { toPng } from 'html-to-image';
 import {
   Check,
+  Clock,
   Columns2,
   Copy,
   ExternalLink,
@@ -12,8 +13,10 @@ import {
   ListTree,
   Loader2,
   PencilLine,
+  RefreshCw,
   Share2,
   Sparkles,
+  Unlink,
   X,
   type LucideIcon,
 } from 'lucide-react';
@@ -31,6 +34,7 @@ import {
   createFolder,
   deleteDocForever,
   deleteFolder,
+  deleteShareLocal,
   docDisplayTitle,
   emptyTrash,
   getAllDocs,
@@ -43,10 +47,24 @@ import {
   saveDoc,
   saveDocs,
   saveFolders,
+  saveShare,
   trashDoc,
   type MarkdownDoc,
   type MarkdownFolder,
+  type ShareRecord,
 } from './docStore';
+import {
+  ShareError,
+  copyToClipboard,
+  createShare,
+  hashSource,
+  revokeShare as revokeShareRemote,
+  setShareExpiry as setShareExpiryRemote,
+  shareUrl,
+  timeAgo,
+  timeUntil,
+  updateShare as updateShareRemote,
+} from './shareApi';
 import sample from './markdown-sample.md?raw';
 
 interface MarkdownToolProps {
@@ -208,8 +226,9 @@ export function MarkdownTool({ initialPayload, fullscreen = false, chromeGone = 
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const { docs: all, folders: allFolders } = await loadWorkspace();
+      const { docs: all, folders: allFolders, shares: allShares } = await loadWorkspace();
       if (cancelled) return;
+      setSharesState(allShares);
       // Documents in the recycle bin stay out of the live tree.
       setDocs(all.filter((d) => d.deletedAt == null));
       setTrashed(all.filter((d) => d.deletedAt != null).sort((a, b) => (b.deletedAt ?? 0) - (a.deletedAt ?? 0)));
@@ -309,15 +328,22 @@ export function MarkdownTool({ initialPayload, fullscreen = false, chromeGone = 
 
   // Destructive actions ask through a styled in-app dialog (state-driven)
   // instead of the native window.confirm, which is unstyled and clipped.
-  const handleDeleteDocForever = useCallback((id: string) => {
-    const doc = trashedRef.current.find((d) => d.id === id);
-    if (!doc) return;
-    setConfirm({
-      kind: 'deleteDocForever',
-      docId: id,
-      title: docDisplayTitle(doc, t('tools.markdown.untitled')),
-    });
-  }, [t]);
+  const handleDeleteDocForever = useCallback(
+    (id: string) => {
+      const doc = trashedRef.current.find((d) => d.id === id);
+      if (!doc) return;
+      const share = shareOf(id);
+      setConfirm({
+        kind: 'deleteDocForever',
+        docId: id,
+        title: docDisplayTitle(doc, t('tools.markdown.untitled')),
+        // A shared doc's link is revoked by default — the checkbox lets the
+        // user keep the published page alive deliberately.
+        revokeShare: share ? true : undefined,
+      });
+    },
+    [t],
+  );
 
   const handleEmptyTrash = useCallback(() => {
     if (trashedRef.current.length === 0) return;
@@ -332,6 +358,9 @@ export function MarkdownTool({ initialPayload, fullscreen = false, chromeGone = 
     if (pending.kind === 'deleteDocForever') {
       await deleteDocForever(pending.docId);
       setTrashed((list) => list.filter((d) => d.id !== pending.docId));
+      if (pending.revokeShare === true) await finishRevoke(pending.docId);
+    } else if (pending.kind === 'revokeShare') {
+      await finishRevoke(pending.docId);
     } else if (pending.kind === 'emptyTrash') {
       await emptyTrash();
       setTrashed([]);
@@ -439,6 +468,9 @@ export function MarkdownTool({ initialPayload, fullscreen = false, chromeGone = 
   const [exportFailed, setExportFailed] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [shareDialog, setShareDialog] = useState<ShareDialogState | null>(null);
+  /** Registry of share links this browser created (IndexedDB). */
+  const [shares, setShares] = useState<ShareRecord[]>([]);
+  const sharesRef = useRef<ShareRecord[]>([]);
   const areaRef = useRef<HTMLDivElement>(null);
   // The preview pane's scroll container — the outline scroll-spies on it.
   const previewScrollRef = useRef<HTMLDivElement>(null);
@@ -451,6 +483,22 @@ export function MarkdownTool({ initialPayload, fullscreen = false, chromeGone = 
   // The share API is hosted on the web build (lab.loadix.dev); the extension
   // dashboard has no backend, so the button only appears in http(s) contexts.
   const canShare = /^https?:$/.test(window.location.protocol);
+
+  /** Registry updates keep the ref and state in lockstep (refs feed the
+      handlers, state feeds the UI). */
+  const setSharesState = useCallback((next: ShareRecord[]) => {
+    sharesRef.current = next;
+    setShares(next);
+  }, []);
+
+  /** The share record for a doc, or null when it was never shared. */
+  const shareOf = (docId: string | null): ShareRecord | null =>
+    docId != null ? (sharesRef.current.find((s) => s.docId === docId) ?? null) : null;
+
+  const activeShare = shareOf(activeDocId);
+  /** The published link lags the editor when local edits happened after the
+      last publish — that's when "Update link" becomes available. */
+  const needsUpdate = activeShare ? activeShare.sourceHash !== hashSource(input) : false;
 
   const preview = showPreview ? (
     <MarkdownPreview source={input} />
@@ -546,43 +594,132 @@ export function MarkdownTool({ initialPayload, fullscreen = false, chromeGone = 
   };
 
   /**
-   * POSTs the current source to the share API and opens the result dialog
-   * with the link. Failures map to a friendly, retryable message.
+   * Share button entry. Already shared → open the management dialog (no
+   * network). Never shared → POST the current source, register the record
+   * locally, and copy the fresh link immediately — still inside the click's
+   * user-activation window, so no extra permission prompt on first use.
    */
   const shareDoc = async () => {
-    if (sharing || !showPreview) return;
+    if (sharing || !showPreview || !activeDocId) return;
+    const existing = shareOf(activeDocId);
+    if (existing) {
+      setShareDialog({ status: 'live', share: existing, needsUpdate: hashSource(input) !== existing.sourceHash });
+      return;
+    }
     setSharing(true);
     try {
-      const res = await fetch('/api/share', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ source: input }),
-      });
-      const data = (await res.json().catch(() => null)) as { id?: string; error?: string } | null;
-      if (!res.ok) {
-        setShareDialog({
-          status: 'error',
-          reason: data?.error === 'source_too_large' ? 'too-large' : 'generic',
-        });
-        return;
-      }
-      if (!data?.id) throw new Error('Share response missing id');
-      // The id rides in both the path and the query: hosts that redirect /s/*
-      // to a clean path keep the query (but drop the path id), so the viewer
-      // can recover the document either way.
-      const url = `${window.location.origin}/s/${data.id}?id=${data.id}`;
-      // Copy immediately — still inside the click's user-activation window, so
-      // no extra permission prompt is needed on first use. If the clipboard is
-      // denied the dialog falls back to the pre-selected URL + manual button.
-      const autoCopied = await copyToClipboard(url);
-      setShareDialog({ status: 'ready', url, autoCopied });
+      const created = await createShare(input);
+      const record: ShareRecord = {
+        id: created.id,
+        docId: activeDocId,
+        url: created.url,
+        ownerToken: created.ownerToken,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        sourceHash: hashSource(input),
+      };
+      setSharesState([record, ...sharesRef.current]);
+      await saveShare(record);
+      const autoCopied = await copyToClipboard(record.url);
+      setShareDialog({ status: 'ready', url: record.url, autoCopied });
     } catch (e) {
-      console.error('[markdown] share failed:', e);
-      setShareDialog({ status: 'error', reason: 'generic' });
+      setShareDialog({
+        status: 'error',
+        reason: e instanceof ShareError && e.code === 'too-large' ? 'too-large' : 'generic',
+      });
     } finally {
       setSharing(false);
     }
   };
+
+  /** Re-publishes the current content to the existing link (same URL). */
+  const [updatingShare, setUpdatingShare] = useState(false);
+  const handleUpdateShare = async () => {
+    const share = shareOf(activeDocId);
+    if (!share || updatingShare) return;
+    setUpdatingShare(true);
+    try {
+      await updateShareRemote(share.id, input, share.ownerToken);
+      const updated: ShareRecord = { ...share, updatedAt: Date.now(), sourceHash: hashSource(input) };
+      setSharesState(sharesRef.current.map((s) => (s.id === share.id ? updated : s)));
+      await saveShare(updated);
+      setShareDialog({ status: 'live', share: updated, needsUpdate: false, justUpdated: true });
+    } catch (e) {
+      setShareDialog({
+        status: 'error',
+        reason: e instanceof ShareError && e.code === 'too-large' ? 'too-large' : 'generic',
+      });
+    } finally {
+      setUpdatingShare(false);
+    }
+  };
+
+  /** Sets or clears the link's expiration, then reflects it in the registry
+      and the open dialog (which shows the updated validity + a confirmation). */
+  const [savingExpiry, setSavingExpiry] = useState(false);
+  const handleSetExpiry = async (expiresAt: number | null) => {
+    const share = shareOf(activeDocId);
+    if (!share || savingExpiry) return;
+    setSavingExpiry(true);
+    try {
+      await setShareExpiryRemote(share.id, expiresAt, share.ownerToken);
+      const updated: ShareRecord = { ...share, expiresAt: expiresAt ?? undefined };
+      setSharesState(sharesRef.current.map((s) => (s.id === share.id ? updated : s)));
+      await saveShare(updated);
+      setShareDialog({
+        status: 'live',
+        share: updated,
+        needsUpdate: hashSource(input) !== updated.sourceHash,
+        expiryJustApplied: true,
+      });
+    } catch (e) {
+      setShareDialog({
+        status: 'error',
+        reason: e instanceof ShareError && e.code === 'too-large' ? 'too-large' : 'generic',
+      });
+    } finally {
+      setSavingExpiry(false);
+    }
+  };
+
+  /** Revoke flow entry — always asks first (destructive, irreversible). */
+  const requestRevokeShare = useCallback(
+    (docId: string | null) => {
+      const share = shareOf(docId);
+      if (!share) return;
+      const doc =
+        docsRef.current.find((d) => d.id === docId) ?? trashedRef.current.find((d) => d.id === docId);
+      setConfirm({
+        kind: 'revokeShare',
+        docId: docId ?? '',
+        title: doc ? docDisplayTitle(doc, t('tools.markdown.untitled')) : share.id,
+      });
+    },
+    [t],
+  );
+
+  /** Deletes the server record and drops the local registry entry. Hard
+      failures (network) surface as an error dialog so the record survives. */
+  const finishRevoke = useCallback(
+    async (docId: string) => {
+      const share = shareOf(docId);
+      if (!share) return;
+      try {
+        await revokeShareRemote(share.id, share.ownerToken);
+      } catch (e) {
+        if (e instanceof ShareError && e.code === 'network') {
+          setShareDialog({ status: 'error', reason: 'generic' });
+          return;
+        }
+        // not-found: the link is already gone — still clean up locally.
+        if (!(e instanceof ShareError && e.code === 'not-found')) throw e;
+      }
+      setSharesState(sharesRef.current.filter((s) => s.id !== share.id));
+      await deleteShareLocal(share.id);
+      setShareDialog(null);
+    },
+    [setSharesState],
+  );
 
   return (
     <div
@@ -610,6 +747,8 @@ export function MarkdownTool({ initialPayload, fullscreen = false, chromeGone = 
         onRestoreDoc={(id) => void handleRestoreDoc(id)}
         onDeleteDocForever={(id) => void handleDeleteDocForever(id)}
         onEmptyTrash={() => void handleEmptyTrash()}
+        shares={shares}
+        onRevokeShare={(share) => requestRevokeShare(share.docId)}
       />
       {/* min-w-0: the tool column must shrink below its content's min-content
           width (toolbar, wide tables) so narrow windows clip inside scroll
@@ -706,11 +845,15 @@ export function MarkdownTool({ initialPayload, fullscreen = false, chromeGone = 
               <button
                 onClick={() => void shareDoc()}
                 disabled={sharing || !showPreview}
-                title={t('tools.markdown.shareHint')}
-                className="flex items-center gap-1.5 rounded-lg border border-line bg-panel px-3 py-1.5 text-xs font-semibold text-muted transition-colors duration-150 hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-45"
+                title={activeShare ? t('tools.markdown.shareManageHint') : t('tools.markdown.shareHint')}
+                className={`flex items-center gap-1.5 rounded-lg border bg-panel px-3 py-1.5 text-xs font-semibold transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-45 ${
+                  activeShare
+                    ? 'border-success/40 text-success hover:border-success hover:text-success'
+                    : 'border-line text-muted hover:border-primary hover:text-primary'
+                }`}
               >
                 {sharing ? <Loader2 size={13} className="animate-spin" /> : <Share2 size={13} />}
-                {sharing ? t('tools.markdown.sharing') : t('tools.markdown.share')}
+                {sharing ? t('tools.markdown.sharing') : activeShare ? t('tools.markdown.shareManage') : t('tools.markdown.share')}
               </button>
             )}
           </div>
@@ -800,11 +943,19 @@ flowchart LR
       {shareDialog && (
         <ShareDialog
           dialog={shareDialog}
+          updating={updatingShare}
+          savingExpiry={savingExpiry}
           onClose={() => setShareDialog(null)}
           onRetry={() => {
             setShareDialog(null);
             void shareDoc();
           }}
+          onUpdate={() => void handleUpdateShare()}
+          onRevoke={() => {
+            setShareDialog(null);
+            requestRevokeShare(activeDocId);
+          }}
+          onSetExpiry={(expiresAt) => void handleSetExpiry(expiresAt)}
         />
       )}
 
@@ -813,25 +964,40 @@ flowchart LR
           title={t(
             confirm.kind === 'deleteDocForever'
               ? 'tools.markdown.deleteForever'
-              : confirm.kind === 'emptyTrash'
-                ? 'tools.markdown.emptyTrash'
-                : 'tools.markdown.delete',
+              : confirm.kind === 'revokeShare'
+                ? 'tools.markdown.shareRevokeTitle'
+                : confirm.kind === 'emptyTrash'
+                  ? 'tools.markdown.emptyTrash'
+                  : 'tools.markdown.delete',
           )}
           message={
             confirm.kind === 'deleteDocForever'
               ? t('tools.markdown.confirmDeleteForever', { title: confirm.title })
-              : confirm.kind === 'emptyTrash'
-                ? t('tools.markdown.confirmEmptyTrash')
-                : t('tools.markdown.confirmDeleteFolder')
+              : confirm.kind === 'revokeShare'
+                ? t('tools.markdown.shareRevokeBody', { title: confirm.title })
+                : confirm.kind === 'emptyTrash'
+                  ? t('tools.markdown.confirmEmptyTrash')
+                  : t('tools.markdown.confirmDeleteFolder')
           }
           confirmLabel={t(
             confirm.kind === 'deleteDocForever'
               ? 'tools.markdown.deleteForever'
-              : confirm.kind === 'emptyTrash'
-                ? 'tools.markdown.emptyTrash'
-                : 'tools.markdown.delete',
+              : confirm.kind === 'revokeShare'
+                ? 'tools.markdown.shareRevoke'
+                : confirm.kind === 'emptyTrash'
+                  ? 'tools.markdown.emptyTrash'
+                  : 'tools.markdown.delete',
           )}
           cancelLabel={t('tools.markdown.confirmCancel')}
+          checkbox={
+            confirm.kind === 'deleteDocForever' && confirm.revokeShare !== undefined
+              ? {
+                  label: t('tools.markdown.deleteForeverRevokeCheck'),
+                  checked: confirm.revokeShare === true,
+                  onChange: (v) => setConfirm({ ...confirm, revokeShare: v }),
+                }
+              : undefined
+          }
           onConfirm={() => void runConfirm()}
           onClose={() => setConfirm(null)}
         />
@@ -840,32 +1006,80 @@ flowchart LR
   );
 }
 
-/** State of the share-action dialog. */
+/** State of the share-action dialog. 'ready' is a freshly minted link;
+    'live' is an existing link being managed (update / revoke). */
 type ShareDialogState =
   | { status: 'ready'; url: string; autoCopied: boolean }
+  | {
+      status: 'live';
+      share: ShareRecord;
+      needsUpdate: boolean;
+      justUpdated?: boolean;
+      /** Set right after the link's expiration was changed (transient banner). */
+      expiryJustApplied?: boolean;
+    }
   | { status: 'error'; reason: 'generic' | 'too-large' };
+
+/** Preset durations offered in the expiry row (never / 1h / 24h / 7d / 30d). */
+const EXPIRY_OPTIONS = [
+  { key: 'never', ms: null, labelKey: 'shareExpiresNever' },
+  { key: '1h', ms: 3_600_000, labelKey: 'shareExpires1h' },
+  { key: '1d', ms: 86_400_000, labelKey: 'shareExpires1d' },
+  { key: '7d', ms: 7 * 86_400_000, labelKey: 'shareExpires7d' },
+  { key: '30d', ms: 30 * 86_400_000, labelKey: 'shareExpires30d' },
+] as const;
+type ExpiryChoice = (typeof EXPIRY_OPTIONS)[number]['key'];
+
+/** Maps a stored expiresAt back to the closest preset (for the select's value). */
+function expiryChoiceOf(expiresAt: number | undefined): ExpiryChoice {
+  if (expiresAt == null) return 'never';
+  const remaining = Math.max(0, expiresAt - Date.now());
+  if (remaining <= 0) return 'never';
+  let best: ExpiryChoice = 'never';
+  let bestGap = Infinity;
+  for (const opt of EXPIRY_OPTIONS) {
+    if (opt.ms === null) continue;
+    const gap = Math.abs(opt.ms - remaining);
+    if (gap < bestGap) {
+      bestGap = gap;
+      best = opt.key;
+    }
+  }
+  return best;
+}
 
 /** Destructive-action confirmations (replaces window.confirm). */
 type PendingConfirm =
-  | { kind: 'deleteDocForever'; docId: string; title: string }
+  | { kind: 'deleteDocForever'; docId: string; title: string; revokeShare?: boolean }
   | { kind: 'emptyTrash' }
-  | { kind: 'deleteFolder'; folderId: string };
+  | { kind: 'deleteFolder'; folderId: string }
+  | { kind: 'revokeShare'; docId: string; title: string };
 
 /**
- * Share result sheet. The link was copied as soon as it was created (see
- * shareDoc), so by the time the sheet opens the job is already done — it
- * confirms with ✓ 已复制 and keeps the URL handy for a re-copy or preview.
- * When the clipboard was denied, the URL is pre-selected so ⌘/Ctrl+C still
- * works, and the manual button remains.
+ * Share sheet. Freshly created links were copied the moment they were made
+ * (see shareDoc) — the 'ready' state just confirms and keeps the URL handy.
+ * Existing links open in the 'live' state: status (Live · updated X ago),
+ * a stale warning with an Update action when local edits haven't been
+ * published, and a Revoke action that asks before destroying the link.
  */
 function ShareDialog({
   dialog,
+  updating,
+  savingExpiry,
   onClose,
   onRetry,
+  onUpdate,
+  onRevoke,
+  onSetExpiry,
 }: {
   dialog: ShareDialogState;
+  updating: boolean;
+  savingExpiry: boolean;
   onClose: () => void;
   onRetry: () => void;
+  onUpdate: () => void;
+  onRevoke: () => void;
+  onSetExpiry: (expiresAt: number | null) => void;
 }) {
   const { t } = useTranslation();
   const [copied, setCopied] = useState(() => dialog.status === 'ready' && dialog.autoCopied);
@@ -874,7 +1088,7 @@ function ShareDialog({
 
   useEffect(() => () => window.clearTimeout(revertTimerRef.current), []);
 
-  // Select the whole link the moment it appears.
+  // Select the whole link the moment a fresh one appears.
   useEffect(() => {
     if (dialog.status === 'ready') {
       const id = window.setTimeout(() => {
@@ -894,9 +1108,20 @@ function ShareDialog({
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
+  const url = dialog.status === 'ready' ? dialog.url : dialog.status === 'live' ? dialog.share.url : '';
+
+  // Expiry row state: which preset is selected (derived from the stored
+  // expiresAt so reopening the dialog shows the link's actual validity).
+  const [expiryChoice, setExpiryChoice] = useState<ExpiryChoice>(() =>
+    dialog.status === 'live' ? expiryChoiceOf(dialog.share.expiresAt) : 'never',
+  );
+  const liveShare = dialog.status === 'live' ? dialog.share : null;
+  const expired =
+    liveShare != null && liveShare.expiresAt != null && liveShare.expiresAt <= Date.now();
+
   const handleCopy = async () => {
-    if (dialog.status !== 'ready') return;
-    const ok = await copyToClipboard(dialog.url);
+    if (dialog.status !== 'ready' && dialog.status !== 'live') return;
+    const ok = await copyToClipboard(url);
     if (!ok) return; // link stays selected — Ctrl/Cmd+C still works
     setCopied(true);
     window.clearTimeout(revertTimerRef.current);
@@ -926,18 +1151,68 @@ function ShareDialog({
           </button>
         </div>
 
-        {dialog.status === 'ready' ? (
+        {dialog.status === 'live' && (
+          <>
+            {/* Status: expired links get a danger banner (the public GET
+                returns 404 meanwhile; the record stays so it can be renewed). */}
+            {expired ? (
+              <div className="mb-2.5 rounded-lg border border-danger/30 bg-danger/10 px-2.5 py-2">
+                <div className="flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-danger" />
+                  <span className="text-xs font-bold text-danger">{t('tools.markdown.shareExpired')}</span>
+                </div>
+                <p className="mt-1 text-[11.5px] leading-relaxed text-muted">
+                  {t('tools.markdown.shareExpiredHint')}
+                </p>
+              </div>
+            ) : (
+              <div className="mb-2.5 flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-success" />
+                <span className="text-xs font-bold text-success">{t('tools.markdown.shareLive')}</span>
+                <span className="text-[11.5px] text-muted">
+                  {t('tools.markdown.shareUpdatedAgo', { time: timeAgo(dialog.share.updatedAt) })}
+                </span>
+              </div>
+            )}
+            {dialog.expiryJustApplied && (
+              <div className="mb-2.5 flex items-center gap-1.5 rounded-lg border border-success/30 bg-success/10 px-2.5 py-1.5 text-xs font-semibold text-success">
+                <Check size={12} />
+                {t('tools.markdown.shareExpiryApplied')}
+              </div>
+            )}
+            {dialog.justUpdated ? (
+              <div className="mb-2.5 flex items-center gap-1.5 rounded-lg border border-success/30 bg-success/10 px-2.5 py-1.5 text-xs font-semibold text-success">
+                <Check size={12} />
+                {t('tools.markdown.shareUpdated')}
+              </div>
+            ) : dialog.needsUpdate ? (
+              <div className="mb-2.5 flex items-center justify-between gap-2 rounded-lg border border-line bg-hover px-2.5 py-1.5">
+                <span className="text-xs text-muted">{t('tools.markdown.shareNeedsUpdate')}</span>
+                <button
+                  onClick={onUpdate}
+                  disabled={updating}
+                  className="flex shrink-0 cursor-pointer items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-primary transition-colors duration-150 hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-45"
+                >
+                  {updating ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+                  {updating ? t('tools.markdown.shareUpdating') : t('tools.markdown.shareUpdate')}
+                </button>
+              </div>
+            ) : null}
+          </>
+        )}
+
+        {dialog.status === 'ready' || dialog.status === 'live' ? (
           <div className="flex items-center rounded-lg border border-line bg-panel pl-3 transition-colors duration-150 focus-within:border-primary">
             <input
               ref={linkRef}
               readOnly
-              value={dialog.url}
+              value={url}
               aria-label={t('tools.markdown.shareUrlLabel')}
               onFocus={(e) => e.currentTarget.select()}
               className="w-full min-w-0 bg-transparent font-mono text-[12.5px] text-ink outline-none"
             />
             <button
-              onClick={() => window.open(dialog.url, '_blank', 'noopener')}
+              onClick={() => window.open(url, '_blank', 'noopener')}
               aria-label={t('tools.markdown.shareOpen')}
               title={t('tools.markdown.shareOpen')}
               className="shrink-0 cursor-pointer rounded-md p-2 text-muted transition-colors duration-150 hover:bg-hover hover:text-ink"
@@ -968,42 +1243,59 @@ function ShareDialog({
             </div>
           </>
         )}
+
+        {/* Validity row — only for existing links: pick a preset and apply.
+            Setting one makes the link 404 after that point; "Never" clears it. */}
+        {dialog.status === 'live' && (
+          <div className="mt-2.5 flex items-center justify-between gap-2">
+            <span className="shrink-0 text-xs text-muted">{t('tools.markdown.shareExpires')}</span>
+            <div className="flex min-w-0 items-center gap-1.5">
+              {!expired && dialog.share.expiresAt != null && (
+                <span className="shrink-0 text-[11px] text-muted">
+                  {t('tools.markdown.shareExpiresIn', { time: timeUntil(dialog.share.expiresAt) })}
+                </span>
+              )}
+              <select
+                value={expiryChoice}
+                onChange={(e) => setExpiryChoice(e.target.value as ExpiryChoice)}
+                aria-label={t('tools.markdown.shareExpires')}
+                className="max-w-28 cursor-pointer rounded-lg border border-line bg-panel px-1.5 py-1 text-xs text-ink outline-none transition-colors duration-150 focus:border-primary"
+              >
+                {EXPIRY_OPTIONS.map((o) => (
+                  <option key={o.key} value={o.key}>
+                    {t(`tools.markdown.${o.labelKey}`)}
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={() => {
+                  const ms = EXPIRY_OPTIONS.find((o) => o.key === expiryChoice)?.ms ?? null;
+                  onSetExpiry(ms === null ? null : Date.now() + ms);
+                }}
+                disabled={savingExpiry}
+                className="flex shrink-0 cursor-pointer items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-primary transition-colors duration-150 hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-45"
+              >
+                {savingExpiry ? <Loader2 size={12} className="animate-spin" /> : <Clock size={12} />}
+                {t('tools.markdown.shareExpiresApply')}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {dialog.status === 'live' && (
+          <div className="mt-3 flex justify-end border-t border-line pt-2.5">
+            <button
+              onClick={onRevoke}
+              className="flex cursor-pointer items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-semibold text-danger transition-colors duration-150 hover:bg-danger/10"
+            >
+              <Unlink size={12} />
+              {t('tools.markdown.shareRevoke')}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
-}
-
-/**
- * Writes text to the clipboard: Async Clipboard API first, then the legacy
- * textarea + execCommand path (covers insecure contexts and browsers without
- * the API). Never throws — resolves false when every path is denied so the
- * caller can fall back to its own affordance.
- */
-async function copyToClipboard(text: string): Promise<boolean> {
-  try {
-    if (navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(text);
-      return true;
-    }
-  } catch {
-    // Fall through to the legacy path below.
-  }
-  try {
-    const ta = document.createElement('textarea');
-    ta.value = text;
-    ta.setAttribute('readonly', '');
-    ta.style.position = 'fixed';
-    ta.style.top = '0';
-    ta.style.left = '-9999px';
-    ta.style.opacity = '0';
-    document.body.appendChild(ta);
-    ta.select();
-    const ok = document.execCommand('copy');
-    ta.remove();
-    return ok;
-  } catch {
-    return false;
-  }
 }
 
 /* ——— Full-document export helpers ——— */

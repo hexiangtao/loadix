@@ -19,6 +19,7 @@ export function ConfirmDialog({
   message,
   confirmLabel,
   cancelLabel,
+  checkbox,
   onConfirm,
   onClose,
 }: {
@@ -26,6 +27,10 @@ export function ConfirmDialog({
   message: string;
   confirmLabel: string;
   cancelLabel: string;
+  /** Optional opt-out (or opt-in) checkbox, e.g. "also revoke its share
+      link". Controlled by the caller so the final state rides along with
+      the confirmed action. */
+  checkbox?: { label: string; checked: boolean; onChange: (checked: boolean) => void };
   onConfirm: () => void;
   onClose: () => void;
 }) {
@@ -52,6 +57,17 @@ export function ConfirmDialog({
       >
         <h3 className="text-[14px] font-bold">{title}</h3>
         <p className="mt-1.5 text-[13px] leading-relaxed text-muted">{message}</p>
+        {checkbox && (
+          <label className="mt-3 flex cursor-pointer items-start gap-2 text-[13px] text-muted">
+            <input
+              type="checkbox"
+              checked={checkbox.checked}
+              onChange={(e) => checkbox.onChange(e.target.checked)}
+              className="mt-0.5 shrink-0"
+            />
+            <span className="leading-snug">{checkbox.label}</span>
+          </label>
+        )}
         <div className="mt-4 flex justify-end gap-2">
           <button className="ghost-btn" onClick={onClose} autoFocus>
             {cancelLabel}

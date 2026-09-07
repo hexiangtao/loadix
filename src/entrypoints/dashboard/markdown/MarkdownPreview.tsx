@@ -1,6 +1,7 @@
 import {
   isValidElement,
   memo,
+  useEffect,
   useState,
   type ComponentPropsWithoutRef,
   type ReactNode,
@@ -11,13 +12,16 @@ import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import rehypeHighlight from 'rehype-highlight';
 import { useTranslation } from 'react-i18next';
-import { Check, Copy } from 'lucide-react';
+import { Check, Copy, X } from 'lucide-react';
 import { MermaidBlock } from './MermaidBlock';
 import 'katex/dist/katex.min.css';
 import './markdown.css';
 
 interface MarkdownPreviewProps {
   source: string;
+  /** Click-to-zoom for rendered media (mermaid diagrams AND images) — used by
+      the read-only share viewer; the dashboard's own preview stays plain. */
+  zoomable?: boolean;
 }
 
 /**
@@ -31,35 +35,43 @@ interface MarkdownPreviewProps {
  * open in a new tab, fenced code becomes a card with a language label + copy,
  * and wide tables scroll instead of breaking the layout.
  */
-export const MarkdownPreview = memo(function MarkdownPreview({ source }: MarkdownPreviewProps) {
+export const MarkdownPreview = memo(function MarkdownPreview({
+  source,
+  zoomable = false,
+}: MarkdownPreviewProps) {
+  const [zoom, setZoom] = useState<{ src: string; alt: string } | null>(null);
   return (
     <div className="md-prose">
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkMath]}
         rehypePlugins={[rehypeKatex, rehypeHighlight]}
         components={{
-          code: Code,
+          code: (props) => <Code {...props} zoomable={zoomable} />,
           a: Link,
           table: Table,
+          img: zoomable
+            ? (props) => <ZoomableImg {...props} onZoom={(src, alt) => setZoom({ src, alt })} />
+            : undefined,
         }}
       >
         {source}
       </ReactMarkdown>
+      {zoom && <ImageZoom {...zoom} onClose={() => setZoom(null)} />}
     </div>
   );
 });
 
 /* ——— Component overrides ——— */
 
-type CodeProps = ComponentPropsWithoutRef<'code'> & { node?: unknown };
+type CodeProps = ComponentPropsWithoutRef<'code'> & { node?: unknown; zoomable?: boolean };
 
 /** Fenced blocks (language-* className) become code cards; mermaid becomes a diagram. */
-function Code({ className, children, node: _node, ...props }: CodeProps) {
+function Code({ className, children, node: _node, zoomable = false, ...props }: CodeProps) {
   const match = /language-([\w-]+)/.exec(className ?? '');
   if (match) {
     const lang = match[1] ?? '';
     const source = rawText(children);
-    if (lang === 'mermaid') return <MermaidBlock source={source} />;
+    if (lang === 'mermaid') return <MermaidBlock source={source} zoomable={zoomable} />;
     return (
       <CodeBlock lang={lang} source={source} className={className}>
         {children}
@@ -133,6 +145,84 @@ function Link({ node: _node, href, children, ...props }: LinkProps) {
     <a href={href} {...(external ? { target: '_blank', rel: 'noreferrer' } : {})} {...props}>
       {children}
     </a>
+  );
+}
+
+type ImgProps = ComponentPropsWithoutRef<'img'> & { node?: unknown };
+
+/** Click-to-zoom wrapper for images in zoomable contexts (the share viewer).
+    The whole image opens the shared .md-zoom lightbox; images nested inside
+    a link keep normal link behavior. */
+function ZoomableImg({
+  node: _node,
+  src,
+  alt,
+  onZoom,
+  ...props
+}: ImgProps & { onZoom: (src: string, alt: string) => void }) {
+  return (
+    <img
+      {...props}
+      src={src}
+      alt={alt ?? ''}
+      draggable={false}
+      className="md-zoomable-img"
+      onClick={(e) => {
+        if (src && !(e.target as HTMLElement).closest('a')) onZoom(src, alt ?? '');
+      }}
+    />
+  );
+}
+
+/** Fullscreen image preview — the same .md-zoom* chrome as the diagram
+    lightbox, showing the image at natural resolution (capped to the
+    viewport). Closes via ✕, Esc, or clicking the scrim; scroll is locked. */
+function ImageZoom({ src, alt, onClose }: { src: string; alt: string; onClose: () => void }) {
+  const { t } = useTranslation();
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [onClose]);
+
+  return (
+    <div
+      className="md-zoom"
+      role="dialog"
+      aria-modal="true"
+      aria-label={alt || t('tools.markdown.zoomImage')}
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="md-zoom-box">
+        <div className="md-zoom-toolbar">
+          <button
+            type="button"
+            className="md-zoom-btn"
+            onClick={onClose}
+            autoFocus
+            aria-label={t('tools.markdown.zoomClose')}
+            title={t('tools.markdown.zoomClose')}
+          >
+            <X size={16} />
+          </button>
+        </div>
+        <div className="md-zoom-scroll">
+          <div className="md-zoom-img">
+            <img src={src} alt={alt} />
+          </div>
+        </div>
+        <p className="md-zoom-hint">{t('tools.markdown.zoomHint')}</p>
+      </div>
+    </div>
   );
 }
 

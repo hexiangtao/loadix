@@ -3,10 +3,13 @@ import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import {
   Broom,
+  Check,
   ChevronDown,
+  Copy,
   FileText,
   Folder,
   FolderPlus,
+  Link2,
   MoreHorizontal,
   PanelLeftClose,
   PanelLeftOpen,
@@ -14,8 +17,10 @@ import {
   Plus,
   RotateCcw,
   Trash2,
+  Unlink,
 } from 'lucide-react';
-import { docDisplayTitle, type MarkdownDoc, type MarkdownFolder } from './docStore';
+import { docDisplayTitle, type MarkdownDoc, type MarkdownFolder, type ShareRecord } from './docStore';
+import { copyToClipboard, hashSource, timeAgo } from './shareApi';
 import { byOrderCreated, byOrderRecency, zoneFromEvent, type ReorderZone } from '../ordering';
 import { DropLine } from '../components/DropLine';
 
@@ -43,6 +48,9 @@ interface DocSidebarProps {
   onRestoreDoc: (id: string) => void;
   onDeleteDocForever: (id: string) => void;
   onEmptyTrash: () => void;
+  /** Share links this browser created (IndexedDB registry). */
+  shares: ShareRecord[];
+  onRevokeShare: (share: ShareRecord) => void;
 }
 
 const COLLAPSED_KEY = 'loadix-tool:markdown.sidebarCollapsed';
@@ -181,6 +189,94 @@ function MenuItem({
     >
       {children}
     </button>
+  );
+}
+
+/**
+ * A row in the Shared section: doc title, a stale marker when local edits
+ * haven't been published, and hover actions (copy link / revoke). Clicking
+ * the title opens the document (live docs only — a share whose doc was
+ * permanently deleted still lists so it can be revoked and cleaned up).
+ */
+function SharedRow({
+  title,
+  url,
+  stale,
+  expired,
+  openable,
+  updatedAt,
+  onOpen,
+  onRevoke,
+}: {
+  title: string;
+  url: string;
+  stale: boolean;
+  expired: boolean;
+  openable: boolean;
+  updatedAt: number;
+  onOpen: () => void;
+  onRevoke: () => void;
+}) {
+  const { t } = useTranslation();
+  const [copied, setCopied] = useState(false);
+  const revertTimerRef = useRef<number | undefined>(undefined);
+  useEffect(() => () => window.clearTimeout(revertTimerRef.current), []);
+
+  const handleCopy = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const ok = await copyToClipboard(url);
+    if (!ok) return;
+    setCopied(true);
+    window.clearTimeout(revertTimerRef.current);
+    revertTimerRef.current = window.setTimeout(() => setCopied(false), 1500);
+  };
+
+  return (
+    <div className="group relative flex items-center gap-1.5 rounded-lg px-2 py-1.5 transition-colors duration-150 hover:bg-hover">
+      <Link2 size={13} className="shrink-0 text-muted/70" />
+      {stale && (
+        <span
+          title={t('tools.markdown.shareNeedsUpdate')}
+          className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400"
+        />
+      )}
+      <button
+        onClick={onOpen}
+        disabled={!openable}
+        title={title}
+        className={`flex min-w-0 flex-1 cursor-pointer items-center gap-1.5 text-left text-[13px] transition-colors duration-150 disabled:cursor-default ${
+          openable ? 'text-ink hover:text-primary' : 'text-muted/60'
+        }`}
+      >
+        <span className="truncate">{title}</span>
+        {expired ? (
+          <span className="shrink-0 text-[10.5px] font-semibold text-danger/80">
+            · {t('tools.markdown.shareExpired')}
+          </span>
+        ) : (
+          <span className="shrink-0 text-[10.5px] text-muted/50">· {timeAgo(updatedAt)}</span>
+        )}
+      </button>
+      <button
+        onClick={(e) => void handleCopy(e)}
+        title={t('tools.copy')}
+        className={`shrink-0 rounded-md p-1 transition-all duration-150 hover:bg-hover ${
+          copied ? 'text-success opacity-100' : 'text-muted/70 opacity-0 hover:text-ink group-hover:opacity-100'
+        }`}
+      >
+        {copied ? <Check size={13} /> : <Copy size={13} />}
+      </button>
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onRevoke();
+        }}
+        title={t('tools.markdown.shareRevoke')}
+        className="shrink-0 rounded-md p-1 text-muted/70 opacity-0 transition-all duration-150 hover:bg-danger/10 hover:text-danger group-hover:opacity-100"
+      >
+        <Unlink size={13} />
+      </button>
+    </div>
   );
 }
 
@@ -617,10 +713,11 @@ function TrashRow({
  * strip (width transition) and hidden entirely in fullscreen reading.
  */
 export function DocSidebar(props: DocSidebarProps) {
-  const { docs, trashedDocs, folders, activeDocId, hidden, onOpenDoc } = props;
+  const { docs, trashedDocs, folders, activeDocId, hidden, onOpenDoc, shares, onRevokeShare } = props;
   const { t } = useTranslation();
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(COLLAPSED_KEY) === '1');
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set([TRASH_KEY]));
+  const [sharedOpen, setSharedOpen] = useState(true);
   /** Drill-down navigation: folder ids from root to the folder currently
       shown. Empty = the root view. Depth is expressed as a breadcrumb path,
       never as indentation. */
@@ -1025,9 +1122,57 @@ export function DocSidebar(props: DocSidebarProps) {
             )}
           </div>
 
-          {/* Recycle bin — pinned footer so it never scrolls out of reach,
-              visually separated from the document content. */}
+          {/* Pinned footer: share management + recycle bin, so neither ever
+              scrolls out of reach. */}
           <div className="shrink-0 border-t border-line px-2 pb-2 pt-1">
+            {/* Shared — every link this browser created, with quick copy /
+                revoke. Stale links (local edits not yet published) get an
+                amber marker. Orphaned shares (doc deleted forever without
+                revoke) stay listed so they can still be taken down. */}
+            <div className="relative">
+              <div
+                onClick={() => setSharedOpen((v) => !v)}
+                className="group relative flex cursor-pointer items-center gap-1 rounded-lg px-2 py-1.5 transition-colors duration-150 hover:bg-hover"
+              >
+                <ChevronDown
+                  size={13}
+                  className={`shrink-0 text-muted transition-transform duration-200 ${sharedOpen ? '' : '-rotate-90'}`}
+                />
+                <Link2 size={14} className="shrink-0 text-primary" />
+                <span className="min-w-0 flex-1 truncate text-[13px] text-ink">
+                  {t('tools.markdown.sharedSection')}
+                  {shares.length > 0 && <span className="ml-1.5 text-[11px] text-muted/60">{shares.length}</span>}
+                </span>
+              </div>
+              <Collapsible open={sharedOpen}>
+                <div className="ml-3 border-l border-line pl-2">
+                  {shares.length === 0 ? (
+                    <p className="px-2 py-1 text-[11px] text-muted/60">{t('tools.markdown.sharedEmpty')}</p>
+                  ) : (
+                    <div className="app-scroller sb-hairline max-h-44 overflow-y-auto pr-0.5">
+                      {shares.map((share) => {
+                        const live = docs.find((d) => d.id === share.docId);
+                        const trashed = !live ? trashedDocs.find((d) => d.id === share.docId) : undefined;
+                        const doc = live ?? trashed;
+                        return (
+                          <SharedRow
+                            key={share.id}
+                            title={doc ? docDisplayTitle(doc, t('tools.markdown.untitled')) : share.id}
+                            url={share.url}
+                            stale={live ? hashSource(live.content) !== share.sourceHash : false}
+                            expired={share.expiresAt != null && share.expiresAt <= Date.now()}
+                            openable={live != null}
+                            updatedAt={share.updatedAt}
+                            onOpen={() => onOpenDoc(share.docId)}
+                            onRevoke={() => onRevokeShare(share)}
+                          />
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </Collapsible>
+            </div>
             <TrashRow
               count={trashedDocs.length}
               open={expanded.has(TRASH_KEY)}

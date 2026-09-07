@@ -18,6 +18,8 @@ import { useAutoHideHeader } from '@/entrypoints/dashboard/useAutoHideHeader';
 import { DocOutline } from '@/entrypoints/dashboard/markdown/DocOutline';
 import { MarkdownPreview } from '@/entrypoints/dashboard/markdown/MarkdownPreview';
 import { firstHeading } from '@/entrypoints/dashboard/markdown/docStore';
+import { storageGet, storageSet } from '@/entrypoints/dashboard/storage';
+import { useUiStore } from '@/entrypoints/dashboard/store/ui-store';
 import '@/entrypoints/dashboard/app.css';
 
 const HOME_URL = 'https://loadix.dev';
@@ -47,19 +49,13 @@ function shareIdFromUrl(): string | null {
   return fromQuery && /^[A-Za-z0-9_-]{4,64}$/.test(fromQuery) ? fromQuery : null;
 }
 
-/** Follows the OS theme by toggling `.dark` — the app's CSS tokens are var-based, so both themes work. */
-function useSystemTheme() {
-  useEffect(() => {
-    const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    const apply = () => document.documentElement.classList.toggle('dark', mq.matches);
-    apply();
-    mq.addEventListener('change', apply);
-    return () => mq.removeEventListener('change', apply);
-  }, []);
-}
+// Theme storage key shared with the app (App.tsx) — a visitor's light/dark
+// choice persists across the dashboard and every shared page on this origin.
+const THEME_KEY = 'api-pressure-theme';
 
 function ShareApp() {
-  useSystemTheme();
+  const theme = useUiStore((s) => s.theme);
+  const setTheme = useUiStore((s) => s.setTheme);
   const { t } = useTranslation();
   const [id] = useState(shareIdFromUrl);
   const [state, setState] = useState<ViewState>(() =>
@@ -67,6 +63,24 @@ function ShareApp() {
   );
   const [attempt, setAttempt] = useState(0);
   const retry = () => setAttempt((a) => a + 1);
+
+  // Restore the saved theme on mount (falling back to the OS preference),
+  // then keep <html>'s .dark class and the stored value in sync with the
+  // ui-store — the same mechanism as the app. Mermaid subscribes to the same
+  // store, so diagrams re-render in the picked theme too.
+  useEffect(() => {
+    storageGet<'light' | 'dark'>(THEME_KEY).then((saved) => {
+      setTheme(saved ?? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+    });
+  }, [setTheme]);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.toggle('dark', theme === 'dark');
+    storageSet(THEME_KEY, theme);
+  }, [theme]);
+
+  const toggleTheme = () => setTheme(theme === 'dark' ? 'light' : 'dark');
 
   /* ——— Document outline (大纲) ———
      Lark/Feishu-style: the outline sits on the LEFT of the document. On
@@ -169,18 +183,41 @@ function ShareApp() {
             <span className="size-2 rounded-full bg-primary" />
             Loadix
           </a>
-          {/* Restrained on purpose: the shared document is the hero, so the
-              funnel CTA uses the app's quiet brand tint instead of a heavy
-              filled button — present, but it never competes with the content. */}
-          <a
-            href={LAB_URL}
-            target="_blank"
-            rel="noreferrer"
-            className="flex shrink-0 items-center gap-1.5 rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary transition-colors duration-150 hover:bg-primary/15"
-          >
-            {t('share.backHome')}
-            <ArrowUpRight size={13} />
-          </a>
+          <div className="flex shrink-0 items-center gap-1">
+            {/* Night-mode toggle — mirrors the app's: flips light/dark, keeps
+                the choice in storage so returning visitors and shared links
+                open in the theme they last picked. */}
+            <button
+              type="button"
+              className="nav-btn flex cursor-pointer items-center"
+              onClick={toggleTheme}
+              title={theme === 'dark' ? 'Light' : 'Dark'}
+              aria-label="Toggle theme"
+            >
+              {theme === 'dark' ? (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <circle cx="12" cy="12" r="4" />
+                  <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+                </svg>
+              ) : (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z" />
+                </svg>
+              )}
+            </button>
+            {/* Restrained on purpose: the shared document is the hero, so the
+                funnel CTA uses the app's quiet brand tint instead of a heavy
+                filled button — present, but it never competes with the content. */}
+            <a
+              href={LAB_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="flex shrink-0 items-center gap-1.5 rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary transition-colors duration-150 hover:bg-primary/15"
+            >
+              {t('share.backHome')}
+              <ArrowUpRight size={13} />
+            </a>
+          </div>
         </div>
       </header>
 
@@ -229,7 +266,10 @@ function ShareApp() {
                 </div>
               )}
 
-              {state.status === 'ready' && <MarkdownPreview source={state.source} />}
+              {/* Rendered media is click-to-zoom on the share page: diagrams
+                  open full-size in a lightbox (vector-crisp) and images at
+                  their natural resolution — never just the in-flow size. */}
+              {state.status === 'ready' && <MarkdownPreview source={state.source} zoomable />}
             </div>
           )}
 

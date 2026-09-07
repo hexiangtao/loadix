@@ -8,6 +8,9 @@
 // ({ get(key) -> string|null, put(key, value) }).
 
 export const ID_LENGTH = 8;
+/** Owner-token length: the secret that lets the creating client re-publish
+    (PUT) or revoke (DELETE) a share. Never returned by public reads. */
+export const TOKEN_LENGTH = 24;
 export const MAX_SOURCE_BYTES = 1024 * 1024; // 1 MiB cap — far above real docs, guards KV bloat
 const ID_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789'; // no 0/O/1/l/I
 const ID_RE = /^[A-Za-z0-9_-]{4,64}$/;
@@ -21,6 +24,14 @@ export function makeId(len = ID_LENGTH) {
   let id = '';
   for (let i = 0; i < len; i++) id += ID_ALPHABET[bytes[i] % ID_ALPHABET.length];
   return id;
+}
+
+/** Constant-time string comparison for owner tokens (length first, then XOR). */
+export function tokensEqual(a, b) {
+  if (typeof a !== 'string' || typeof b !== 'string' || a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
 }
 
 /** Rejects anything that could be path tricks, junk, or wildly long ids. */
@@ -49,6 +60,7 @@ export async function parseShareBody(request) {
   }
   const contentType = request.headers.get('content-type') ?? '';
   let source = raw;
+  let expiresAt;
   if (contentType.includes('application/json')) {
     try {
       const data = JSON.parse(raw);
@@ -56,6 +68,7 @@ export async function parseShareBody(request) {
         return { error: 'invalid_json' };
       }
       source = data.source;
+      if (typeof data.expiresAt === 'number') expiresAt = data.expiresAt;
     } catch {
       return { error: 'invalid_json' };
     }
@@ -66,22 +79,34 @@ export async function parseShareBody(request) {
   if (new TextEncoder().encode(source).length > MAX_SOURCE_BYTES) {
     return { error: 'source_too_large' };
   }
-  return { source };
+  return { source, expiresAt };
 }
 
-/** POST /api/share — stores the source, returns { id, url }. */
+/** POST /api/share — stores the source, returns { id, url, ownerToken }. */
 export async function postShare(request, kv) {
   const parsed = await parseShareBody(request);
   if (parsed.error) {
     return json({ error: parsed.error }, parsed.error === 'source_too_large' ? 413 : 400);
   }
   const id = makeId();
-  const record = { source: parsed.source, createdAt: Date.now() };
+  const now = Date.now();
+  const expiresAt =
+    typeof parsed.expiresAt === 'number' && Number.isFinite(parsed.expiresAt) && parsed.expiresAt > now
+      ? parsed.expiresAt
+      : null;
+  const record = {
+    source: parsed.source,
+    createdAt: now,
+    updatedAt: now,
+    ownerToken: makeId(TOKEN_LENGTH),
+    ...(expiresAt ? { expiresAt } : {}),
+  };
   await kv.put(kvKey(id), JSON.stringify(record));
-  return json({ id, url: `/s/${id}` }, 201);
+  return json({ id, url: `/s/${id}`, ownerToken: record.ownerToken }, 201);
 }
 
-/** Reads a stored share record; null when the id is invalid, missing, or malformed. */
+/** Reads a stored share record (including the owner token); null when the id
+    is invalid, missing, or malformed. Internal — public callers use getShare. */
 export async function readShare(id, kv) {
   if (!isValidId(id)) return null;
   const raw = await kv.get(kvKey(id));
@@ -93,16 +118,90 @@ export async function readShare(id, kv) {
       id,
       source: record.source,
       createdAt: typeof record.createdAt === 'number' ? record.createdAt : null,
+      updatedAt: typeof record.updatedAt === 'number' ? record.updatedAt : null,
+      ownerToken: typeof record.ownerToken === 'string' ? record.ownerToken : null,
+      expiresAt:
+        typeof record.expiresAt === 'number' && Number.isFinite(record.expiresAt) ? record.expiresAt : null,
     };
   } catch {
     return null;
   }
 }
 
-/** GET /api/share/:id — returns { id, source, createdAt } or a JSON 404. */
+/** GET /api/share/:id — public read. Returns { id, source, createdAt, updatedAt };
+    the owner token is never exposed. Expired links behave exactly like revoked
+    ones for visitors (404 → the viewer's removed page) while the record stays
+    in place so the owner can renew it. */
 export async function getShare(id, kv) {
   const record = await readShare(id, kv);
-  return record ? json(record) : json({ error: 'not_found' }, 404);
+  if (!record) return json({ error: 'not_found' }, 404);
+  if (record.expiresAt != null && record.expiresAt <= Date.now()) {
+    return json({ error: 'not_found' }, 404);
+  }
+  return json({
+    id: record.id,
+    source: record.source,
+    createdAt: record.createdAt,
+    updatedAt: record.updatedAt ?? record.createdAt,
+  });
+}
+
+/**
+ * PUT /api/share/:id/expiry — set (absolute timestamp ms) or clear (null) a
+ * link's expiration. Requires the owner token. Only future timestamps are
+ * accepted; past values would 404 the link immediately and confuse the owner.
+ */
+export async function setShareExpiry(id, expiresAt, token, kv) {
+  if (!isValidId(id)) return json({ error: 'not_found' }, 404);
+  if (
+    expiresAt !== null &&
+    (typeof expiresAt !== 'number' || !Number.isFinite(expiresAt) || expiresAt <= Date.now())
+  ) {
+    return json({ error: 'invalid_expiry' }, 400);
+  }
+  const record = await readShare(id, kv);
+  if (!record) return json({ error: 'not_found' }, 404);
+  if (!record.ownerToken || !tokensEqual(record.ownerToken, token)) {
+    return json({ error: 'forbidden' }, 403);
+  }
+  const updated = { ...record, expiresAt };
+  await kv.put(kvKey(id), JSON.stringify(updated));
+  return json({ id, expiresAt });
+}
+
+/**
+ * PUT /api/share/:id — re-publish the source to the same link. Requires the
+ * owner token (X-Share-Token header). Returns { id, url, updatedAt }.
+ */
+export async function updateShare(id, source, token, kv) {
+  if (!isValidId(id)) return json({ error: 'not_found' }, 404);
+  if (!source.trim()) return json({ error: 'empty_source' }, 400);
+  if (new TextEncoder().encode(source).length > MAX_SOURCE_BYTES) {
+    return json({ error: 'source_too_large' }, 413);
+  }
+  const record = await readShare(id, kv);
+  if (!record) return json({ error: 'not_found' }, 404);
+  if (!record.ownerToken || !tokensEqual(record.ownerToken, token)) {
+    return json({ error: 'forbidden' }, 403);
+  }
+  const updated = { ...record, source, updatedAt: Date.now() };
+  await kv.put(kvKey(id), JSON.stringify(updated));
+  return json({ id, url: `/s/${id}`, updatedAt: updated.updatedAt });
+}
+
+/**
+ * DELETE /api/share/:id — revoke a link. Requires the owner token. The record
+ * is removed, so subsequent reads return 404 (the viewer shows a removed page).
+ */
+export async function deleteShare(id, token, kv) {
+  if (!isValidId(id)) return json({ error: 'not_found' }, 404);
+  const record = await readShare(id, kv);
+  if (!record) return json({ error: 'not_found' }, 404);
+  if (!record.ownerToken || !tokensEqual(record.ownerToken, token)) {
+    return json({ error: 'forbidden' }, 403);
+  }
+  await kv.delete(kvKey(id));
+  return new Response(null, { status: 204 });
 }
 
 /** Page title from markdown: the first H1, else the first heading of any

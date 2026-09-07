@@ -31,8 +31,27 @@ export interface MarkdownFolder {
   order?: number;
 }
 
+/**
+ * A share link this browser created for a document. The record is the local
+ * registry that powers the "Shared" list and link management (update/revoke);
+ * the owner token is the secret that authorizes those calls server-side.
+ */
+export interface ShareRecord {
+  id: string;
+  docId: string;
+  url: string;
+  ownerToken: string;
+  createdAt: number;
+  updatedAt: number;
+  /** Hash of the source that was last published; used to detect staleness. */
+  sourceHash: string;
+  /** Absolute ms timestamp after which the link 404s for visitors (optional;
+      absent means the link never expires). */
+  expiresAt?: number;
+}
+
 const DB_NAME = 'loadix-markdown';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const MIGRATED_FLAG = 'loadix-docs:migrated-v1';
 const LEGACY_INPUT_KEY = 'loadix-tool:markdown.input';
 
@@ -54,6 +73,7 @@ function open(): Promise<IDBDatabase> {
         const db = r.result;
         if (!db.objectStoreNames.contains('docs')) db.createObjectStore('docs', { keyPath: 'id' });
         if (!db.objectStoreNames.contains('folders')) db.createObjectStore('folders', { keyPath: 'id' });
+        if (!db.objectStoreNames.contains('shares')) db.createObjectStore('shares', { keyPath: 'id' });
       };
       r.onsuccess = () => resolve(r.result);
       r.onerror = () => reject(r.error ?? new Error('IndexedDB open failed'));
@@ -310,10 +330,28 @@ export async function migrateLegacyDoc(): Promise<MarkdownDoc | null> {
   }
 }
 
+/* ——— Share registry ——— */
+
+export async function getAllShares(): Promise<ShareRecord[]> {
+  return getAll<ShareRecord>('shares');
+}
+
+export async function saveShare(share: ShareRecord): Promise<void> {
+  await putOne('shares', share);
+}
+
+export async function deleteShareLocal(id: string): Promise<void> {
+  await deleteOne('shares', id);
+}
+
 /** Loads everything the workspace needs, running the legacy migration first. */
-export async function loadWorkspace(): Promise<{ docs: MarkdownDoc[]; folders: MarkdownFolder[] }> {
+export async function loadWorkspace(): Promise<{
+  docs: MarkdownDoc[];
+  folders: MarkdownFolder[];
+  shares: ShareRecord[];
+}> {
   const migrated = await migrateLegacyDoc();
-  const [docs, folders] = await Promise.all([getAllDocs(), getAllFolders()]);
+  const [docs, folders, shares] = await Promise.all([getAllDocs(), getAllFolders(), getAllShares()]);
   if (migrated) docs.unshift(migrated);
-  return { docs, folders };
+  return { docs, folders, shares };
 }
