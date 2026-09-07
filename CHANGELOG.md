@@ -1,3 +1,10 @@
+# [1.51.0](https://github.com/hexiangtao/loadix/compare/v1.50.0...v1.51.0) (2026-09-07)
+
+
+### Features
+
+* **site:** relaunch landing page around the actual toolkit modules ([1de24dc](https://github.com/hexiangtao/loadix/commit/1de24dcf01621b386bb047da14d63ae9b61ec4a8))
+
 # [1.50.0](https://github.com/hexiangtao/loadix/compare/v1.49.0...v1.50.0) (2026-09-06)
 
 
