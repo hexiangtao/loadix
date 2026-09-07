@@ -1,3 +1,10 @@
+# [1.52.0](https://github.com/hexiangtao/loadix/compare/v1.51.0...v1.52.0) (2026-09-07)
+
+
+### Features
+
+* **markdown:** share-link management — CRUD, zoom, dark mode, expiry ([64d6534](https://github.com/hexiangtao/loadix/commit/64d6534a5cf13a32a29cabbd686c85d27ff86a36))
+
 # [1.51.0](https://github.com/hexiangtao/loadix/compare/v1.50.0...v1.51.0) (2026-09-07)
 
 
