@@ -1,125 +1,122 @@
 # Loadix
 
-A local API workbench in your browser. Decode JWTs, parse URLs, format JSON, hash strings, generate UUIDs, parse cron, convert bases — and run load tests against your own APIs. All in your browser, no account, no install, no nothing.
+**All-in-one developer toolkit — APIs and Markdown, local-first.**
+
+Load testing, an API request client, Markdown preview &amp; sharing, and 19 everyday utilities — all in your browser. It runs as a web app (no install) or a Chrome extension, and both surfaces share the same engine.
+
+No account, no telemetry: requests, documents and test runs stay in your browser (IndexedDB + local storage). The only network round-trips are the requests you send and the pages you choose to publish as share links.
 
 Built with [WXT](https://wxt.dev) + React + TypeScript, with i18n (English / 简体中文 / 日本語 / 한국어 / Français).
 
-[Website](https://loadix.dev) · [GitHub](https://github.com/hexiangtao/loadix)
+[Website](https://loadix.dev) · [Launch](https://lab.loadix.dev) · [GitHub](https://github.com/hexiangtao/loadix)
 
 [![CI](https://github.com/hexiangtao/loadix/actions/workflows/ci.yml/badge.svg)](https://github.com/hexiangtao/loadix/actions/workflows/ci.yml)
 
-## What you get
+## What's inside
 
-- **18 everyday developer tools** — JWT, Base64, URL Parser, URL Encode, JSON Formatter, SQL Formatter, HTML Entities, Unicode, Markdown, Regex Tester, Hash, UUID Generator, Timestamp, Cron Parser, Color Picker, JSONPath, Base Converter, CSS Gradient, plus the Diff Checker.
-- **No account, no telemetry, no backend.** Your URLs, headers, payloads and test runs never leave the browser. Works offline once installed.
-- **Browser-based HTTP load tester** — concurrent virtual users, target RPS, ramp-up, duration. Run from the background service worker, so closing the tab doesn't stop the test.
-- **Open source, MIT licensed.** Audit anything you don't trust.
+### Load Test
 
-## The tools
+In-browser HTTP load and stress testing.
 
-### Encoders / decoders
-- **JWT** — decode payloads, sign with HS256, verify signatures locally
-- **Base64** — encode & decode Base64 strings
-- **URL Parser** — decompose URLs, edit query parameters in place
-- **URL Encode** — percent-encode & decode URL components
-- **HTML Entities** — escape & unescape HTML entities
-- **Hash** — MD5, SHA-1, SHA-256, SHA-512
-- **Base Converter** — binary / octal / decimal / hexadecimal (BigInt, no precision loss)
+- **Five load shapes** — constant, ramp, step, spike and soak
+- **Live metrics** — requests, RPS, errors, and latency percentiles (P50 / P95 / P99) with throughput and latency charts
+- **Assertions** — HTTP status, max latency, body-contains, with a failure breakdown
+- **Variables** — `{{variable}}` interpolation in URLs, headers and bodies
+- **Reports** — export a JSON report or a self-contained HTML file
+- In the extension the engine runs in the background service worker, so closing the tab doesn't stop a run; `host_permissions: <all_urls>` also exempts requests from CORS for most targets
 
-### Formatters
-- **JSON Formatter** — pretty-print, minify, validate
-- **SQL Formatter** — pretty-print SQL queries
-- **Markdown** — live-rendered preview
-- **Diff Checker** — side-by-side / unified line diff (LCS-based)
+### Requests
 
-### Tools
-- **Regex Tester** — test patterns and extract capture groups
-- **UUID Generator** — v1, v3, v4, v5, v7 (with namespace + name for v3 / v5)
-- **Timestamp** — Unix epoch ↔ human date
-- **Cron Parser** — read cron expressions, preview next runs
-- **Color Picker** — HEX / RGB / HSL with native picker
-- **JSONPath** — query JSON with the JSONPath expression language
-- **CSS Gradient** — visual linear / radial gradient builder
+An API client built around real responses rather than raw walls of JSON.
 
-## Load tester
+- Start from a URL or a whole (even multi-line) cURL command
+- **Response insights** — status, time, size and JSON shape at a glance, plus faster / slower comparison to the previous run
+- Organize with drafts, collections and history; import Postman v2.1 collections
+- Send any request straight to **Load Test**, or capture the response into a **Markdown** page as live documentation
 
-A complete HTTP load testing tool, separate from the workbench:
+### Markdown
 
-- **Methods:** GET / POST / PUT / PATCH / DELETE / HEAD
-- **Configuration:** URL, timeout, custom headers, JSON / form / text body
-- **Load model:** virtual users, target RPS, duration, ramp-up
-- **Presets:** Smoke / Normal / Stress / Spike
-- **Assertions:** HTTP status, max latency, body-contains
-- **Variables:** `{{variable}}` interpolation in URLs, headers, bodies
-- **Live metrics:** requests, success, errors, RPS, avg, P50 / P95 / P99, success rate
-- **Charts:** throughput / sec and latency
-- **Recent requests, status / error breakdown, assertion failures**
-- **History & export:** runs saved to `chrome.storage`, restore configs, export JSON reports
-- **Runs in the background service worker** — survives tab close, fewer CORS issues thanks to `host_permissions: <all_urls>`
+A local Markdown workspace with live preview.
 
-## Project structure
+- Pages and folders with drag-and-drop organization; everything is stored locally in **IndexedDB**
+- GFM tables and task lists, KaTeX math, Mermaid diagrams, highlighted code, collapsible outline
+- Paste Markdown from anywhere — LLM output, notes, docs — and preview it immediately, no other tool needed
+- **Share as a link** — publish any page to a public, unguessable URL rendered by the same engine (with title + Open Graph preview for Slack / Teams); no file to send
+- Export a rendered page as PNG, or capture a live API response into the page
 
-```
-src/
-├── entrypoints/          # WXT entrypoints
-│   ├── background.ts     # Service worker hosting the load engine
-│   └── dashboard/        # React app (workbench + load tester UI)
-│       ├── App.tsx
-│       ├── components/   # Reusable UI components
-│       ├── panels/       # Config sections (request / load / assertions / …)
-│       ├── tools/        # The developer tools
-│       ├── i18n/         # i18next setup + locale files
-│       └── store/        # Zustand UI state
-├── engine/               # Load-testing engine (pure logic, unit-testable)
-│   ├── core.ts           # Interpolation, percentiles, RPS scheduler, ramp-up
-│   ├── runner.ts         # Single request execution + assertions
-│   ├── metrics.ts        # Live metrics aggregation
-│   ├── load-engine.ts    # Orchestrator (users, pacing, abort)
-│   └── core.test.ts      # Vitest unit tests
-└── shared/               # Types shared between UI and engine
+### Toolbox
 
-site/                     # Static landing page (loadix.dev)
-├── index.html
-├── script.js
-└── style.css
-```
+19 single-purpose utilities behind one searchable palette (`Ctrl/⌘K`):
+
+JWT · Base64 · URL Encode · URL Parser · Diff · Base Converter · HTML Entities · Unicode · Hash · JSON Formatter · SQL Formatter · Regex Tester · UUID Generator · Timestamp · Cron Parser · CSS Gradient · Color Picker · JSONPath · Element Snapshot
+
+## Local-first
+
+- **No account, no telemetry.** Nothing to register; no analytics SDK, no usage beacons.
+- **Web or extension, same engine.** The web app needs nothing to install; the extension adds background load tests, CORS-free requests for most targets, and offline-capable tools.
+- **Open source.** Everything — the engine, the persistence, and the share backend — is in this repository.
+
+## Get started
+
+**No install:** open [lab.loadix.dev](https://lab.loadix.dev), paste an endpoint, go.
+
+**Chrome extension** (background engine, offline, CORS-free requests for most targets):
+
+1. Grab the latest `loadix-*.zip` from [GitHub Releases](https://github.com/hexiangtao/loadix/releases)
+2. Open `chrome://extensions/` and enable **Developer mode**
+3. Click **Load unpacked** and select the unzipped folder
 
 ## Development
 
 ```bash
 npm install
-npm run dev        # Start dev server with HMR, then load the extension once
-npm run dev:web    # Web-only dev (just the dashboard, no extension)
+npm run dev        # Extension dev server with HMR
+npm run dev:web    # Web-only dev (dashboard, no extension)
 npm run compile    # Type check
-npm test           # Unit tests (engine)
-npm run build      # Production build → .output/chrome-mv3
-npm run build:web  # Build the standalone web dashboard
+npm test           # Unit tests (engine, stores, imports)
+npm run build      # Extension build → .output/chrome-mv3
+npm run build:web  # Web dashboard → dist/web
 npm run zip        # Build + zip for store upload
 ```
 
-### Load in Chrome
+## Project structure
 
-1. Open `chrome://extensions/`
-2. Enable **Developer mode**
-3. Click **Load unpacked** and select `.output/chrome-mv3` (or the project root during `npm run dev`)
-4. Click the extension icon to open the workbench
+```
+src/
+├── engine/                  # Load-test engine — pure TS, zero DOM/chrome deps
+│   ├── core.ts              #   RPS scheduler, percentiles, interpolation
+│   ├── load-model.ts        #   constant / ramp / step / spike / soak
+│   ├── runner.ts            #   Single-request execution + assertions
+│   ├── load-engine.ts       #   Orchestrator (load shapes, pacing, abort)
+│   ├── metrics.ts           #   Live metrics aggregation
+│   └── engine-host.ts       #   UI ⇄ engine contract (+ chrome/browser hosts)
+├── entrypoints/
+│   ├── background.ts        #   Service worker hosting the load engine
+│   └── dashboard/           #   React app (all modules)
+│       ├── App.tsx          #   Routing: loadtest / requests / markdown / tools
+│       ├── api/             #   Requests module — client, stores, import,
+│       │                    #     response insights, Markdown capture
+│       ├── markdown/        #   Markdown module — doc tree, editor, preview,
+│       │                    #     outline, share, IndexedDB store
+│       ├── tools/           #   Toolbox — registry, ⌘K palette, tool components
+│       ├── panels/          #   Load-test config panels
+│       ├── components/      #   Shared UI — charts, result cards, dialogs
+│       ├── store/           #   Zustand UI state
+│       └── i18n/            #   en / zh-CN / ja / ko / fr
+├── shared/                  # Types shared between engine, UI, web
+└── web/                     # Share viewer (renders published pages)
 
-### Or use the web build
-
-The same dashboard is also published as a standalone web app — no Chrome install required. Visit [lab.loadix.dev](https://lab.loadix.dev) after running `npm run build:web`, or browse the prebuilt copy at [loadix.dev](https://loadix.dev).
+functions/                   # Share backend (Cloudflare Pages Functions + KV)
+site/                        # Marketing page (loadix.dev)
+```
 
 ## Architecture notes
 
-- The dashboard talks to the load engine over a `chrome.runtime.connect` port; metrics are pushed ~2× / sec and the UI re-syncs on refresh.
-- Requests are executed in the background service worker. With `host_permissions: <all_urls>`, extension-initiated requests bypass CORS for most targets.
-- The engine (`src/engine`) has zero DOM / chrome dependencies so it can be unit tested with Vitest.
-- Tools are registered in `src/entrypoints/dashboard/tools/registry.ts`; each tool lives in its own component file under `src/entrypoints/dashboard/tools/tools/`.
-- Persisted input (per tool) is stored in `localStorage` under the `loadix-tool:` prefix via `usePersistedState`.
-
-## Internationalization
-
-Five locales ship by default — `en`, `zh-CN`, `ja`, `ko`, `fr`. Add or edit strings in `src/entrypoints/dashboard/i18n/locales/`. The active language falls back to English when a key is missing.
+- **One engine, three surfaces.** The UI talks to the load engine over an `EngineHost` (`chrome.runtime.connect` in the extension, a browser host in the web build); metrics stream ~2×/sec and re-sync on refresh.
+- **Shared render path.** Markdown preview, the share viewer, and server-side share pages render from the same core — what you preview is what a reader of a share link sees.
+- **Bounded persistence.** History snapshots are capped and large bodies truncated to keep local storage healthy.
+- **i18n.** `en`, `zh-CN`, `ja`, `ko`, `fr` ship by default; add strings under `src/entrypoints/dashboard/i18n/locales/`.
 
 ## Disclaimer
 
-Use this only against systems you own or are explicitly authorized to test. Browser-based load generation is not a replacement for distributed load-testing infrastructure.
+Use Loadix only against systems you own or are explicitly authorized to test. Browser-based load generation is not a replacement for distributed load-testing infrastructure.

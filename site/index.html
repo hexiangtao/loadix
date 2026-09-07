@@ -4,51 +4,42 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <title>Loadix — Swiss Army knife for API developers</title>
-  <meta name="description" content="A small collection of local API tools: JWT, Base64, URLs, JSON, hash, UUID, cron, and load testing. Local. No account. No install." />
-  <meta name="keywords" content="loadix, api tools, swiss army knife, jwt decoder, base64 encoder, url parser, json formatter, regex tester, hash generator, uuid generator, unicode escape, browser load tester" />
+  <title>Loadix — Test APIs, render &amp; share Markdown, all local</title>
+  <meta name="description" content="Load test an endpoint, send requests, and preview &amp; share Markdown from anywhere — all in your browser. 19 utilities included. No account, no install." />
+  <meta name="keywords" content="loadix, api tools, load tester, load testing, stress testing, api client, curl, markdown preview, markdown renderer, markdown share, markdown editor, llm output markdown, jwt decoder, base64 encoder, url parser, json formatter, regex tester, hash generator, uuid generator, cron parser, local first" />
   <meta name="robots" content="index, follow" />
   <meta name="theme-color" content="#0f172a" />
   <link rel="canonical" href="https://loadix.dev/" />
 
-  <!-- Open Graph -->
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://loadix.dev/" />
-  <meta property="og:title" content="Loadix — Swiss Army knife for API developers" />
-  <meta property="og:description" content="Local. No account. No install." />
+  <meta property="og:title" content="Loadix — Test APIs, render &amp; share Markdown, all local" />
+  <meta property="og:description" content="Load test an endpoint, send requests, and preview &amp; share Markdown from anywhere. No account, no install." />
   <meta property="og:site_name" content="Loadix" />
 
-  <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Loadix — Swiss Army knife for API developers" />
-  <meta name="twitter:description" content="Local. No account. No install." />
+  <meta name="twitter:title" content="Loadix — Test APIs, render &amp; share Markdown, all local" />
+  <meta name="twitter:description" content="Load test an endpoint, send requests, and preview &amp; share Markdown from anywhere. No account, no install." />
 
-  <!-- Structured data: Google rich-result candidate -->
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "Loadix",
     "applicationCategory": "DeveloperApplication",
-    "operatingSystem": "Chrome, Edge, Brave, any Chromium browser",
-    "description": "A Swiss Army knife for API developers. Local. No account. No install.",
+    "operatingSystem": "Chrome, Edge, Brave, any browser",
+    "description": "Local-first browser tools: HTTP load testing, an API request client, Markdown preview, storage and sharing, and everyday utilities.",
     "url": "https://loadix.dev/",
     "downloadUrl": "https://github.com/hexiangtao/loadix/releases",
-    "softwareVersion": "1.18.1",
-    "offers": {
-      "@type": "Offer",
-      "price": "0",
-      "priceCurrency": "USD"
-    },
+    "softwareVersion": "1.49.0",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
     "featureList": [
-      "In-browser HTTP load tester",
-      "JWT decode / sign / verify (HS256)",
-      "Base64, URL, HTML-entity encode/decode",
-      "URL parser with editable query parameters",
-      "JSON, SQL, Markdown formatters",
-      "Regex tester, hash (MD5 / SHA-1/256/512)",
-      "UUID v4 / v7, cron parser, timestamp converter",
-      "Color picker, JSONPath query"
+      "In-browser HTTP load & stress testing",
+      "API request client with response insights",
+      "Markdown docs with share links",
+      "Postman v2.1 import",
+      "19 utilities: JWT, Base64, URL, JSON, SQL, regex, hash, cron and more",
+      "Local-first: no account, no telemetry"
     ]
   }
   </script>
@@ -59,6 +50,9 @@
   <header class="nav">
     <a class="brand" href="https://lab.loadix.dev">Loadix</a>
     <nav class="links">
+      <a href="#modules">Modules</a>
+      <a href="#tools">Toolbox</a>
+      <a href="#why">Why Loadix</a>
       <a href="#install">Install</a>
       <a class="nav-cta" href="https://lab.loadix.dev">Launch</a>
       <a href="https://github.com/hexiangtao/loadix" target="_blank" rel="noopener">GitHub</a>
@@ -68,47 +62,66 @@
   <main>
     <section class="hero">
       <div class="hero-copy">
-        <h1>Swiss Army knife for API developers.</h1>
-        <p class="sub">Local. No account. No install.</p>
+        <h1>All-in-one developer toolkit.</h1>
+        <p class="sub">Load testing · request client · Markdown preview &amp; share · 19 utilities — all in your browser, no account, no install.</p>
         <div class="cta">
           <a class="btn solid" href="https://lab.loadix.dev">Launch Loadix</a>
           <a class="btn ghost" href="https://github.com/hexiangtao/loadix" target="_blank" rel="noopener">Source on GitHub</a>
         </div>
       </div>
       <div class="hero-visual">
-        <div class="app-mock" role="img" aria-label="Loadix workbench — JWT decode tool">
+        <div class="app-mock" role="img" aria-label="Loadix — load test run in progress">
           <div class="mock-bar">
             <span class="dot"></span><span class="dot"></span><span class="dot"></span>
-            <span class="mock-title">Loadix</span>
+            <span class="mock-title">Loadix — Load Test</span>
           </div>
           <div class="mock-body">
             <aside class="mock-side">
-              <div class="mock-tool active">
-                <span class="mock-icon"></span>JWT
-              </div>
+              <div class="mock-tool active"><span class="mock-icon"></span>Load Test</div>
+              <div class="mock-tool"><span class="mock-icon"></span>Requests</div>
+              <div class="mock-tool"><span class="mock-icon"></span>Markdown</div>
+              <div class="mock-tool"><span class="mock-icon"></span>JWT</div>
               <div class="mock-tool"><span class="mock-icon"></span>Base64</div>
               <div class="mock-tool"><span class="mock-icon"></span>URL Parser</div>
               <div class="mock-tool"><span class="mock-icon"></span>JSON</div>
-              <div class="mock-tool"><span class="mock-icon"></span>Hash</div>
-              <div class="mock-tool"><span class="mock-icon"></span>UUID</div>
-              <div class="mock-tool"><span class="mock-icon"></span>Cron</div>
             </aside>
             <main class="mock-main">
               <div class="mock-tabs">
-                <span class="mock-tab on">Decode</span>
-                <span class="mock-tab">Encode</span>
+                <span class="mock-tab on">Config</span>
+                <span class="mock-tab">Assertions</span>
               </div>
-              <div class="mock-label">Token</div>
-              <div class="mock-input">eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.abc</div>
-              <div class="mock-chips">
-                <span class="mock-chip on">Header</span>
-                <span class="mock-chip on">Payload</span>
-                <span class="mock-chip">Signature</span>
+              <div class="mock-label">Target</div>
+              <div class="mock-input">https://api.example.com/v1/orders</div>
+              <div class="mock-stats">
+                <div><b>Requests</b><span>7,204</span></div>
+                <div><b>RPS</b><span>126</span></div>
+                <div><b>Errors</b><span class="ok">0</span></div>
               </div>
-              <div class="mock-pre">{ "sub": "1234567890", "name": "John Doe" }</div>
+              <div class="mock-chart">
+                <div class="mock-bar" style="height:34%"></div>
+                <div class="mock-bar" style="height:44%"></div>
+                <div class="mock-bar" style="height:38%"></div>
+                <div class="mock-bar" style="height:52%"></div>
+                <div class="mock-bar" style="height:46%"></div>
+                <div class="mock-bar" style="height:60%"></div>
+                <div class="mock-bar" style="height:54%"></div>
+                <div class="mock-bar" style="height:66%"></div>
+                <div class="mock-bar" style="height:58%"></div>
+                <div class="mock-bar" style="height:74%"></div>
+                <div class="mock-bar" style="height:62%"></div>
+                <div class="mock-bar" style="height:82%"></div>
+                <div class="mock-bar hot" style="height:70%"></div>
+                <div class="mock-bar hot" style="height:88%"></div>
+                <div class="mock-bar hot" style="height:80%"></div>
+              </div>
+              <div class="mock-pills">
+                <span class="mock-chip ok">P50 86 ms</span>
+                <span class="mock-chip">P95 210 ms</span>
+                <span class="mock-chip">P99 540 ms</span>
+              </div>
               <div class="mock-verify">
-                <span class="mock-verify-icon"></span>
-                Signature verified
+                <span class="mock-verify-icon live"></span>
+                Running — 0:42 / 1:00
               </div>
             </main>
           </div>
@@ -116,31 +129,184 @@
       </div>
     </section>
 
-    <section id="features" class="section">
-      <p class="eyebrow">What you get</p>
-      <div class="grid">
-        <div class="feature">
-          <h3>No account</h3>
-          <p>Install the extension, you're in. Nothing to register, nothing to verify.</p>
+    <section id="modules" class="section">
+      <p class="eyebrow">Modules</p>
+
+      <div class="mod feature">
+        <div class="mod-copy">
+          <span class="mod-num">01 — Load test</span>
+          <h3>Load Test</h3>
+          <p class="tagline">Stress an endpoint from the browser and watch it live.</p>
+          <ul>
+            <li>Constant, ramp, step, spike or soak</li>
+            <li>Live P50 / P95 / P99, RPS and errors</li>
+            <li>Assertions, variables and auto-stop</li>
+            <li>Keeps running in the background (extension)</li>
+          </ul>
         </div>
-        <div class="feature">
-          <h3>No telemetry</h3>
-          <p>Your URLs, headers, payloads and test runs never leave the browser. There is no backend.</p>
+        <div class="mod-shot">
+          <div class="shot">
+            <div class="shot-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="t">Loadix · Load Test</span></div>
+            <div class="shot-body">
+              <div class="r">
+                <span class="pill on">Constant</span><span class="pill">Ramp</span><span class="pill">Step</span><span class="pill">Spike</span><span class="pill">Soak</span>
+                <span class="grow"></span>
+                <span class="mini">120 users · 60 s</span>
+                <span class="btn-mini dark">Start</span>
+              </div>
+              <div class="stats">
+                <div class="stat"><span>Requests</span><b>7,204</b></div>
+                <div class="stat"><span>RPS</span><b>126</b></div>
+                <div class="stat"><span>Errors</span><b class="grn">0</b></div>
+              </div>
+              <div class="panel">
+                <div class="r">
+                  <span class="dot-live"></span><span class="mini grn">Running — 0:42 / 1:00</span>
+                  <span class="grow"></span>
+                  <span class="pill ok">P50 86 ms</span><span class="pill">P95 210 ms</span><span class="pill">P99 540 ms</span>
+                </div>
+                <div class="bars">
+                  <i style="height:30%"></i><i style="height:44%"></i><i style="height:36%"></i><i style="height:52%"></i><i style="height:46%"></i><i style="height:60%"></i><i style="height:52%"></i><i style="height:66%"></i><i style="height:58%"></i><i style="height:74%"></i><i style="height:62%"></i><i style="height:82%"></i><i class="hot" style="height:70%"></i><i class="hot" style="height:88%"></i><i class="hot" style="height:80%"></i>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-        <div class="feature">
-          <h3>Works offline</h3>
-          <p>Once installed, every tool and the load tester run without a network connection.</p>
+      </div>
+
+      <div class="mod feature flip">
+        <div class="mod-copy">
+          <span class="mod-num">02 — Requests</span>
+          <h3>Requests</h3>
+          <p class="tagline">Paste a URL or a cURL — read the insight card.</p>
+          <ul>
+            <li>Status, time, size and shape at a glance</li>
+            <li>Faster / slower than the previous run</li>
+            <li>Drafts, collections and history</li>
+            <li>Postman v2.1 import · send to Load Test</li>
+          </ul>
+        </div>
+        <div class="mod-shot">
+          <div class="shot">
+            <div class="shot-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="t">Loadix · Requests</span></div>
+            <div class="shot-body">
+              <div class="r">
+                <span class="method">GET</span>
+                <span class="url">https://api.example.com/v1/orders?status=paid</span>
+                <span class="btn-mini dark">Send</span>
+              </div>
+              <div class="panel resp">
+                <div class="r">
+                  <span class="pill ok">200 OK</span>
+                  <span class="mini">214 ms · 1.2 KB</span>
+                  <span class="grow"></span>
+                  <span class="mini grn">↘ 38 ms vs last run</span>
+                </div>
+                <div class="code">{ <span class="k">"status"</span>: <span class="s">"paid"</span>,<br>&nbsp;&nbsp;<span class="k">"total"</span>: <span class="n">129.0</span>,<br>&nbsp;&nbsp;<span class="k">"items"</span>: [ <span class="n">4</span> ] }</div>
+              </div>
+              <div class="stats">
+                <div class="stat"><span>Latency</span><b>214 ms</b></div>
+                <div class="stat"><span>Size</span><b>1.2 KB</b></div>
+                <div class="stat"><span>Shape</span><b>array[4]</b></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mod feature">
+        <div class="mod-copy">
+          <span class="mod-num">03 — Markdown</span>
+          <h3>Markdown</h3>
+          <p class="tagline">Paste Markdown from anywhere — render, keep and share it.</p>
+          <ul>
+            <li>Render instantly: GFM · KaTeX · Mermaid</li>
+            <li>Stored locally in your browser</li>
+            <li>Share as a rendered link — no files to send</li>
+            <li>Capture a request response into the page</li>
+          </ul>
+        </div>
+        <div class="mod-shot">
+          <div class="shot">
+            <div class="shot-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="t">Loadix · Markdown — split view</span></div>
+            <div class="shot-body split">
+              <div class="md-ed">
+                <div class="md mh"># Orders API</div>
+                <div class="md mp">List <b>paid</b> orders with totals.</div>
+                <div class="md mf">```json</div>
+                <div class="md mc">{ "status": "paid", "total": 129.0 }</div>
+                <div class="md mf">```</div>
+              </div>
+              <div class="md-pv">
+                <div class="pv-h">Orders API</div>
+                <div class="pv-p">List <b>paid</b> orders with totals.</div>
+                <div class="r pv-row"><span class="pill ok">200 OK</span><span class="pill">captured live</span></div>
+                <div class="tbl">
+                  <div class="tr th"><span>ID</span><span>Status</span><span>Total</span></div>
+                  <div class="tr"><span>o-104</span><span class="grn">paid</span><span>129.00</span></div>
+                  <div class="tr"><span>o-109</span><span class="grn">paid</span><span>61.50</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mod feature flip">
+        <div class="mod-copy">
+          <span class="mod-num">04 — Toolbox</span>
+          <h3>Toolbox</h3>
+          <p class="tagline">19 single-purpose utilities behind one palette.</p>
+          <ul>
+            <li>JWT · Base64 · URL parse &amp; encode</li>
+            <li>JSON &amp; SQL formatters · regex · hash</li>
+            <li>UUID · timestamp · cron · color</li>
+            <li>Every tool available at <code>Ctrl/⌘K</code></li>
+          </ul>
+        </div>
+        <div class="mod-shot">
+          <div class="shot">
+            <div class="shot-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="t">Loadix · Toolbox</span></div>
+            <div class="shot-body">
+              <div class="tb">
+                <div class="tiles">
+                  <div class="tile"><span class="sq"></span><em>JWT</em></div>
+                  <div class="tile"><span class="sq"></span><em>Base64</em></div>
+                  <div class="tile"><span class="sq"></span><em>URL</em></div>
+                  <div class="tile"><span class="sq"></span><em>JSON</em></div>
+                  <div class="tile"><span class="sq"></span><em>SQL</em></div>
+                  <div class="tile"><span class="sq"></span><em>Hash</em></div>
+                  <div class="tile"><span class="sq"></span><em>UUID</em></div>
+                  <div class="tile"><span class="sq"></span><em>Cron</em></div>
+                </div>
+                <div class="scrim">
+                  <div class="pal">
+                    <div class="pal-in">
+                      <span class="kbd">⌘K</span>
+                      <span class="pal-q">jwt</span>
+                      <span class="grow"></span>
+                      <span class="kbd dim">esc</span>
+                    </div>
+                    <div class="pal-row on"><span class="sq sm"></span><span>JWT</span><span class="tag-r">auth</span></div>
+                    <div class="pal-row"><span class="sq sm"></span><span>Base64</span><span class="tag-r">encode</span></div>
+                    <div class="pal-row"><span class="sq sm"></span><span>URL Parser</span><span class="tag-r">encode</span></div>
+                    <div class="pal-ftr"><span class="kbd dim">↑↓</span><span class="mini">navigate</span><span class="kbd dim">↵</span><span class="mini">open</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </section>
 
     <section id="tools" class="section">
-      <p class="eyebrow">Tools</p>
+      <p class="eyebrow">Toolbox</p>
       <div class="tool-grid">
         <div class="tool"><h3>JWT</h3></div>
         <div class="tool"><h3>Base64</h3></div>
-        <div class="tool"><h3>URL Parser</h3></div>
         <div class="tool"><h3>URL Encode</h3></div>
+        <div class="tool"><h3>URL Parser</h3></div>
         <div class="tool"><h3>Base Converter</h3></div>
         <div class="tool"><h3>HTML Entities</h3></div>
         <div class="tool"><h3>Unicode</h3></div>
@@ -148,7 +314,6 @@
         <div class="tool"><h3>JSON Formatter</h3></div>
         <div class="tool"><h3>SQL Formatter</h3></div>
         <div class="tool"><h3>Diff</h3></div>
-        <div class="tool"><h3>Markdown</h3></div>
         <div class="tool"><h3>Regex Tester</h3></div>
         <div class="tool"><h3>UUID Generator</h3></div>
         <div class="tool"><h3>Timestamp</h3></div>
@@ -156,32 +321,41 @@
         <div class="tool"><h3>CSS Gradient</h3></div>
         <div class="tool"><h3>Color Picker</h3></div>
         <div class="tool"><h3>JSONPath</h3></div>
+        <div class="tool"><h3>Element Snapshot</h3></div>
+      </div>
+    </section>
+
+    <section id="why" class="section">
+      <p class="eyebrow">Why Loadix</p>
+      <div class="grid">
+        <div class="feature">
+          <h3>No account</h3>
+          <p>Open it and go. Nothing to register.</p>
+        </div>
+        <div class="feature">
+          <h3>No telemetry</h3>
+          <p>Your data stays in your browser.</p>
+        </div>
+        <div class="feature">
+          <h3>Web or extension</h3>
+          <p>Same engine. The extension adds background tests and CORS-free requests.</p>
+        </div>
       </div>
     </section>
 
     <section id="install" class="section">
       <p class="eyebrow">Install</p>
       <div class="steps">
-        <div class="step"><span>01</span><div>Download the latest <code class="sh">loadix-*.zip</code> from <a href="https://github.com/hexiangtao/loadix/releases" target="_blank" rel="noopener">GitHub Releases</a></div></div>
-        <div class="step"><span>02</span><div>Open <code class="sh">chrome://extensions/</code> and enable <span class="dim">Developer mode</span></div></div>
-        <div class="step"><span>03</span><div>Drag the zip into the page — or click <span class="dim">Load unpacked</span> and select the unzipped folder</div></div>
-      </div>
-    </section>
-
-    <section id="build" class="section">
-      <p class="eyebrow">Build from source</p>
-      <div class="steps">
-        <div class="step"><span>01</span><div><code class="sh"><span class="cmd">$</span> <span class="arg">git clone</span> <span class="str">git@github.com:hexiangtao/loadix.git</span></code></div></div>
-        <div class="step"><span>02</span><div><code class="sh"><span class="cmd">$</span> <span class="arg">npm install</span></code></div></div>
-        <div class="step"><span>03</span><div><code class="sh"><span class="cmd">$</span> <span class="arg">npm run build</span></code></div></div>
-        <div class="step"><span>04</span><div><code class="sh">chrome://extensions/</code> <span class="dim">→ enable Developer mode</span></div></div>
-        <div class="step"><span>05</span><div>Load unpacked <span class="dim">→ select</span> <code class="sh">.output/chrome-mv3</code></div></div>
+        <div class="step"><span>01</span><div>Open <code class="sh"><a href="https://lab.loadix.dev">lab.loadix.dev</a></code> — no install</div></div>
+        <div class="step"><span>02</span><div>Or grab <code class="sh">loadix-*.zip</code> from <a href="https://github.com/hexiangtao/loadix/releases" target="_blank" rel="noopener">GitHub Releases</a></div></div>
+        <div class="step"><span>03</span><div><code class="sh">chrome://extensions</code> → Developer mode → Load unpacked</div></div>
       </div>
     </section>
   </main>
 
   <footer class="footer">
-    <p>Loadix · Use only against systems you own or are authorized to test.</p>
+    <p>Loadix · <a href="https://github.com/hexiangtao/loadix" target="_blank" rel="noopener">GitHub</a> · <a href="https://lab.loadix.dev">lab.loadix.dev</a></p>
+    <p>Use only against systems you own or are authorized to test.</p>
   </footer>
 
   <script src="./script.js"></script>
