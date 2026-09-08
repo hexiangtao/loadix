@@ -42,6 +42,8 @@ import { ApiSidebar } from './ApiSidebar';
 import { RequestEditor } from './RequestEditor';
 import { ResponseView } from './ResponseView';
 import { RealtimePanel, type RealtimeMode } from './RealtimePanel';
+import { ApiDirectoryPanel } from './ApiDirectoryPanel';
+import type { DirectoryApi } from './apiDirectory';
 import { SplitDivider } from './SplitDivider';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 
@@ -49,6 +51,7 @@ const CURRENT_KEY = 'loadix-api:current';
 const VARS_KEY = 'loadix-api:vars'; // global-scope variables (pre-environment legacy key)
 const ACTIVE_ENV_KEY = 'loadix-api:active-env';
 const EXTRACTED_KEY = 'loadix-api:extracted';
+const DIR_FAVORITES_KEY = 'loadix-api:dir-favorites';
 const EDITOR_HEIGHT_KEY = 'loadix-api:editor-height';
 const SAVE_DEBOUNCE_MS = 600;
 
@@ -79,6 +82,15 @@ export function ApiClientTool({ onOpenInLoadTest, onOpenInMarkdown }: ApiClientT
   const [extracted, setExtracted] = useState<[string, string][]>([]);
   const [assertionResults, setAssertionResults] = useState<{ assertion: Assertion; pass: boolean }[] | null>(null);
   const [mode, setMode] = useState<RealtimeMode | 'http'>('http');
+  const [directoryOpen, setDirectoryOpen] = useState(false);
+  const [favorites, setFavorites] = useState<string[]>(() => {
+    try {
+      const raw = localStorage.getItem(DIR_FAVORITES_KEY);
+      return raw ? (JSON.parse(raw) as string[]) : [];
+    } catch {
+      return [];
+    }
+  });
   // Split-divider preference: null = editor at natural height, otherwise px.
   const [editorHeight, setEditorHeight] = useState<number | null>(() => {
     const raw = localStorage.getItem(EDITOR_HEIGHT_KEY);
@@ -572,10 +584,43 @@ export function ApiClientTool({ onOpenInLoadTest, onOpenInMarkdown }: ApiClientT
   const handleModeChange = useCallback(
     (m: RealtimeMode | 'http') => {
       if (current) void saveRequest({ ...current, updatedAt: Date.now() });
+      setDirectoryOpen(false);
       setMode(m);
     },
     [current],
   );
+
+  /* ——— API directory ——— */
+
+  const handleToggleFavorite = useCallback((id: string) => {
+    setFavorites((prev) => {
+      const next = prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
+      localStorage.setItem(DIR_FAVORITES_KEY, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  const handleTryApi = useCallback((api: DirectoryApi) => {
+    const draft = createApiRequest();
+    draft.name = api.name;
+    draft.method = api.example.method;
+    draft.url = api.example.url;
+    draft.headers = api.example.headers ? api.example.headers.map(([k, v]) => [k, v] as [string, string]) : draft.headers;
+    if (api.example.body) draft.body = { ...api.example.body, form: [...(api.example.body.form ?? [])] };
+    void saveRequest(draft);
+    setRequests((prev) => [draft, ...prev]);
+    setCurrentId(draft.id);
+    setDirectoryOpen(false);
+    setResponse(null);
+    setPreviousResponse(null);
+    setResponseRequest(null);
+  }, []);
+
+  const handleOpenDirectory = useCallback(() => {
+    if (current) void saveRequest({ ...current, updatedAt: Date.now() });
+    setMode('http');
+    setDirectoryOpen(true);
+  }, [current]);
 
   /* ——— Split divider ——— */
 
@@ -625,7 +670,14 @@ export function ApiClientTool({ onOpenInLoadTest, onOpenInMarkdown }: ApiClientT
         </div>
       </div>
 
-      {mode !== 'http' ? (
+      {directoryOpen ? (
+        <ApiDirectoryPanel
+          favorites={favorites}
+          onToggleFavorite={handleToggleFavorite}
+          onTryApi={handleTryApi}
+          onClose={() => setDirectoryOpen(false)}
+        />
+      ) : mode !== 'http' ? (
         <RealtimePanel mode={mode} />
       ) : (
         <div className="flex min-h-0 w-full flex-1">
@@ -650,6 +702,7 @@ export function ApiClientTool({ onOpenInLoadTest, onOpenInMarkdown }: ApiClientT
             onExportPostman={handleExport}
             onExportOpenApi={handleExportOpenApi}
             onOpenHistory={handleOpenHistory}
+            onOpenDirectory={handleOpenDirectory}
             onClearHistory={handleClearHistory}
           />
           <div className="flex min-w-0 flex-1 flex-col bg-panel">

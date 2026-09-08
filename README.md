@@ -35,6 +35,7 @@ An API client built around real responses rather than raw walls of JSON.
 - **Tests tab** — response assertions (status, latency, body contains, JSONPath, header) with pass/fail chips after every send
 - **Request chaining** — extract values from a response (JSONPath / regex / header) into the extracted scope, then reference them as `{{name}}` in later requests — login → token → CRUD flows work out of the box
 - **Protocols** — GraphQL bodies (query + variables panes), plus WebSocket and SSE panels with live message logs
+- **Free API directory** — 116 curated free APIs (sourced from the public-apis community list, MIT) with one-click **Try it**: search, filter by category/auth, star the ones you use into your own toolkit
 - Organize with drafts, collections and history; import Postman v2.1 and **OpenAPI 3.0** (YAML or JSON), export either format
 - Send any request straight to **Load Test**, or capture the response into a **Markdown** page as live documentation
 

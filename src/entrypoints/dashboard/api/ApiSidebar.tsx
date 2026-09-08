@@ -18,6 +18,7 @@ import {
   Copy,
   Download,
   Folder,
+  Library,
   FolderPlus,
   Globe,
   History as HistoryIcon,
@@ -73,6 +74,8 @@ interface ApiSidebarProps {
   onImportFile: (file: File) => void;
   onExportPostman: () => void;
   onExportOpenApi: () => void;
+  /** Opens the built-in free API directory. */
+  onOpenDirectory: () => void;
   onOpenHistory: (entry: ApiHistoryEntry) => void;
   onClearHistory: () => void;
 }
@@ -337,13 +340,22 @@ export function ApiSidebar(props: ApiSidebarProps) {
       <div className="px-3 pb-2 pt-3">
         <div className="mb-2 flex items-center justify-between pl-1">
           <span className="text-xs font-bold text-muted">{t('api.collections')}</span>
-          <button
-            onClick={() => setCollapsed(true)}
-            title={t('tools.collapseSidebar')}
-            className="rounded-lg p-1.5 text-muted transition-colors duration-150 hover:bg-hover hover:text-ink"
-          >
-            <PanelLeftClose size={16} />
-          </button>
+          <div className="flex items-center gap-0.5">
+            <button
+              onClick={props.onOpenDirectory}
+              title={t('api.dirTitle')}
+              className="rounded-lg p-1.5 text-muted transition-colors duration-150 hover:bg-hover hover:text-primary"
+            >
+              <Library size={15} />
+            </button>
+            <button
+              onClick={() => setCollapsed(true)}
+              title={t('tools.collapseSidebar')}
+              className="rounded-lg p-1.5 text-muted transition-colors duration-150 hover:bg-hover hover:text-ink"
+            >
+              <PanelLeftClose size={16} />
+            </button>
+          </div>
         </div>
         <div className="flex gap-1.5">
           <button
