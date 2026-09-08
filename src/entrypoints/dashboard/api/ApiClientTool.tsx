@@ -14,7 +14,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Route } from 'lucide-react';
+import { Radio, Route } from 'lucide-react';
 import { storageGet, storageSet } from '../storage';
 import { evaluateAssertions } from '@/engine/core';
 import type { ApiCollection, ApiHistoryEntry, ApiRequest, ApiResponse } from './apiTypes';
@@ -49,6 +49,7 @@ import { ApiDirectoryPanel } from './ApiDirectoryPanel';
 import type { DirectoryApi } from './apiDirectory';
 import { parseQueryParams } from './urlUtil';
 import { JourneyPanel } from './JourneyPanel';
+import { RecorderPanel } from './RecorderPanel';
 import { createJourney, createRequestNode, type Journey } from './journeyTypes';
 import { runJourney, type JourneyRunReport } from './journeyRunner';
 import { journeyToMarkdown } from './journeyReport';
@@ -92,6 +93,7 @@ export function ApiClientTool({ onOpenInLoadTest, onOpenInMarkdown }: ApiClientT
   const [mode, setMode] = useState<RealtimeMode | 'http'>('http');
   const [directoryOpen, setDirectoryOpen] = useState(false);
   const [journeyOpen, setJourneyOpen] = useState(false);
+  const [recorderOpen, setRecorderOpen] = useState(false);
   const [journeys, setJourneys] = useState<Journey[]>([]);
   const [activeJourneyId, setActiveJourneyId] = useState<string | null>(null);
   const [journeyReport, setJourneyReport] = useState<JourneyRunReport | null>(null);
@@ -617,6 +619,7 @@ export function ApiClientTool({ onOpenInLoadTest, onOpenInMarkdown }: ApiClientT
       if (current) void saveRequest({ ...current, updatedAt: Date.now() });
       setDirectoryOpen(false);
       setJourneyOpen(false);
+      setRecorderOpen(false);
       setMode(m);
     },
     [current],
@@ -653,7 +656,16 @@ export function ApiClientTool({ onOpenInLoadTest, onOpenInMarkdown }: ApiClientT
     if (current) void saveRequest({ ...current, updatedAt: Date.now() });
     setMode('http');
     setJourneyOpen(false);
+    setRecorderOpen(false);
     setDirectoryOpen(true);
+  }, [current]);
+
+  const handleOpenRecorder = useCallback(() => {
+    if (current) void saveRequest({ ...current, updatedAt: Date.now() });
+    setMode('http');
+    setJourneyOpen(false);
+    setDirectoryOpen(false);
+    setRecorderOpen(true);
   }, [current]);
 
   /* ——— API Journey ——— */
@@ -751,9 +763,24 @@ export function ApiClientTool({ onOpenInLoadTest, onOpenInMarkdown }: ApiClientT
   const handleOpenJourney = useCallback(() => {
     if (journeys.length === 0) handleLoadJourneyDemo();
     setDirectoryOpen(false);
+    setRecorderOpen(false);
     setMode('http');
     setJourneyOpen(true);
   }, [handleLoadJourneyDemo, journeys.length]);
+
+  /** Recorder import: persist captured requests (+ journey) into the workspace. */
+  const handleRecorderImport = useCallback((imported: ApiRequest[], journey: Journey | null) => {
+    for (const request of imported) void saveRequest(request);
+    setRequests((prev) => [...imported, ...prev]);
+    if (journey) {
+      setJourneys((prev) => [journey, ...prev]);
+      setActiveJourneyId(journey.id);
+      setJourneyReport(null);
+      void saveJourneyInStore(journey);
+      setRecorderOpen(false);
+      setJourneyOpen(true);
+    }
+  }, []);
 
   const handleRunJourney = useCallback(
     async (startAt?: number) => {
@@ -934,6 +961,13 @@ export function ApiClientTool({ onOpenInLoadTest, onOpenInMarkdown }: ApiClientT
           <Route size={12} />
           {t('api.journeyTabTitle')}
         </button>
+        <button
+          onClick={handleOpenRecorder}
+          className={`flex cursor-pointer items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs transition-colors ${recorderOpen ? 'bg-primary font-semibold text-white' : 'text-muted hover:bg-hover hover:text-ink'}`}
+        >
+          <Radio size={12} />
+          {t('api.recorderTabTitle')}
+        </button>
       </div>
 
       {journeyOpen ? (
@@ -956,6 +990,8 @@ export function ApiClientTool({ onOpenInLoadTest, onOpenInMarkdown }: ApiClientT
           onExportReport={handleJourneyExportReport}
           onClose={() => setJourneyOpen(false)}
         />
+      ) : recorderOpen ? (
+        <RecorderPanel onClose={() => setRecorderOpen(false)} onImport={handleRecorderImport} />
       ) : directoryOpen ? (
         <ApiDirectoryPanel
           favorites={favorites}

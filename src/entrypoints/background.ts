@@ -591,6 +591,16 @@ export default defineBackground(() => {
     return false;
   });
 
+  // The recorder content script learns its own tab id from the SW so its
+  // recording state + buffer can be persisted in chrome.storage.session
+  // under a tab-scoped key and restored after a page reload.
+  chrome.runtime.onMessage.addListener((msg: unknown, sender, sendResponse) => {
+    if (!msg || typeof msg !== 'object') return false;
+    if ((msg as { type?: string }).type !== 'recorder:tabid') return false;
+    sendResponse({ type: 'recorder:tabid', tabId: sender.tab?.id ?? null });
+    return false;
+  });
+
   // Content-script replies routed back to the right tab.
   chrome.runtime.onMessage.addListener((raw, sender) => {
     if (!sender.tab?.id) return;
