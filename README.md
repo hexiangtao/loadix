@@ -34,6 +34,7 @@ An API client built around real responses rather than raw walls of JSON.
 - **Environments** — dev / staging / prod variable scopes with nested `{{name}}` references, plus global and session (extracted) scopes; switch with one click
 - **Tests tab** — response assertions (status, latency, body contains, JSONPath, header) with pass/fail chips after every send
 - **Request chaining** — extract values from a response (JSONPath / regex / header) into the extracted scope, then reference them as `{{name}}` in later requests — login → token → CRUD flows work out of the box
+- **API Journeys** — saved, multi-step flows with a visual editor: bind earlier steps' extracted variables (`{{owner_id}} ← step 1 · userId`), per-step delay / retries / timeout / conditional skip, data-set iteration (JSON or CSV), stop on failure or continue, run from any step, and export a Markdown run report showing exactly what went over the wire
 - **Protocols** — GraphQL bodies (query + variables panes), plus WebSocket and SSE panels with live message logs
 - **Free API directory** — 116 curated free APIs (sourced from the public-apis community list, MIT) with one-click **Try it**: search, filter by category/auth, star the ones you use into your own toolkit
 - Organize with drafts, collections and history; import Postman v2.1 and **OpenAPI 3.0** (YAML or JSON), export either format

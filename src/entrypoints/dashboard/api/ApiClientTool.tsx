@@ -14,6 +14,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Route } from 'lucide-react';
 import { storageGet, storageSet } from '../storage';
 import { evaluateAssertions } from '@/engine/core';
 import type { ApiCollection, ApiHistoryEntry, ApiRequest, ApiResponse } from './apiTypes';
@@ -23,11 +24,13 @@ import {
   clearHistory,
   deleteCollection as deleteCollectionInStore,
   deleteEnvironment as deleteEnvironmentInStore,
+  deleteJourney as deleteJourneyInStore,
   deleteRequest as deleteRequestInStore,
   loadWorkspace,
   saveCollection,
   saveCollections,
   saveEnvironment,
+  saveJourney as saveJourneyInStore,
   saveRequest,
   saveRequests,
 } from './apiStore';
@@ -45,6 +48,10 @@ import { RealtimePanel, type RealtimeMode } from './RealtimePanel';
 import { ApiDirectoryPanel } from './ApiDirectoryPanel';
 import type { DirectoryApi } from './apiDirectory';
 import { parseQueryParams } from './urlUtil';
+import { JourneyPanel } from './JourneyPanel';
+import { createJourney, createRequestNode, type Journey } from './journeyTypes';
+import { runJourney, type JourneyRunReport } from './journeyRunner';
+import { journeyToMarkdown } from './journeyReport';
 import { SplitDivider } from './SplitDivider';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 
@@ -84,6 +91,12 @@ export function ApiClientTool({ onOpenInLoadTest, onOpenInMarkdown }: ApiClientT
   const [assertionResults, setAssertionResults] = useState<{ assertion: Assertion; pass: boolean }[] | null>(null);
   const [mode, setMode] = useState<RealtimeMode | 'http'>('http');
   const [directoryOpen, setDirectoryOpen] = useState(false);
+  const [journeyOpen, setJourneyOpen] = useState(false);
+  const [journeys, setJourneys] = useState<Journey[]>([]);
+  const [activeJourneyId, setActiveJourneyId] = useState<string | null>(null);
+  const [journeyReport, setJourneyReport] = useState<JourneyRunReport | null>(null);
+  const [journeyRunning, setJourneyRunning] = useState(false);
+  const journeyCancelRef = useRef(false);
   const [favorites, setFavorites] = useState<string[]>(() => {
     try {
       const raw = localStorage.getItem(DIR_FAVORITES_KEY);
@@ -129,6 +142,8 @@ export function ApiClientTool({ onOpenInLoadTest, onOpenInMarkdown }: ApiClientT
       setCollections(workspace.collections);
       setHistory(workspace.history);
       setEnvironments(workspace.environments);
+      setJourneys(workspace.journeys);
+      if (workspace.journeys.length > 0) setActiveJourneyId(workspace.journeys[0]!.id);
       if (savedVars) setGlobalVars(savedVars);
       if (savedExtracted) setExtracted(savedExtracted);
       if (activeEnv && workspace.environments.some((e) => e.id === activeEnv)) setActiveEnvId(activeEnv);
@@ -168,6 +183,21 @@ export function ApiClientTool({ onOpenInLoadTest, onOpenInMarkdown }: ApiClientT
   useEffect(() => {
     if (currentId) void storageSet(CURRENT_KEY, currentId);
   }, [currentId]);
+
+  /* ——— Journey auto-save (debounced, same as requests) ——— */
+
+  const journeySaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const activeJourney = journeys.find((journey) => journey.id === activeJourneyId) ?? null;
+  useEffect(() => {
+    if (!activeJourney) return;
+    if (journeySaveTimer.current) clearTimeout(journeySaveTimer.current);
+    journeySaveTimer.current = setTimeout(() => {
+      void saveJourneyInStore(activeJourney);
+    }, SAVE_DEBOUNCE_MS);
+    return () => {
+      if (journeySaveTimer.current) clearTimeout(journeySaveTimer.current);
+    };
+  }, [activeJourney]);
 
   /* ——— Auto-save: every edit persists (debounced) ——— */
 
@@ -586,6 +616,7 @@ export function ApiClientTool({ onOpenInLoadTest, onOpenInMarkdown }: ApiClientT
     (m: RealtimeMode | 'http') => {
       if (current) void saveRequest({ ...current, updatedAt: Date.now() });
       setDirectoryOpen(false);
+      setJourneyOpen(false);
       setMode(m);
     },
     [current],
@@ -621,8 +652,234 @@ export function ApiClientTool({ onOpenInLoadTest, onOpenInMarkdown }: ApiClientT
   const handleOpenDirectory = useCallback(() => {
     if (current) void saveRequest({ ...current, updatedAt: Date.now() });
     setMode('http');
+    setJourneyOpen(false);
     setDirectoryOpen(true);
   }, [current]);
+
+  /* ——— API Journey ——— */
+
+  const handleLoadJourneyDemo = useCallback(() => {
+    const demoNames = ['1. Fetch todo', '2. Fetch owner', '3. Create a note'];
+    const existingDemo = demoNames.map((name) => requests.find((request) => request.name === name));
+    let demo: ApiRequest[];
+    if (existingDemo.every((request): request is ApiRequest => Boolean(request))) {
+      demo = existingDemo as ApiRequest[];
+      const [first, second, third] = demo;
+      first!.extract = [{ id: first!.extract[0]?.id ?? uid(), name: 'userId', kind: 'json', source: '$.userId' }];
+      second!.url = 'https://jsonplaceholder.typicode.com/users?id={{owner_id}}';
+      second!.params = parseQueryParams(second!.url);
+      third!.method = 'POST';
+      third!.url = 'https://jsonplaceholder.typicode.com/posts';
+      third!.params = parseQueryParams(third!.url);
+      third!.headers = [['Content-Type', 'application/json']];
+      third!.body = { type: 'json', content: '{\n  "userId": {{owner_id}},\n  "title": "Journey demo",\n  "body": "Created by a JSON step"\n}', form: [], gqlVariables: '' };
+      for (const request of demo) void saveRequest(request);
+      setRequests((prev) => prev.map((request) => demo.find((item) => item.id === request.id) ?? request));
+    } else {
+      const first = createApiRequest();
+      first.name = '1. Fetch todo';
+      first.url = 'https://jsonplaceholder.typicode.com/todos/1';
+      first.params = parseQueryParams(first.url);
+      first.extract = [{ id: uid(), name: 'userId', kind: 'json', source: '$.userId' }];
+      const second = createApiRequest();
+      second.name = '2. Fetch owner';
+      second.url = 'https://jsonplaceholder.typicode.com/users?id={{owner_id}}';
+      second.params = parseQueryParams(second.url);
+      const third = createApiRequest();
+      third.name = '3. Create a note';
+      third.method = 'POST';
+      third.url = 'https://jsonplaceholder.typicode.com/posts';
+      third.params = parseQueryParams(third.url);
+      third.headers = [['Content-Type', 'application/json']];
+      third.body = { type: 'json', content: '{\n  "userId": {{owner_id}},\n  "title": "Journey demo",\n  "body": "Created by a JSON step"\n}', form: [], gqlVariables: '' };
+      demo = [first, second, third];
+      for (const request of demo) void saveRequest(request);
+      setRequests((prev) => [...demo, ...prev]);
+    }
+    const journey = createJourney(t('api.journeyDemoName'));
+    journey.steps = [
+      createRequestNode(demo[0]!.id),
+      { ...createRequestNode(demo[1]!.id), bindings: { owner_id: 'step:0:userId' } },
+      { ...createRequestNode(demo[2]!.id), bindings: { owner_id: 'step:0:userId' } },
+    ];
+    setJourneys((prev) => [journey, ...prev]);
+    setActiveJourneyId(journey.id);
+    setJourneyReport(null);
+    void saveJourneyInStore(journey);
+  }, [requests, t]);
+
+  /** Auth-flow template: login → extract token → authenticated request. */
+  const handleLoadJourneyAuth = useCallback(() => {
+    const authNames = ['A1. Login', 'A2. Fetch my profile'];
+    const existing = authNames.map((name) => requests.find((request) => request.name === name));
+    let flow: ApiRequest[];
+    if (existing.every((request): request is ApiRequest => Boolean(request))) {
+      flow = existing as ApiRequest[];
+      const [login, me] = flow;
+      login!.extract = [{ id: login!.extract[0]?.id ?? uid(), name: 'accessToken', kind: 'json', source: '$.accessToken' }];
+      me!.headers = [['Authorization', 'Bearer {{accessToken}}']];
+      me!.assertions = [{ type: 'status', value: '200' }];
+      for (const request of flow) void saveRequest(request);
+      setRequests((prev) => prev.map((request) => flow.find((item) => item.id === request.id) ?? request));
+    } else {
+      const login = createApiRequest();
+      login.name = 'A1. Login';
+      login.method = 'POST';
+      login.url = 'https://dummyjson.com/auth/login';
+      login.params = parseQueryParams(login.url);
+      login.headers = [['Content-Type', 'application/json']];
+      login.body = { type: 'json', content: '{\n  "username": "emilys",\n  "password": "emilyspass"\n}', form: [], gqlVariables: '' };
+      login.extract = [{ id: uid(), name: 'accessToken', kind: 'json', source: '$.accessToken' }];
+      const me = createApiRequest();
+      me.name = 'A2. Fetch my profile';
+      me.url = 'https://dummyjson.com/auth/me';
+      me.params = parseQueryParams(me.url);
+      me.headers = [['Authorization', 'Bearer {{accessToken}}']];
+      me.assertions = [{ type: 'status', value: '200' }];
+      flow = [login, me];
+      for (const request of flow) void saveRequest(request);
+      setRequests((prev) => [...flow, ...prev]);
+    }
+    const journey = createJourney(t('api.journeyAuthName'));
+    journey.steps = flow.map((request) => createRequestNode(request.id));
+    setJourneys((prev) => [journey, ...prev]);
+    setActiveJourneyId(journey.id);
+    setJourneyReport(null);
+    void saveJourneyInStore(journey);
+  }, [requests, t]);
+
+  const handleOpenJourney = useCallback(() => {
+    if (journeys.length === 0) handleLoadJourneyDemo();
+    setDirectoryOpen(false);
+    setMode('http');
+    setJourneyOpen(true);
+  }, [handleLoadJourneyDemo, journeys.length]);
+
+  const handleRunJourney = useCallback(
+    async (startAt?: number) => {
+      const journey = journeys.find((item) => item.id === activeJourneyId);
+      if (!journey || journeyRunning || journey.steps.length === 0) return;
+      journeyCancelRef.current = false;
+      setJourneyRunning(true);
+      setJourneyReport(null);
+      try {
+        const report = await runJourney({
+          requests: Object.fromEntries(requests.map((request) => [request.id, request])),
+          journey,
+          vars: { ...varsRef.current },
+          startAt,
+          isCancelled: () => journeyCancelRef.current,
+          onProgress: (snapshot) => setJourneyReport(snapshot),
+        });
+        setJourneyReport(report);
+        // Merge extracted values into the persistent extracted scope so
+        // manual requests after the run benefit from the flow's data.
+        const merged = new Map<string, string>();
+        for (const iteration of report.iterations) {
+          for (const step of iteration.stepResults) {
+            for (const [key, value] of step.extractedPairs) merged.set(key, value);
+          }
+        }
+        if (merged.size > 0) {
+          const entries = Array.from(merged.entries());
+          setExtracted((prev) => {
+            const map = new Map(prev);
+            for (const [key, value] of entries) map.set(key, value);
+            const next = Array.from(map.entries());
+            void storageSet(EXTRACTED_KEY, next);
+            return next;
+          });
+        }
+      } finally {
+        setJourneyRunning(false);
+      }
+    },
+    [activeJourneyId, journeyRunning, journeys, requests],
+  );
+
+  const handleStopJourney = useCallback(() => {
+    journeyCancelRef.current = true;
+  }, []);
+
+  const handleJourneyNew = useCallback(() => {
+    const journey = createJourney('');
+    setJourneys((prev) => [...prev, journey]);
+    setActiveJourneyId(journey.id);
+    setJourneyReport(null);
+    void saveJourneyInStore(journey);
+  }, []);
+
+  const handleJourneyDelete = useCallback(
+    (id: string) => {
+      const target = journeys.find((journey) => journey.id === id);
+      if (!target) return;
+      setConfirm({
+        message: t('api.journeyConfirmDelete'),
+        confirmLabel: t('api.journeyDeleteLabel'),
+        onConfirm: () => {
+          void deleteJourneyInStore(id);
+          setJourneys((prev) => {
+            const next = prev.filter((journey) => journey.id !== id);
+            if (activeJourneyId === id) setActiveJourneyId(next[0]?.id ?? null);
+            return next;
+          });
+          setJourneyReport(null);
+        },
+      });
+    },
+    [activeJourneyId, journeys, t],
+  );
+
+  const handleJourneyExportReport = useCallback(() => {
+    const journey = journeys.find((item) => item.id === activeJourneyId);
+    if (!journey || !journeyReport) return;
+    const labels = {
+      untitled: t('api.journeyUntitled'),
+      reportTitle: t('api.journeyReportTitle'),
+      runAt: t('api.journeyReportRunAt'),
+      duration: t('api.journeyReportDuration'),
+      cancelled: t('api.journeyStopped'),
+      passed: t('api.journeyReportPassed'),
+      failed: t('api.journeyReportFailed'),
+      skipped: t('api.journeyReportSkipped'),
+      iteration: t('api.journeyIteration'),
+      step: t('api.journeyStepShort'),
+      skippedLabel: t('api.journeySkipped'),
+      request: t('api.journeyReportRequest'),
+      url: 'URL',
+      method: 'Method',
+      headers: 'Headers',
+      body: 'Body',
+      response: t('api.journeyReportResponse'),
+      status: t('api.journeyReportStatus'),
+      latency: t('api.journeyReportLatency'),
+      extracted: t('api.journeyExtracted'),
+      assertionsFailed: t('api.journeyReportAssertions'),
+      attempts: t('api.journeyReportAttempts'),
+      error: t('api.error'),
+      dataError: t('api.journeyDataError'),
+      iterationsTotal: t('api.journeyIterations'),
+      noResponse: t('api.journeyReportNoResponse'),
+    };
+    const md = journeyToMarkdown(
+      journey,
+      journeyReport,
+      Object.fromEntries(requests.map((request) => [request.id, request])),
+      labels,
+    );
+    const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${journey.name.trim() || 'journey'}-report.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [activeJourneyId, journeyReport, journeys, requests, t]);
+
+  const handleJourneyOpenRequest = useCallback((id: string) => {
+    setJourneyOpen(false);
+    switchTo(id);
+  }, [switchTo]);
 
   /* ——— Split divider ——— */
 
@@ -670,9 +927,36 @@ export function ApiClientTool({ onOpenInLoadTest, onOpenInMarkdown }: ApiClientT
             </button>
           ))}
         </div>
+        <button
+          onClick={handleOpenJourney}
+          className={`flex cursor-pointer items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs transition-colors ${journeyOpen ? 'bg-primary font-semibold text-white' : 'text-muted hover:bg-hover hover:text-ink'}`}
+        >
+          <Route size={12} />
+          {t('api.journeyTabTitle')}
+        </button>
       </div>
 
-      {directoryOpen ? (
+      {journeyOpen ? (
+        <JourneyPanel
+          journeys={journeys}
+          activeId={activeJourneyId}
+          requests={requests}
+          running={journeyRunning}
+          report={journeyReport}
+          vars={varsRef.current}
+          onSelect={setActiveJourneyId}
+          onNew={handleJourneyNew}
+          onDelete={handleJourneyDelete}
+          onPatch={(journey) => setJourneys((prev) => prev.map((item) => (item.id === journey.id ? journey : item)))}
+          onRun={(startAt) => void handleRunJourney(startAt)}
+          onStop={handleStopJourney}
+          onLoadDemo={handleLoadJourneyDemo}
+          onLoadAuth={handleLoadJourneyAuth}
+          onOpenRequest={handleJourneyOpenRequest}
+          onExportReport={handleJourneyExportReport}
+          onClose={() => setJourneyOpen(false)}
+        />
+      ) : directoryOpen ? (
         <ApiDirectoryPanel
           favorites={favorites}
           onToggleFavorite={handleToggleFavorite}

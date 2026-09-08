@@ -8,9 +8,10 @@
 
 import type { ApiCollection, ApiHistoryEntry, ApiRequest } from './apiTypes';
 import type { ApiEnvironment } from './variables';
+import type { Journey } from './journeyTypes';
 
 const DB_NAME = 'loadix-api';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const HISTORY_CAP = 100;
 
 let dbPromise: Promise<IDBDatabase> | null = null;
@@ -33,6 +34,7 @@ function open(): Promise<IDBDatabase> {
         if (!db.objectStoreNames.contains('collections')) db.createObjectStore('collections', { keyPath: 'id' });
         if (!db.objectStoreNames.contains('history')) db.createObjectStore('history', { keyPath: 'id' });
         if (!db.objectStoreNames.contains('environments')) db.createObjectStore('environments', { keyPath: 'id' });
+        if (!db.objectStoreNames.contains('journeys')) db.createObjectStore('journeys', { keyPath: 'id' });
       };
       r.onsuccess = () => resolve(r.result);
       r.onerror = () => reject(r.error ?? new Error('IndexedDB open failed'));
@@ -151,6 +153,23 @@ export async function deleteEnvironment(id: string): Promise<void> {
   await req(db.transaction('environments', 'readwrite').objectStore('environments').delete(id));
 }
 
+/* ——— Journeys ——— */
+
+export async function getAllJourneys(): Promise<Journey[]> {
+  const db = await open();
+  return req(db.transaction('journeys', 'readonly').objectStore('journeys').getAll() as IDBRequest<Journey[]>);
+}
+
+export async function saveJourney(journey: Journey): Promise<void> {
+  const db = await open();
+  await req(db.transaction('journeys', 'readwrite').objectStore('journeys').put(journey));
+}
+
+export async function deleteJourney(id: string): Promise<void> {
+  const db = await open();
+  await req(db.transaction('journeys', 'readwrite').objectStore('journeys').delete(id));
+}
+
 /* ——— Workspace ——— */
 
 export async function loadWorkspace(): Promise<{
@@ -158,12 +177,14 @@ export async function loadWorkspace(): Promise<{
   collections: ApiCollection[];
   history: ApiHistoryEntry[];
   environments: ApiEnvironment[];
+  journeys: Journey[];
 }> {
-  const [requests, collections, history, environments] = await Promise.all([
+  const [requests, collections, history, environments, journeys] = await Promise.all([
     getAllRequests(),
     getAllCollections(),
     getAllHistory(),
     getAllEnvironments(),
+    getAllJourneys(),
   ]);
-  return { requests, collections, history, environments };
+  return { requests, collections, history, environments, journeys };
 }
