@@ -1,3 +1,10 @@
+# [1.53.0](https://github.com/hexiangtao/loadix/compare/v1.52.0...v1.53.0) (2026-09-08)
+
+
+### Features
+
+* **api:** requests module v2 — environments, assertions, chaining, OpenAPI, GraphQL, WS/SSE ([a79f5ad](https://github.com/hexiangtao/loadix/commit/a79f5ad43d8b046392d8f4986918a03f9dd5b08b))
+
 # [1.52.0](https://github.com/hexiangtao/loadix/compare/v1.51.0...v1.52.0) (2026-09-07)
 
 
