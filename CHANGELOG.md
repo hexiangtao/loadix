@@ -1,3 +1,10 @@
+# [1.54.0](https://github.com/hexiangtao/loadix/compare/v1.53.0...v1.54.0) (2026-09-08)
+
+
+### Features
+
+* **api:** free API directory — 116 curated APIs with one-click Try it and favorites ([e6de7d8](https://github.com/hexiangtao/loadix/commit/e6de7d8fbd496e63db682c510da696a176e1c068))
+
 # [1.53.0](https://github.com/hexiangtao/loadix/compare/v1.52.0...v1.53.0) (2026-09-08)
 
 
