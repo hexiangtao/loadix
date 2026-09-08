@@ -325,10 +325,10 @@ export function RecorderPanel(props: {
       )}
 
       {/* ——— List ——— */}
-      <div className="app-scroller sb-hairline min-h-0 flex-1 overflow-y-auto px-4 py-4">
-        <div className="mx-auto max-w-3xl space-y-2">
+      <div className="app-scroller sb-hairline min-h-0 flex-1 overflow-y-auto px-5 py-5">
+        <div className="space-y-2.5">
           {captures.length === 0 ? (
-            <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-line bg-surface/30 px-6 py-12 text-center">
+            <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-line bg-surface/30 px-6 py-14 text-center">
               <div className="flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary"><Radio size={20} /></div>
               <p className="text-sm font-semibold text-ink">{t('api.recorderEmptyTitle')}</p>
               <p className="max-w-sm text-xs text-muted">{t('api.recorderEmpty')}</p>
@@ -353,8 +353,11 @@ export function RecorderPanel(props: {
                 ...c.redacted.bodyFields.map((n) => `body ${n}`),
               ];
               return (
-                <div key={c.id} className={`rounded-xl border bg-surface/60 ${isExpanded ? 'border-primary/30' : 'border-line'}`}>
-                  <div className="flex items-center gap-2 px-2.5 py-2">
+                <div
+                  key={c.id}
+                  className={`rounded-xl border bg-surface/60 transition-colors hover:bg-surface/80 ${isExpanded ? 'border-primary/30' : 'border-line'}`}
+                >
+                  <div className="flex items-center gap-3 px-4 py-3">
                     <input
                       type="checkbox"
                       checked={selected.has(c.id)}
@@ -364,68 +367,76 @@ export function RecorderPanel(props: {
                         else next.delete(c.id);
                         setSelected(next);
                       }}
-                      className="size-3 shrink-0 cursor-pointer accent-[var(--primary)]"
+                      className="size-3.5 shrink-0 cursor-pointer accent-[var(--primary)]"
                     />
-                    <span className={`shrink-0 rounded-md px-1.5 py-0.5 font-mono text-[9px] font-bold ${METHOD_CHIP[c.method as keyof typeof METHOD_CHIP] ?? 'bg-muted/10 text-muted'}`}>
-                      {c.method}
-                    </span>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate font-mono text-[11px] text-ink">{c.url}</p>
-                      <p className="truncate text-[9px] text-muted">
+                      <div className="flex items-center gap-2">
+                        <span className={`w-12 shrink-0 rounded-md px-1 py-0.5 text-center font-mono text-[10px] font-bold ${METHOD_CHIP[c.method as keyof typeof METHOD_CHIP] ?? 'bg-muted/10 text-muted'}`}>
+                          {c.method}
+                        </span>
+                        <p className="truncate font-mono text-[13px] leading-snug text-ink">{c.url}</p>
+                      </div>
+                      <p className="mt-1 truncate pl-14 text-[10px] text-muted">
                         {formatTime(c.ts)} · {c.source === 'xhr' ? 'XHR' : 'fetch'} · {c.pageTitle || hostOf(c.pageUrl)}
                       </p>
                     </div>
-                    <span className={`shrink-0 rounded-full px-1.5 py-px font-mono text-[9px] font-semibold ${statusClass(c.status)}`}>
-                      {c.status || 'ERR'}
-                    </span>
-                    {c.status > 0 && <span className="hidden w-12 shrink-0 text-right font-mono text-[9px] text-muted sm:block">{c.durationMs.toFixed(0)}ms</span>}
-                    {isRedacted && (
-                      <span
-                        onClick={() => toggle(showRedacted, c.id, setShowRedacted)}
-                        title={redactedParts.join(' · ')}
-                        className={`shrink-0 cursor-help rounded-full px-1.5 py-px text-[9px] font-semibold ${showRedacted.has(c.id) ? 'bg-warning text-white' : 'bg-warning/12 text-warning'}`}
+                    <div className="flex shrink-0 items-center gap-3">
+                      {isRedacted && (
+                        <span
+                          onClick={() => toggle(showRedacted, c.id, setShowRedacted)}
+                          title={redactedParts.join(' · ')}
+                          className={`cursor-help rounded-full px-2 py-0.5 text-[10px] font-semibold ${showRedacted.has(c.id) ? 'bg-warning text-white' : 'bg-warning/12 text-warning'}`}
+                        >
+                          {t('api.recorderRedacted')} {c.redacted.headers.length + c.redacted.urlParams.length + c.redacted.bodyFields.length}
+                        </span>
+                      )}
+                      <div className="min-w-16 text-right">
+                        <span className={`inline-block rounded-md px-1.5 py-0.5 font-mono text-[10px] font-bold ${statusClass(c.status)}`}>
+                          {c.status || 'ERR'}
+                        </span>
+                        {c.status > 0 && (
+                          <p className="mt-0.5 font-mono text-[10px] text-muted">{c.durationMs.toFixed(0)} ms</p>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => toggle(expanded, c.id, setExpanded)}
+                        title={t('api.journeyDetail')}
+                        className="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted transition-colors hover:bg-hover hover:text-ink"
                       >
-                        {t('api.recorderRedacted')} {c.redacted.headers.length + c.redacted.urlParams.length + c.redacted.bodyFields.length}
-                      </span>
-                    )}
-                    <button
-                      onClick={() => toggle(expanded, c.id, setExpanded)}
-                      title={t('api.journeyDetail')}
-                      className="flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted transition-colors hover:bg-hover hover:text-ink"
-                    >
-                      {isExpanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
-                    </button>
+                        {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                      </button>
+                    </div>
                   </div>
 
                   {isExpanded && (
-                    <div className="grid gap-3 border-t border-line px-3 py-3 sm:grid-cols-2">
-                      <div>
-                        <p className="mb-1 text-[9px] font-bold uppercase tracking-wider text-muted">{t('api.recorderRequest')}</p>
+                    <div className="grid gap-4 border-t border-line px-4 py-4 xl:grid-cols-2">
+                      <div className="min-w-0">
+                        <p className="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-muted">{t('api.recorderRequest')}</p>
                         {c.headers.length > 0 && (
-                          <pre className="app-scroller sb-hairline mb-1.5 max-h-28 overflow-auto rounded bg-panel px-2 py-1.5 font-mono text-[9px] leading-relaxed text-muted">
+                          <pre className="app-scroller sb-hairline mb-2 max-h-32 overflow-auto rounded-lg bg-panel px-2.5 py-2 font-mono text-[10px] leading-relaxed text-muted">
                             {c.headers.map(([k, v]) => `${k}: ${v}`).join('\n')}
                           </pre>
                         )}
                         {c.body ? (
-                          <pre className="app-scroller sb-hairline max-h-40 overflow-auto rounded bg-panel px-2 py-1.5 font-mono text-[9px] leading-relaxed text-ink">{c.body}</pre>
+                          <pre className="app-scroller sb-hairline max-h-44 overflow-auto rounded-lg bg-panel px-2.5 py-2 font-mono text-[10px] leading-relaxed text-ink">{c.body}</pre>
                         ) : (
-                          <p className="text-[9px] text-muted">{t('api.recorderNoBody')}</p>
+                          <p className="text-[10px] text-muted">{t('api.recorderNoBody')}</p>
                         )}
                       </div>
-                      <div>
-                        <p className="mb-1 text-[9px] font-bold uppercase tracking-wider text-muted">
+                      <div className="min-w-0">
+                        <p className="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-muted">
                           {t('api.recorderResponse')} {c.status > 0 && <span className={`font-semibold ${c.status < 300 ? 'text-success' : c.status < 400 ? 'text-warning' : 'text-danger'}`}>{c.status} {c.statusText}</span>}
-                          {c.responseTruncated && <span className="text-muted"> · {t('api.recorderBodyTruncated')}</span>}
+                          {c.responseTruncated && <span className="font-normal text-muted"> · {t('api.recorderBodyTruncated')}</span>}
                         </p>
                         {c.responseHeaders.length > 0 && (
-                          <pre className="app-scroller sb-hairline mb-1.5 max-h-28 overflow-auto rounded bg-panel px-2 py-1.5 font-mono text-[9px] leading-relaxed text-muted">
+                          <pre className="app-scroller sb-hairline mb-2 max-h-32 overflow-auto rounded-lg bg-panel px-2.5 py-2 font-mono text-[10px] leading-relaxed text-muted">
                             {c.responseHeaders.map(([k, v]) => `${k}: ${v}`).join('\n')}
                           </pre>
                         )}
                         {c.responseBody ? (
-                          <pre className="app-scroller sb-hairline max-h-52 overflow-auto rounded bg-panel px-2 py-1.5 font-mono text-[9px] leading-relaxed text-ink">{c.responseBody}</pre>
+                          <pre className="app-scroller sb-hairline max-h-60 overflow-auto rounded-lg bg-panel px-2.5 py-2 font-mono text-[10px] leading-relaxed text-ink">{c.responseBody}</pre>
                         ) : (
-                          <p className="text-[9px] text-muted">{t('api.recorderNoResponse')}</p>
+                          <p className="text-[10px] text-muted">{t('api.recorderNoResponse')}</p>
                         )}
                       </div>
                     </div>
@@ -439,8 +450,8 @@ export function RecorderPanel(props: {
 
       {/* ——— Import bar ——— */}
       {captures.length > 0 && (
-        <div className="flex shrink-0 flex-wrap items-center gap-2 border-t border-line px-4 py-2.5">
-          <span className="text-[10px] text-muted">
+        <div className="flex shrink-0 flex-wrap items-center gap-2 border-t border-line px-5 py-3">
+          <span className="text-[11px] text-muted">
             {t('api.recorderCount', { count: captures.length })} · {t('api.recorderSelected', { count: selectedCount })}
             {redactedCount > 0 && ` · ${t('api.recorderRedactedTotal', { count: redactedCount })}`}
           </span>
