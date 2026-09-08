@@ -1,3 +1,10 @@
+# [1.55.0](https://github.com/hexiangtao/loadix/compare/v1.54.1...v1.55.0) (2026-09-08)
+
+
+### Features
+
+* **api:** API Journeys — saved multi-step flows with branches, parallel lanes, data-set iteration, and Markdown run reports ([1018434](https://github.com/hexiangtao/loadix/commit/10184340d590c43f08a53f1b6274c29c33446c06))
+
 ## [1.54.1](https://github.com/hexiangtao/loadix/compare/v1.54.0...v1.54.1) (2026-09-08)
 
 
