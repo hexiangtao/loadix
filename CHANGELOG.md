@@ -1,3 +1,10 @@
+## [1.54.1](https://github.com/hexiangtao/loadix/compare/v1.54.0...v1.54.1) (2026-09-08)
+
+
+### Bug Fixes
+
+* prevent API directory request jitter ([18d89e6](https://github.com/hexiangtao/loadix/commit/18d89e61961dc61e0b3bb266ea6eec127a44a73e))
+
 # [1.54.0](https://github.com/hexiangtao/loadix/compare/v1.53.0...v1.54.0) (2026-09-08)
 
 
