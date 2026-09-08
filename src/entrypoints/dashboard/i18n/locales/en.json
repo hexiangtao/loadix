@@ -26,19 +26,19 @@
   "sections": {
     "request": {
       "title": "Request Configuration"
-  },
+    },
     "load": {
       "title": "Load Model"
-  },
+    },
     "assertions": {
       "title": "Assertion Rules"
-  },
+    },
     "variables": {
       "title": "Variables"
-  },
+    },
     "history": {
       "title": "Test History"
-  }
+    }
   },
   "request": {
     "method": "HTTP Method",
@@ -106,7 +106,9 @@
     "add": "＋ Add Assertion",
     "status": "HTTP Status",
     "latency": "Latency ≤ ms",
-    "contains": "Body contains"
+    "contains": "Body contains",
+    "jsonpath": "JSONPath exists",
+    "header": "Header"
   },
   "variables": {
     "name": "name",
@@ -312,7 +314,70 @@
     "nextStep": "Next",
     "openMarkdown": "Open in Markdown",
     "responseFor": "Response",
-    "responseTruncated": "This response is a capped copy restored from local history."
+    "responseTruncated": "This response is a capped copy restored from local history.",
+    "protoHttp": "HTTP",
+    "protoWebsocket": "WebSocket",
+    "protoSse": "SSE",
+    "tabTests": "Tests",
+    "assertionsTitle": "Assertions (checked after every send)",
+    "addAssertion": "Add",
+    "assertionsEmpty": "No assertions — add one to verify status, JSONPath or headers.",
+    "assertionsHint": "All assertions must pass for the run to count as green.",
+    "assert_status": "Status",
+    "assert_latency": "Latency ≤",
+    "assert_contains": "Contains",
+    "assert_jsonpath": "JSONPath exists",
+    "assert_header": "Header",
+    "assertionsResults": "Assertions",
+    "extractTitle": "Extract variables from response",
+    "addExtract": "Add",
+    "extractEmpty": "No extraction rules — response values are not captured.",
+    "extractHint": "Values are written to the extracted scope and injected into later requests as {{name}}.",
+    "extractVarName": "name",
+    "extractGroup": "Capture group (0 = whole match)",
+    "extractedResults": "Extracted",
+    "extractedHint": "Session variables pulled from responses. Extracted values override environment and global.",
+    "extractedEmpty": "Nothing extracted yet — add rules in the Tests tab.",
+    "clearExtracted": "Clear all",
+    "scopeEnv": "Environments",
+    "scopeGlobal": "Global",
+    "scopeExtracted": "Extracted",
+    "noEnv": "No environment (global only)",
+    "envHint": "Create or select an environment; its variables override global ones.",
+    "deleteEnv": "Delete environment",
+    "newEnvPlaceholder": "New environment name",
+    "createEnv": "Create environment",
+    "activeEnvTitle": "Active environment",
+    "globalHint": "Shared across environments — API keys, base URLs.",
+    "gqlQuery": "Query",
+    "gqlQueryPlaceholder": "query { me { id name } }",
+    "gqlVariables": "Variables (JSON)",
+    "gqlVariablesPlaceholder": "{ \"id\": 7 }",
+    "export": "Export",
+    "exportPostman": "Postman collection",
+    "exportOpenApi": "OpenAPI 3.0",
+    "wsConnecting": "Connecting to",
+    "wsOpen": "Connected",
+    "wsClosed": "Disconnected",
+    "wsError": "WebSocket error",
+    "wsDisconnected": "Disconnected",
+    "wsNotConnected": "Not connected",
+    "wsBinary": "binary frame",
+    "wsEmptyHint": "Enter a ws:// or wss:// URL and hit Connect. Frames appear here.",
+    "wsSendPlaceholder": "Type a message and press Enter…",
+    "sseConnecting": "Connecting to",
+    "sseOpen": "Stream open",
+    "sseClosed": "Stream closed",
+    "sseStopped": "Stopped",
+    "sseHttpError": "Stream failed:",
+    "sseOneWayHint": "SSE is one-way — the server pushes events, there is no send box.",
+    "sseHeadersPlaceholder": "Header: value",
+    "sseHeadersTitle": "Custom request headers (one per line, e.g. Authorization: Bearer x)",
+    "sseEmptyHint": "Enter an event-stream URL and hit Connect. Events appear here as they arrive.",
+    "connect": "Connect",
+    "connecting": "Connecting…",
+    "disconnect": "Disconnect",
+    "clearLog": "Clear log"
   },
   "common": {
     "delete": "Delete",
@@ -356,7 +421,7 @@
     "base64": {
       "name": "Base64",
       "desc": "Encode & decode Base64 strings",
-          "encode": "Encode",
+      "encode": "Encode",
       "decode": "Decode",
       "input": "Base64 string",
       "placeholder": "Type text to encode…",
@@ -367,7 +432,7 @@
     "baseconv": {
       "name": "Base Converter",
       "desc": "Convert between binary, octal, decimal, and hexadecimal",
-          "input": "Number",
+      "input": "Number",
       "interpretAs": "Interpret as",
       "invalid": "Not a valid number for the selected base",
       "decimal": "Decimal value",
@@ -376,7 +441,7 @@
     "json": {
       "name": "JSON Formatter",
       "desc": "Format, validate & minify JSON",
-          "spaces": "spaces",
+      "spaces": "spaces",
       "keys": "keys",
       "depth": "depth",
       "size": "size",
@@ -386,7 +451,7 @@
     "jwt": {
       "name": "JWT",
       "desc": "Decode & sign JWTs locally",
-          "decode": "Decode",
+      "decode": "Decode",
       "encode": "Encode",
       "editEncode": "Edit in encode mode",
       "input": "Paste a JWT",
@@ -408,7 +473,7 @@
     "regex": {
       "name": "Regex Tester",
       "desc": "Test regex & extract capture groups",
-          "templates": "Templates",
+      "templates": "Templates",
       "pattern": "Pattern",
       "test": "Test text",
       "placeholder": "Paste text to test against…",
@@ -418,14 +483,14 @@
     "url": {
       "name": "URL Encode",
       "desc": "Encode & decode URL components",
-          "encode": "Encode",
+      "encode": "Encode",
       "decode": "Decode",
       "invalid": "Invalid percent encoding"
     },
     "urlparser": {
       "name": "URL Parser",
       "desc": "Inspect every part of a URL & edit query params",
-          "invalid": "Not a valid URL (expected protocol://host/...)",
+      "invalid": "Not a valid URL (expected protocol://host/...)",
       "samples": "Samples",
       "protocol": "Protocol",
       "host": "Host",
@@ -442,13 +507,13 @@
     "html": {
       "name": "HTML Entities",
       "desc": "Escape & unescape HTML entities",
-          "encode": "Escape",
+      "encode": "Escape",
       "decode": "Unescape"
     },
     "unicode": {
       "name": "Unicode",
       "desc": "Escape & unescape \\uXXXX sequences, inspect codepoints",
-          "encode": "Escape",
+      "encode": "Escape",
       "decode": "Unescape",
       "scope_nonAscii": "Non-ASCII",
       "scope_control": "Control only",
@@ -461,16 +526,16 @@
     "uuid": {
       "name": "UUID Generator",
       "desc": "Generate UUID v1 / v3 / v4 / v5 / v7",
-          "count": "Count",
+      "count": "Count",
       "generate": "Generate",
       "nameLabel": "Name",
       "namespace": "Namespace",
       "customNamespace": "Custom namespace (UUID)"
-  },
+    },
     "timestamp": {
       "name": "Timestamp",
       "desc": "Convert epoch & date strings",
-          "epochSec": "Epoch (seconds)",
+      "epochSec": "Epoch (seconds)",
       "epochMs": "Epoch (ms)",
       "local": "Local time",
       "input": "Epoch or date string",
@@ -480,7 +545,7 @@
     "cron": {
       "name": "Cron Parser",
       "desc": "Parse cron & preview next runs",
-          "input": "Cron expression (5 fields)",
+      "input": "Cron expression (5 fields)",
       "minute": "Minute",
       "hour": "Hour",
       "dayOfMonth": "Day of month",
@@ -488,20 +553,20 @@
       "dayOfWeek": "Day of week",
       "next": "Next 5 runs",
       "invalid": "Invalid cron expression (expected 5 fields)"
-  },
+    },
     "sql": {
       "name": "SQL Formatter",
       "desc": "Format & beautify SQL queries",
-          "uppercase": "Uppercase keywords"
+      "uppercase": "Uppercase keywords"
     },
     "hash": {
       "name": "Hash",
       "desc": "Compute MD5 / SHA-1 / SHA-256 / SHA-512"
-  },
+    },
     "color": {
       "name": "Color Picker",
       "desc": "Pick & convert between HEX, RGB, HSL",
-          "hex": "HEX",
+      "hex": "HEX",
       "preview": "Live preview"
     },
     "requests": {
@@ -511,7 +576,7 @@
     "screenshot": {
       "name": "Element Snapshot",
       "desc": "Capture a single element on the current page as PNG or JPEG",
-          "selector": "CSS selector",
+      "selector": "CSS selector",
       "selectorNotFound": "No element matches \"{{selector}}\"",
       "format": "Format",
       "background": "Background",
@@ -532,7 +597,7 @@
     "gradient": {
       "name": "CSS Gradient",
       "desc": "Build linear / radial CSS gradients with live preview",
-          "type": "Type",
+      "type": "Type",
       "angle": "Angle",
       "presets": "Presets",
       "stops": "Stops",
@@ -542,7 +607,7 @@
     "markdown": {
       "name": "Markdown",
       "desc": "Live Markdown preview",
-          "source": "Markdown source",
+      "source": "Markdown source",
       "preview": "Rendered preview",
       "empty": "Start typing markdown on the left…",
       "outline": "Outline",
@@ -656,7 +721,7 @@
     "diff": {
       "name": "Diff",
       "desc": "Compare two texts and see the changes",
-          "samples": "Samples",
+      "samples": "Samples",
       "original": "Original",
       "changed": "Changed",
       "unified": "Unified",
@@ -666,7 +731,7 @@
     "jsonpath": {
       "name": "JSONPath",
       "desc": "Extract data from JSON with a path expression",
-          "presets": "Quick:",
+      "presets": "Quick:",
       "matches": "Matches"
     }
   },

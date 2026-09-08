@@ -48,6 +48,26 @@ describe('assertionsPass', () => {
       ]),
     ).toBe(true);
   });
+  it('jsonpath passes when the path matches, fails when empty', () => {
+    const json = { status: 200, ms: 100, body: '{"token":"abc","user":{"id":7}}', ok: true, error: '' };
+    expect(assertionsPass(json, [{ type: 'jsonpath', value: '$.token' }])).toBe(true);
+    expect(assertionsPass(json, [{ type: 'jsonpath', value: '$.user.id' }])).toBe(true);
+    expect(assertionsPass(json, [{ type: 'jsonpath', value: '$.missing' }])).toBe(false);
+  });
+  it('header asserts presence, or exact value after a colon', () => {
+    const withHeaders = {
+      status: 200,
+      ms: 100,
+      body: 'ok',
+      ok: true,
+      error: '',
+      responseHeaders: { 'content-type': 'application/json', 'X-Rate-Limit': '120' },
+    };
+    expect(assertionsPass(withHeaders, [{ type: 'header', value: 'x-rate-limit' }])).toBe(true);
+    expect(assertionsPass(withHeaders, [{ type: 'header', value: 'Content-Type:application/json' }])).toBe(true);
+    expect(assertionsPass(withHeaders, [{ type: 'header', value: 'X-Rate-Limit:99' }])).toBe(false);
+    expect(assertionsPass(withHeaders, [{ type: 'header', value: 'X-Nope' }])).toBe(false);
+  });
 });
 
 describe('targetConcurrency', () => {

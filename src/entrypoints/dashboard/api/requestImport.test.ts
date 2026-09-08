@@ -18,7 +18,7 @@ describe('requestPatchFromInput', () => {
       url: 'https://api.example.com/users',
       params: [],
       headers: [['Content-Type', 'application/json']],
-      body: { type: 'json', content: '{"name":"Ada"}', form: [] },
+      body: { type: 'json', content: '{"name":"Ada"}', form: [], gqlVariables: '' },
     });
   });
 

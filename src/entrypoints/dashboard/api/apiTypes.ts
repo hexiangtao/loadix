@@ -8,6 +8,8 @@
  */
 
 import type { RawResponse } from '@/engine/runner';
+import type { Assertion } from '@/shared/types';
+import type { ExtractRule } from './variables';
 
 export type ApiMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD' | 'OPTIONS';
 
@@ -33,16 +35,18 @@ export const METHOD_CHIP: Record<ApiMethod, string> = {
   OPTIONS: 'bg-muted/10 text-muted',
 };
 
-export type ApiBodyType = 'none' | 'json' | 'form' | 'text';
+export type ApiBodyType = 'none' | 'json' | 'form' | 'text' | 'graphql';
 
 export type ApiAuthType = 'none' | 'bearer' | 'basic' | 'apikey';
 
 export interface ApiBody {
   type: ApiBodyType;
-  /** JSON / text payload (content-type json|text). */
+  /** JSON / text / GraphQL-query payload (content-type json|text). */
   content: string;
   /** Key-value rows for application/x-www-form-urlencoded bodies. */
   form: [string, string][];
+  /** JSON variables object for GraphQL bodies (sent as `variables`). */
+  gqlVariables: string;
 }
 
 export interface ApiAuth {
@@ -71,6 +75,10 @@ export interface ApiRequest {
   headers: [string, string][];
   body: ApiBody;
   auth: ApiAuth;
+  /** Response assertions evaluated after each send (status/latency/contains/jsonpath/header). */
+  assertions: Assertion[];
+  /** Response → variable extraction rules feeding later requests in the chain. */
+  extract: ExtractRule[];
   createdAt: number;
   updatedAt: number;
   /** Position within its sibling group (same collection / same parent).
@@ -133,8 +141,10 @@ export function createApiRequest(): ApiRequest {
     url: '',
     params: [],
     headers: [['Accept', 'application/json']],
-    body: { type: 'none', content: '', form: [] },
+    body: { type: 'none', content: '', form: [], gqlVariables: '' },
     auth: { type: 'none', token: '', username: '', password: '', key: 'X-API-Key', value: '' },
+    assertions: [],
+    extract: [],
     createdAt: now,
     updatedAt: now,
   };

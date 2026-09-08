@@ -26,19 +26,19 @@
   "sections": {
     "request": {
       "title": "요청 설정"
-  },
+    },
     "load": {
       "title": "부하 모델"
-  },
+    },
     "assertions": {
       "title": "어서션 규칙"
-  },
+    },
     "variables": {
       "title": "변수"
-  },
+    },
     "history": {
       "title": "테스트 이력"
-  }
+    }
   },
   "request": {
     "method": "HTTP 메서드",
@@ -106,7 +106,9 @@
     "add": "＋ 어서션 추가",
     "status": "HTTP 상태",
     "latency": "지연 ≤ ms",
-    "contains": "바디 포함"
+    "contains": "바디 포함",
+    "jsonpath": "JSONPath 존재",
+    "header": "헤더"
   },
   "variables": {
     "name": "변수명",
@@ -115,10 +117,12 @@
   },
   "history": {
     "empty": "아직 테스트 기록이 없습니다. 테스트를 실행하면 최근 20건이 여기에 자동 저장됩니다.",
-    "restore": "복원",    "restoreHint": "이 설정을 폼에 로드합니다 (실행하지 않음)",
+    "restore": "복원",
+    "restoreHint": "이 설정을 폼에 로드합니다 (실행하지 않음)",
     "rerun": "재실행",
     "rerunHint": "이 설정으로 즉시 다시 실행 — 새 기록이 저장됩니다",
-    "running": "실행 중…",    "requests": "요청"
+    "running": "실행 중…",
+    "requests": "요청"
   },
   "results": {
     "waiting": "시작 대기 중",
@@ -310,7 +314,70 @@
     "nextStep": "다음 단계",
     "openMarkdown": "Markdown에서 열기",
     "responseFor": "응답",
-    "responseTruncated": "로컬 기록에서 복원한 길이 제한 응답입니다."
+    "responseTruncated": "로컬 기록에서 복원한 길이 제한 응답입니다.",
+    "protoHttp": "HTTP",
+    "protoWebsocket": "WebSocket",
+    "protoSse": "SSE",
+    "tabTests": "테스트",
+    "assertionsTitle": "응답 검증 (전송 후 확인)",
+    "addAssertion": "추가",
+    "assertionsEmpty": "검증 규칙 없음 — 상태 코드·JSONPath·헤더를 검증할 수 있습니다.",
+    "assertionsHint": "모든 검증이 통과해야 성공으로 간주합니다.",
+    "assert_status": "상태 코드",
+    "assert_latency": "지연 ≤",
+    "assert_contains": "포함",
+    "assert_jsonpath": "JSONPath 존재",
+    "assert_header": "헤더",
+    "assertionsResults": "검증 결과",
+    "extractTitle": "응답에서 변수 추출",
+    "addExtract": "추가",
+    "extractEmpty": "추출 규칙 없음 — 응답 값이 캡처되지 않습니다.",
+    "extractHint": "추출 값은 추출 범위에 저장되며 이후 요청에서 {{name}}으로 사용됩니다.",
+    "extractVarName": "변수명",
+    "extractGroup": "캡처 그룹 (0 = 전체 매치)",
+    "extractedResults": "추출됨",
+    "extractedHint": "응답에서 추출한 세션 변수. 환경·전역보다 우선합니다.",
+    "extractedEmpty": "아직 추출된 값 없음 — 테스트 탭에서 규칙을 추가하세요.",
+    "clearExtracted": "모두 지우기",
+    "scopeEnv": "환경",
+    "scopeGlobal": "전역",
+    "scopeExtracted": "추출 값",
+    "noEnv": "환경 없음 (전역만)",
+    "envHint": "환경을 만들거나 선택하세요. 환경 변수가 전역 변수보다 우선합니다.",
+    "deleteEnv": "환경 삭제",
+    "newEnvPlaceholder": "새 환경 이름",
+    "createEnv": "환경 만들기",
+    "activeEnvTitle": "활성 환경",
+    "globalHint": "모든 환경에서 공유 — API 키, 기본 URL 등.",
+    "gqlQuery": "쿼리",
+    "gqlQueryPlaceholder": "query { me { id name } }",
+    "gqlVariables": "변수 (JSON)",
+    "gqlVariablesPlaceholder": "{ \"id\": 7 }",
+    "export": "내보내기",
+    "exportPostman": "Postman 컬렉션",
+    "exportOpenApi": "OpenAPI 3.0",
+    "wsConnecting": "연결 중",
+    "wsOpen": "연결됨",
+    "wsClosed": "연결 끊김",
+    "wsError": "WebSocket 오류",
+    "wsDisconnected": "연결 끊김",
+    "wsNotConnected": "연결 안 됨",
+    "wsBinary": "바이너리 프레임",
+    "wsEmptyHint": "ws:// 또는 wss:// 주소를 입력하고 연결하세요. 메시지가 여기에 표시됩니다.",
+    "wsSendPlaceholder": "메시지를 입력하고 Enter…",
+    "sseConnecting": "연결 중",
+    "sseOpen": "스트림 열림",
+    "sseClosed": "스트림 닫힘",
+    "sseStopped": "중지됨",
+    "sseHttpError": "스트림 실패:",
+    "sseOneWayHint": "SSE는 단방향 — 서버가 이벤트를 푸시하며 보내기 상자가 없습니다.",
+    "sseHeadersPlaceholder": "Header: value",
+    "sseHeadersTitle": "커스텀 요청 헤더 (줄당 하나, 예: Authorization: Bearer x)",
+    "sseEmptyHint": "이벤트 스트림 URL을 입력하고 연결하세요. 이벤트가 여기에 표시됩니다.",
+    "connect": "연결",
+    "connecting": "연결 중…",
+    "disconnect": "연결 끊기",
+    "clearLog": "로그 지우기"
   },
   "common": {
     "delete": "삭제",
@@ -330,11 +397,11 @@
     "hash": {
       "name": "해시",
       "desc": "MD5 / SHA-1 / SHA-256 / SHA-512 계산"
-  },
+    },
     "color": {
       "name": "색상 피커",
       "desc": "HEX / RGB / HSL 상호 변환",
-          "hex": "HEX",
+      "hex": "HEX",
       "preview": "실시간 미리보기"
     },
     "searchTools": "검색…",
@@ -348,7 +415,7 @@
     "markdown": {
       "name": "Markdown",
       "desc": "Markdown 실시간 미리보기",
-          "source": "소스",
+      "source": "소스",
       "preview": "미리보기",
       "empty": "왼쪽에서 Markdown 입력…",
       "outline": "개요",
@@ -420,19 +487,19 @@
     },
     "jwt-encode": {
       "name": "JWT 인코딩",
-          "needSecret": "HS256에는 시크릿이 필요합니다",
+      "needSecret": "HS256에는 시크릿이 필요합니다",
       "generate": "토큰 생성"
     },
     "jsonpath": {
       "name": "JSONPath",
       "desc": "경로 표현식으로 JSON에서 값 추출",
-          "presets": "빠른 선택:",
+      "presets": "빠른 선택:",
       "matches": "일치"
     },
     "unicode": {
       "name": "Unicode",
       "desc": "\\uXXXX 시퀀스 이스케이프 및 복원, 코드 포인트 정보 표시",
-          "encode": "이스케이프",
+      "encode": "이스케이프",
       "decode": "복원",
       "scope_nonAscii": "비-ASCII",
       "scope_control": "제어 문자만",

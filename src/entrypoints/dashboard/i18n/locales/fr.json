@@ -26,19 +26,19 @@
   "sections": {
     "request": {
       "title": "Configuration de la requête"
-  },
+    },
     "load": {
       "title": "Modèle de charge"
-  },
+    },
     "assertions": {
       "title": "Règles d'assertion"
-  },
+    },
     "variables": {
       "title": "Variables"
-  },
+    },
     "history": {
       "title": "Historique"
-  }
+    }
   },
   "request": {
     "method": "Méthode HTTP",
@@ -106,7 +106,9 @@
     "add": "＋ Ajouter une assertion",
     "status": "Statut HTTP",
     "latency": "Latence ≤ ms",
-    "contains": "Corps contient"
+    "contains": "Corps contient",
+    "jsonpath": "JSONPath existe",
+    "header": "En-tête"
   },
   "variables": {
     "name": "nom",
@@ -115,10 +117,12 @@
   },
   "history": {
     "empty": "Aucun test enregistré. Lancez un test et les 20 derniers seront sauvegardés ici.",
-    "restore": "Restaurer",    "restoreHint": "Charger cette configuration dans le formulaire (sans l'exécuter)",
+    "restore": "Restaurer",
+    "restoreHint": "Charger cette configuration dans le formulaire (sans l'exécuter)",
     "rerun": "Relancer",
     "rerunHint": "Relancer immédiatement avec cette configuration — un nouvel historique sera sauvegardé",
-    "running": "En cours…",    "requests": "requêtes"
+    "running": "En cours…",
+    "requests": "requêtes"
   },
   "results": {
     "waiting": "En attente",
@@ -310,7 +314,70 @@
     "nextStep": "Suivant",
     "openMarkdown": "Ouvrir dans Markdown",
     "responseFor": "Réponse",
-    "responseTruncated": "Cette réponse est une copie limitée restaurée depuis l'historique local."
+    "responseTruncated": "Cette réponse est une copie limitée restaurée depuis l'historique local.",
+    "protoHttp": "HTTP",
+    "protoWebsocket": "WebSocket",
+    "protoSse": "SSE",
+    "tabTests": "Tests",
+    "assertionsTitle": "Vérifications de réponse (après chaque envoi)",
+    "addAssertion": "Ajouter",
+    "assertionsEmpty": "Aucune vérification — ajoutez-en pour valider statut, JSONPath ou en-têtes.",
+    "assertionsHint": "Toutes les vérifications doivent passer pour un résultat vert.",
+    "assert_status": "Statut",
+    "assert_latency": "Latence ≤",
+    "assert_contains": "Contient",
+    "assert_jsonpath": "JSONPath existe",
+    "assert_header": "En-tête",
+    "assertionsResults": "Vérifications",
+    "extractTitle": "Extraire des variables de la réponse",
+    "addExtract": "Ajouter",
+    "extractEmpty": "Aucune règle d'extraction — les valeurs ne sont pas capturées.",
+    "extractHint": "Les valeurs vont dans la portée extraite et sont injectées dans les requêtes suivantes via {{name}}.",
+    "extractVarName": "nom",
+    "extractGroup": "Groupe de capture (0 = correspondance entière)",
+    "extractedResults": "Extrait",
+    "extractedHint": "Variables de session issues des réponses. Priorité sur environnement et global.",
+    "extractedEmpty": "Rien d'extrait — ajoutez des règles dans l'onglet Tests.",
+    "clearExtracted": "Tout effacer",
+    "scopeEnv": "Environnements",
+    "scopeGlobal": "Global",
+    "scopeExtracted": "Extrait",
+    "noEnv": "Aucun environnement (global seul)",
+    "envHint": "Créez ou sélectionnez un environnement ; ses variables priment sur le global.",
+    "deleteEnv": "Supprimer l'environnement",
+    "newEnvPlaceholder": "Nom du nouvel environnement",
+    "createEnv": "Créer",
+    "activeEnvTitle": "Environnement actif",
+    "globalHint": "Partagé entre environnements — clés API, URL de base.",
+    "gqlQuery": "Requête",
+    "gqlQueryPlaceholder": "query { me { id name } }",
+    "gqlVariables": "Variables (JSON)",
+    "gqlVariablesPlaceholder": "{ \"id\": 7 }",
+    "export": "Exporter",
+    "exportPostman": "Collection Postman",
+    "exportOpenApi": "OpenAPI 3.0",
+    "wsConnecting": "Connexion à",
+    "wsOpen": "Connecté",
+    "wsClosed": "Déconnecté",
+    "wsError": "Erreur WebSocket",
+    "wsDisconnected": "Déconnecté",
+    "wsNotConnected": "Non connecté",
+    "wsBinary": "frame binaire",
+    "wsEmptyHint": "Saisissez une URL ws:// ou wss:// puis Connectez-vous. Les frames apparaissent ici.",
+    "wsSendPlaceholder": "Saisissez un message puis Entrée…",
+    "sseConnecting": "Connexion à",
+    "sseOpen": "Flux ouvert",
+    "sseClosed": "Flux fermé",
+    "sseStopped": "Arrêté",
+    "sseHttpError": "Échec du flux :",
+    "sseOneWayHint": "SSE est unidirectionnel — le serveur pousse les événements, pas de zone d'envoi.",
+    "sseHeadersPlaceholder": "Header: value",
+    "sseHeadersTitle": "En-têtes personnalisés (un par ligne, ex. Authorization: Bearer x)",
+    "sseEmptyHint": "Saisissez une URL de flux d'événements puis Connectez-vous. Les événements apparaissent ici.",
+    "connect": "Connecter",
+    "connecting": "Connexion…",
+    "disconnect": "Déconnecter",
+    "clearLog": "Effacer le journal"
   },
   "common": {
     "delete": "Supprimer",
@@ -330,11 +397,11 @@
     "hash": {
       "name": "Hash",
       "desc": "Calculer MD5 / SHA-1 / SHA-256 / SHA-512"
-  },
+    },
     "color": {
       "name": "Pipette",
       "desc": "Convertir entre HEX, RGB et HSL",
-          "hex": "HEX",
+      "hex": "HEX",
       "preview": "Aperçu"
     },
     "searchTools": "Rechercher…",
@@ -348,7 +415,7 @@
     "markdown": {
       "name": "Markdown",
       "desc": "Aperçu Markdown en direct",
-          "source": "Source",
+      "source": "Source",
       "preview": "Aperçu",
       "empty": "Commencez à taper du markdown…",
       "outline": "Plan",
@@ -420,19 +487,19 @@
     },
     "jwt-encode": {
       "name": "JWT Encode",
-          "needSecret": "Un secret est requis pour HS256",
+      "needSecret": "Un secret est requis pour HS256",
       "generate": "Générer le jeton"
     },
     "jsonpath": {
       "name": "JSONPath",
       "desc": "Extraire des données JSON par expression",
-          "presets": "Exemples :",
+      "presets": "Exemples :",
       "matches": "Résultats"
     },
     "unicode": {
       "name": "Unicode",
       "desc": "Échapper et restaurer les séquences \\uXXXX, inspecter les points de code",
-          "encode": "Échapper",
+      "encode": "Échapper",
       "decode": "Restaurer",
       "scope_nonAscii": "Non-ASCII",
       "scope_control": "Contrôle seul",

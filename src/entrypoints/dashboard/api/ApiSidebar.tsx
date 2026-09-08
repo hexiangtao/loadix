@@ -16,6 +16,7 @@ import { useTranslation } from 'react-i18next';
 import {
   ChevronDown,
   Copy,
+  Download,
   Folder,
   FolderPlus,
   Globe,
@@ -70,7 +71,8 @@ interface ApiSidebarProps {
   onDeleteRequest: (id: string) => void;
   onDeleteCollection: (id: string) => void;
   onImportFile: (file: File) => void;
-  onExport: () => void;
+  onExportPostman: () => void;
+  onExportOpenApi: () => void;
   onOpenHistory: (entry: ApiHistoryEntry) => void;
   onClearHistory: () => void;
 }
@@ -128,6 +130,8 @@ export function ApiSidebar(props: ApiSidebarProps) {
   const { t } = useTranslation();
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(COLLAPSED_KEY) === '1');
   const [namingCollection, setNamingCollection] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
+  const exportBtnRef = useRef<HTMLButtonElement>(null);
   const [dragState, setDragState] = useState<DragState>(null);
   const [dropTarget, setDropTarget] = useState<DropTarget>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -363,8 +367,30 @@ export function ApiSidebar(props: ApiSidebarProps) {
           >
             <Upload size={14} />
           </button>
+          <button
+            ref={exportBtnRef}
+            onClick={() => setExportOpen((v) => !v)}
+            title={t('api.export')}
+            className={`cursor-pointer rounded-lg border border-line px-2 py-1.5 transition-colors duration-150 hover:border-primary ${
+              exportOpen ? 'border-primary text-primary' : 'text-muted hover:text-primary'
+            }`}
+          >
+            <Download size={14} />
+          </button>
         </div>
-        <input ref={fileRef} type="file" accept=".json,application/json" className="hidden" onChange={(e) => onFile(e.target.files?.[0])} />
+        <input ref={fileRef} type="file" accept=".json,.yaml,.yml,application/json,text/yaml,application/x-yaml" className="hidden" onChange={(e) => onFile(e.target.files?.[0])} />
+        {exportOpen && (
+          <Popover anchor={exportBtnRef.current} onClose={() => setExportOpen(false)} width="w-52">
+            <div className="py-1">
+              <MenuItem onClick={() => { setExportOpen(false); props.onExportPostman(); }}>
+                {t('api.exportPostman')}
+              </MenuItem>
+              <MenuItem onClick={() => { setExportOpen(false); props.onExportOpenApi(); }}>
+                {t('api.exportOpenApi')}
+              </MenuItem>
+            </div>
+          </Popover>
+        )}
         {props.showImportHint && (
           <p className="mt-1.5 px-0.5 text-[11px] leading-snug text-muted/70">{t('api.importHint')}</p>
         )}

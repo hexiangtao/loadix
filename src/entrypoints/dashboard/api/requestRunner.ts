@@ -11,10 +11,10 @@
  * underlying executor is a pure HTTP pass-through.
  */
 
-import { interpolate } from '@/engine/core';
 import { executeRawRequest, type RawRequest, type RawResponse } from '@/engine/runner';
 import type { ApiAuth, ApiBody, ApiRequest } from './apiTypes';
 import { DEFAULT_TIMEOUT_MS, uid } from './apiTypes';
+import { interpolateNested } from './variables';
 
 /** Build the wire request from the editor model, resolving variables. */
 export function buildRawRequest(request: ApiRequest, vars: Record<string, string>): RawRequest {
@@ -27,13 +27,15 @@ export function buildRawRequest(request: ApiRequest, vars: Record<string, string
   if (hasBody && !headers.some(([k]) => k.toLowerCase() === 'content-type')) {
     headers.push(['Content-Type', contentTypeFor(request.body.type)]);
   }
+  // Nested interpolation: environment/global values may themselves
+  // reference other variables (`{{baseUrl}}` where baseUrl = `https://{{host}}`).
   return {
     method: request.method,
-    url: interpolate(request.url, vars),
+    url: interpolateNested(request.url, vars),
     headers: headers
       .filter(([k]) => k.trim().length > 0)
-      .map(([k, v]) => [k.trim(), interpolate(v, vars)] as [string, string]),
-    body: hasBody ? interpolate(body, vars) : undefined,
+      .map(([k, v]) => [k.trim(), interpolateNested(v, vars)] as [string, string]),
+    body: hasBody ? interpolateNested(body, vars) : undefined,
     timeout: DEFAULT_TIMEOUT_MS,
   };
 }
@@ -88,14 +90,14 @@ export function sendRequest(raw: RawRequest): SendHandle {
 export function authHeaders(auth: ApiAuth, vars: Record<string, string>): [string, string][] {
   switch (auth.type) {
     case 'bearer':
-      return auth.token.trim() ? [['Authorization', `Bearer ${interpolate(auth.token, vars)}`]] : [];
+      return auth.token.trim() ? [['Authorization', `Bearer ${interpolateNested(auth.token, vars)}`]] : [];
     case 'basic': {
       if (!auth.username.trim()) return [];
-      const raw = `${interpolate(auth.username, vars)}:${interpolate(auth.password, vars)}`;
+      const raw = `${interpolateNested(auth.username, vars)}:${interpolateNested(auth.password, vars)}`;
       return [['Authorization', `Basic ${base64(raw)}`]];
     }
     case 'apikey':
-      return auth.key.trim() ? [[auth.key.trim(), interpolate(auth.value, vars)]] : [];
+      return auth.key.trim() ? [[auth.key.trim(), interpolateNested(auth.value, vars)]] : [];
     default:
       return [];
   }
@@ -109,6 +111,20 @@ export function bodyContent(body: ApiBody): string {
       return body.content;
     case 'form':
       return new URLSearchParams(body.form.filter(([k]) => k.trim().length > 0)).toString();
+    case 'graphql': {
+      // GraphQL-over-HTTP: `{ "query": …, "variables": … }`.
+      // Invalid variables JSON is skipped rather than producing a broken
+      // payload — the query still goes out.
+      let variables: unknown = undefined;
+      if (body.gqlVariables.trim()) {
+        try {
+          variables = JSON.parse(body.gqlVariables);
+        } catch {
+          variables = undefined;
+        }
+      }
+      return JSON.stringify(variables === undefined ? { query: body.content } : { query: body.content, variables });
+    }
     default:
       return '';
   }
@@ -117,6 +133,7 @@ export function bodyContent(body: ApiBody): string {
 function contentTypeFor(type: ApiBody['type']): string {
   switch (type) {
     case 'json':
+    case 'graphql':
       return 'application/json';
     case 'form':
       return 'application/x-www-form-urlencoded';

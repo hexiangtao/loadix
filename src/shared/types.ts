@@ -4,7 +4,7 @@ export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD';
 
 export type ContentType = 'application/json' | 'application/x-www-form-urlencoded' | 'text/plain';
 
-export type AssertionType = 'status' | 'latency' | 'contains';
+export type AssertionType = 'status' | 'latency' | 'contains' | 'jsonpath' | 'header';
 
 export interface Assertion {
   type: AssertionType;

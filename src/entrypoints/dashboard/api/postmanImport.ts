@@ -52,6 +52,7 @@ interface PostmanRequest {
     mode?: string;
     raw?: string;
     urlencoded?: { key?: string; value?: string; disabled?: boolean }[];
+    graphql?: { query?: string; variables?: string };
     options?: { raw?: { language?: string } };
   };
   auth?: PostmanAuth;
@@ -135,24 +136,33 @@ function mapRequest(name: string, pm: PostmanRequest, auth?: PostmanAuth): MapRe
           type: language === 'json' || looksLikeJson(raw) ? 'json' : 'text',
           content: raw,
           form: [],
+          gqlVariables: '',
         };
         break;
       }
       case 'urlencoded':
         request.body = {
           type: 'form',
+          gqlVariables: '',
           content: '',
           form: (body.urlencoded ?? [])
             .filter((p) => !p.disabled && p.key?.trim())
             .map((p) => [p.key!.trim(), p.value ?? ''] as [string, string]),
         };
         break;
+      case 'graphql':
+        request.body = {
+          type: 'graphql',
+          content: body.graphql?.query ?? '',
+          gqlVariables: body.graphql?.variables ?? '',
+          form: [],
+        };
+        break;
       case 'formdata':
       case 'file':
-      case 'graphql':
         return { ok: false, reason: `Body mode "${body.mode}" is not supported` };
       default:
-        request.body = { type: 'none', content: '', form: [] };
+        request.body = { type: 'none', content: '', form: [], gqlVariables: '' };
     }
   }
 

@@ -8,9 +8,10 @@
 
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Check, Copy, FileText, Gauge, RefreshCw, Terminal, Zap } from 'lucide-react';
+import { Braces, Check, Copy, FileText, Gauge, RefreshCw, Terminal, X as XIcon, Zap } from 'lucide-react';
 import { toCurl } from '@/shared/curl';
 import type { RawResponse } from '@/engine/runner';
+import type { Assertion } from '@/shared/types';
 import type { ApiRequest } from './apiTypes';
 import { buildRawRequest } from './requestRunner';
 import { JsonTree } from './jsonTree';
@@ -22,7 +23,12 @@ interface ResponseViewProps {
   previousResponse: RawResponse | null;
   sending: boolean;
   request: ApiRequest;
-  vars: [string, string][];
+  /** Variables after scope resolution (extracted > env > global). */
+  resolvedVars: Record<string, string>;
+  /** Per-assertion results from the last send (null when no assertions). */
+  assertionResults: { assertion: Assertion; pass: boolean }[] | null;
+  /** Extracted session variables (for the "extracted N" feedback chip). */
+  extracted: [string, string][];
   onLoadTest: (request: ApiRequest) => void;
   onOpenInMarkdown: (markdown: string) => void;
   onLaunch: (patch: Partial<ApiRequest>, send: boolean) => void;
@@ -43,12 +49,12 @@ const MS_COLOR = (ms: number): string => (ms < 300 ? 'text-success' : ms < 1000 
 
 type SnapshotResponse = RawResponse & { bodyTruncated?: boolean };
 
-export function ResponseView({ response, previousResponse, sending, request, vars, onLoadTest, onOpenInMarkdown, onLaunch }: ResponseViewProps) {
+export function ResponseView({ response, previousResponse, sending, request, resolvedVars, assertionResults, extracted, onLoadTest, onOpenInMarkdown, onLaunch }: ResponseViewProps) {
   const { t } = useTranslation();
   const [view, setView] = useState<View>('pretty');
   const [copied, setCopied] = useState<'curl' | 'body' | null>(null);
 
-  const raw = useMemo(() => buildRawRequest(request, Object.fromEntries(vars)), [request, vars]);
+  const raw = useMemo(() => buildRawRequest(request, resolvedVars), [request, resolvedVars]);
   const markdownSnapshot = useMemo(
     () => (response ? formatResponseAsMarkdown(request, response, raw) : ''),
     [request, response, raw],
@@ -160,6 +166,36 @@ export function ResponseView({ response, previousResponse, sending, request, var
             )}
 
             {response.error && <p className="mt-2 truncate text-[11px] text-danger" title={response.error}>{response.error}</p>}
+
+            {assertionResults && assertionResults.length > 0 && (
+              <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+                <span className="mr-1 text-[10px] font-bold uppercase tracking-[0.12em] text-muted/65">{t('api.assertionsResults')}</span>
+                {assertionResults.map(({ assertion, pass }, i) => (
+                  <span
+                    key={i}
+                    className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-semibold ${
+                      pass ? 'bg-success/12 text-success' : 'bg-danger/12 text-danger'
+                    }`}
+                    title={`${assertion.type}: ${assertion.value}`}
+                  >
+                    {pass ? <Check size={10} strokeWidth={3} /> : <XIcon size={10} strokeWidth={3} />}
+                    {t(`api.assert_${assertion.type}`)} {assertion.value}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {extracted.length > 0 && (
+              <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                <span className="mr-1 text-[10px] font-bold uppercase tracking-[0.12em] text-muted/65">{t('api.extractedResults')}</span>
+                {extracted.map(([k, v]) => (
+                  <span key={k} className="flex items-center gap-1 rounded-full bg-primary/8 px-2 py-0.5 font-mono text-[10.5px] text-primary" title={v}>
+                    <Braces size={9} />
+                    {k}
+                  </span>
+                ))}
+              </div>
+            )}
 
             <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
               <span className="mr-1 text-[10px] font-bold uppercase tracking-[0.12em] text-muted/65">{t('api.nextStep')}</span>

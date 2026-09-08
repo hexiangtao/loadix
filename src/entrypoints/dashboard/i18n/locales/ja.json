@@ -26,19 +26,19 @@
   "sections": {
     "request": {
       "title": "リクエスト設定"
-  },
+    },
     "load": {
       "title": "負荷モデル"
-  },
+    },
     "assertions": {
       "title": "アサーションルール"
-  },
+    },
     "variables": {
       "title": "変数"
-  },
+    },
     "history": {
       "title": "テスト履歴"
-  }
+    }
   },
   "request": {
     "method": "HTTPメソッド",
@@ -106,7 +106,9 @@
     "add": "＋ アサーションを追加",
     "status": "HTTPステータス",
     "latency": "レイテンシ ≤ ms",
-    "contains": "ボディに含む"
+    "contains": "ボディに含む",
+    "jsonpath": "JSONPath が存在",
+    "header": "ヘッダー"
   },
   "variables": {
     "name": "変数名",
@@ -115,10 +117,12 @@
   },
   "history": {
     "empty": "まだテスト記録がありません。テストを実行すると、直近20件がここに自動保存されます。",
-    "restore": "復元",    "restoreHint": "この設定をフォームに読み込みます（実行はしません）",
+    "restore": "復元",
+    "restoreHint": "この設定をフォームに読み込みます（実行はしません）",
     "rerun": "再実行",
     "rerunHint": "この設定で直ちに再実行します — 新しい履歴エントリが保存されます",
-    "running": "実行中…",    "requests": "リクエスト"
+    "running": "実行中…",
+    "requests": "リクエスト"
   },
   "results": {
     "title": "リアルタイム結果",
@@ -311,7 +315,70 @@
     "nextStep": "次の操作",
     "openMarkdown": "Markdown で開く",
     "responseFor": "レスポンス",
-    "responseTruncated": "ローカル履歴から復元した、長さを制限したレスポンスです。"
+    "responseTruncated": "ローカル履歴から復元した、長さを制限したレスポンスです。",
+    "protoHttp": "HTTP",
+    "protoWebsocket": "WebSocket",
+    "protoSse": "SSE",
+    "tabTests": "テスト",
+    "assertionsTitle": "レスポンス検証（送信のたびにチェック）",
+    "addAssertion": "追加",
+    "assertionsEmpty": "検証ルールなし — ステータス・JSONPath・ヘッダーを検証できます。",
+    "assertionsHint": "すべての検証が通ったときのみ成功とみなします。",
+    "assert_status": "ステータス",
+    "assert_latency": "レイテンシ ≤",
+    "assert_contains": "含む",
+    "assert_jsonpath": "JSONPath が存在",
+    "assert_header": "ヘッダー",
+    "assertionsResults": "検証結果",
+    "extractTitle": "レスポンスから変数を抽出",
+    "addExtract": "追加",
+    "extractEmpty": "抽出ルールなし — レスポンス値は取得されません。",
+    "extractHint": "抽出値は抽出スコープに保存され、後続リクエストで {{name}} として使えます。",
+    "extractVarName": "変数名",
+    "extractGroup": "キャプチャグループ（0 = 全体）",
+    "extractedResults": "抽出済み",
+    "extractedHint": "レスポンスから抽出したセッション変数。環境・グローバルより優先されます。",
+    "extractedEmpty": "まだ抽出されていません — テストタブでルールを追加。",
+    "clearExtracted": "すべて消去",
+    "scopeEnv": "環境",
+    "scopeGlobal": "グローバル",
+    "scopeExtracted": "抽出値",
+    "noEnv": "環境なし（グローバルのみ）",
+    "envHint": "環境を作成・選択してください。環境変数はグローバルより優先されます。",
+    "deleteEnv": "環境を削除",
+    "newEnvPlaceholder": "新しい環境名",
+    "createEnv": "環境を作成",
+    "activeEnvTitle": "アクティブ環境",
+    "globalHint": "全環境で共有 — API キーやベース URL など。",
+    "gqlQuery": "クエリ",
+    "gqlQueryPlaceholder": "query { me { id name } }",
+    "gqlVariables": "変数（JSON）",
+    "gqlVariablesPlaceholder": "{ \"id\": 7 }",
+    "export": "エクスポート",
+    "exportPostman": "Postman コレクション",
+    "exportOpenApi": "OpenAPI 3.0",
+    "wsConnecting": "接続中",
+    "wsOpen": "接続済み",
+    "wsClosed": "切断済み",
+    "wsError": "WebSocket エラー",
+    "wsDisconnected": "切断済み",
+    "wsNotConnected": "未接続",
+    "wsBinary": "バイナリフレーム",
+    "wsEmptyHint": "ws:// または wss:// アドレスを入力して接続。メッセージがここに表示されます。",
+    "wsSendPlaceholder": "メッセージを入力して Enter…",
+    "sseConnecting": "接続中",
+    "sseOpen": "ストリーム開始",
+    "sseClosed": "ストリーム終了",
+    "sseStopped": "停止",
+    "sseHttpError": "ストリーム失敗：",
+    "sseOneWayHint": "SSE は一方向 — サーバーがイベントを送信し、送信ボックスはありません。",
+    "sseHeadersPlaceholder": "Header: value",
+    "sseHeadersTitle": "カスタムリクエストヘッダー（1行1つ、例: Authorization: Bearer x）",
+    "sseEmptyHint": "イベントストリーム URL を入力して接続。イベントがここに表示されます。",
+    "connect": "接続",
+    "connecting": "接続中…",
+    "disconnect": "切断",
+    "clearLog": "ログを消去"
   },
   "common": {
     "delete": "削除",
@@ -331,11 +398,11 @@
     "hash": {
       "name": "ハッシュ",
       "desc": "MD5 / SHA-1 / SHA-256 / SHA-512 を計算"
-  },
+    },
     "color": {
       "name": "カラーピッカー",
       "desc": "HEX / RGB / HSL を相互変換",
-          "hex": "HEX",
+      "hex": "HEX",
       "preview": "ライブプレビュー"
     },
     "searchTools": "検索…",
@@ -349,7 +416,7 @@
     "markdown": {
       "name": "Markdown",
       "desc": "Markdown をライブプレビュー",
-          "source": "ソース",
+      "source": "ソース",
       "preview": "プレビュー",
       "empty": "左側で Markdown を入力…",
       "outline": "アウトライン",
@@ -421,19 +488,19 @@
     },
     "jwt-encode": {
       "name": "JWT エンコード",
-          "needSecret": "HS256 にはシークレットが必要です",
+      "needSecret": "HS256 にはシークレットが必要です",
       "generate": "トークンを生成"
     },
     "jsonpath": {
       "name": "JSONPath",
       "desc": "パス式で JSON から値を抽出",
-          "presets": "プリセット:",
+      "presets": "プリセット:",
       "matches": "一致"
     },
     "unicode": {
       "name": "Unicode",
       "desc": "\\uXXXX エスケープのエンコード/デコード、コードポイントを表示",
-          "encode": "エスケープ",
+      "encode": "エスケープ",
       "decode": "復元",
       "scope_nonAscii": "非ASCII",
       "scope_control": "制御文字のみ",

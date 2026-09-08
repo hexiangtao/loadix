@@ -31,7 +31,11 @@ An API client built around real responses rather than raw walls of JSON.
 
 - Start from a URL or a whole (even multi-line) cURL command
 - **Response insights** — status, time, size and JSON shape at a glance, plus faster / slower comparison to the previous run
-- Organize with drafts, collections and history; import Postman v2.1 collections
+- **Environments** — dev / staging / prod variable scopes with nested `{{name}}` references, plus global and session (extracted) scopes; switch with one click
+- **Tests tab** — response assertions (status, latency, body contains, JSONPath, header) with pass/fail chips after every send
+- **Request chaining** — extract values from a response (JSONPath / regex / header) into the extracted scope, then reference them as `{{name}}` in later requests — login → token → CRUD flows work out of the box
+- **Protocols** — GraphQL bodies (query + variables panes), plus WebSocket and SSE panels with live message logs
+- Organize with drafts, collections and history; import Postman v2.1 and **OpenAPI 3.0** (YAML or JSON), export either format
 - Send any request straight to **Load Test**, or capture the response into a **Markdown** page as live documentation
 
 ### Markdown

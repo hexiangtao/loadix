@@ -8,7 +8,7 @@ describe('buildRawRequest', () => {
     request.method = 'POST';
     request.url = 'https://{{baseUrl}}/users';
     request.headers = [['X-Token', '{{token}}']];
-    request.body = { type: 'json', content: '{"user":"{{user}}"}', form: [] };
+    request.body = { type: 'json', content: '{"user":"{{user}}"}', form: [], gqlVariables: '' };
     request.auth = { type: 'bearer', token: '{{token}}', username: '', password: '', key: '', value: '' };
     const vars = { baseUrl: 'api.example.com', token: 'sekret', user: 'tom' };
 
@@ -27,7 +27,7 @@ describe('buildRawRequest', () => {
     request.method = 'POST';
     request.url = 'https://x.com';
     request.headers = [['Content-Type', 'text/plain']];
-    request.body = { type: 'json', content: '{}', form: [] };
+    request.body = { type: 'json', content: '{}', form: [], gqlVariables: '' };
     const raw = buildRawRequest(request, {});
     const contentTypes = raw.headers.filter(([k]) => k.toLowerCase() === 'content-type');
     expect(contentTypes).toEqual([['Content-Type', 'text/plain']]); // not duplicated
@@ -37,7 +37,7 @@ describe('buildRawRequest', () => {
     const request = createApiRequest();
     request.method = 'POST';
     request.url = 'https://x.com';
-    request.body = { type: 'form', content: '', form: [['a', '1'], ['b', 'two words'], ['', 'skip']] };
+    request.body = { type: 'form', content: '', form: [['a', '1'], ['b', 'two words'], ['', 'skip']], gqlVariables: '' };
     const raw = buildRawRequest(request, {});
     expect(raw.body).toBe('a=1&b=two+words');
   });
@@ -46,7 +46,7 @@ describe('buildRawRequest', () => {
     const request = createApiRequest();
     request.url = 'https://x.com';
     request.headers = [['', 'empty'], ['Accept', 'application/json']];
-    request.body = { type: 'json', content: '{}', form: [] };
+    request.body = { type: 'json', content: '{}', form: [], gqlVariables: '' };
     const raw = buildRawRequest(request, {});
     expect(raw.body).toBeUndefined();
     expect(raw.headers).toEqual([['Accept', 'application/json']]);
@@ -72,8 +72,29 @@ describe('authHeaders', () => {
 
 describe('bodyContent', () => {
   it('returns content for json/text and serialized form otherwise', () => {
-    expect(bodyContent({ type: 'json', content: '{}', form: [] })).toBe('{}');
-    expect(bodyContent({ type: 'text', content: 'hi', form: [] })).toBe('hi');
-    expect(bodyContent({ type: 'none', content: '', form: [] })).toBe('');
+    expect(bodyContent({ type: 'json', content: '{}', form: [], gqlVariables: '' })).toBe('{}');
+    expect(bodyContent({ type: 'text', content: 'hi', form: [], gqlVariables: '' })).toBe('hi');
+    expect(bodyContent({ type: 'none', content: '', form: [], gqlVariables: '' })).toBe('');
+  });
+
+  it('serializes graphql bodies as { query, variables }', () => {
+    expect(bodyContent({ type: 'graphql', content: 'query { me }', form: [], gqlVariables: '' })).toBe('{"query":"query { me }"}');
+    expect(bodyContent({ type: 'graphql', content: 'query ($id: ID!) { user(id: $id) }', form: [], gqlVariables: '{"id": 7}' })).toBe(
+      '{"query":"query ($id: ID!) { user(id: $id) }","variables":{"id":7}}',
+    );
+  });
+
+  it('drops invalid graphql variables JSON instead of breaking the payload', () => {
+    expect(bodyContent({ type: 'graphql', content: 'query { me }', form: [], gqlVariables: '{oops' })).toBe('{"query":"query { me }"}');
+  });
+
+  it('interpolates variables inside graphql queries', () => {
+    const request = createApiRequest();
+    request.method = 'POST';
+    request.url = 'https://api.example.com/graphql';
+    request.body = { type: 'graphql', content: 'query { user(id: {{userId}}) }', form: [], gqlVariables: '' };
+    const raw = buildRawRequest(request, { userId: '42' });
+    expect(raw.body).toBe('{"query":"query { user(id: 42) }"}');
+    expect(raw.headers).toContainEqual(['Content-Type', 'application/json']);
   });
 });

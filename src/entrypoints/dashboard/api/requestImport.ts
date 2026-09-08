@@ -15,6 +15,7 @@ export function requestPatchFromCurl(input: string): Partial<ApiRequest> {
       type: parsed.contentType === 'application/json' ? 'json' : isForm ? 'form' : 'text',
       content: isForm ? '' : parsed.body,
       form: isForm ? Array.from(new URLSearchParams(parsed.body).entries()) : [],
+      gqlVariables: '',
     },
   };
 }

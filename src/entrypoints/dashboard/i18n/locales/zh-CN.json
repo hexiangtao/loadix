@@ -26,19 +26,19 @@
   "sections": {
     "request": {
       "title": "请求配置"
-  },
+    },
     "load": {
       "title": "负载模型"
-  },
+    },
     "assertions": {
       "title": "断言规则"
-  },
+    },
     "variables": {
       "title": "变量"
-  },
+    },
     "history": {
       "title": "历史测试"
-  }
+    }
   },
   "request": {
     "method": "HTTP Method",
@@ -106,7 +106,9 @@
     "add": "＋ 添加断言",
     "status": "HTTP 状态码",
     "latency": "响应时间 ≤ ms",
-    "contains": "响应体包含"
+    "contains": "响应体包含",
+    "jsonpath": "JSONPath 存在",
+    "header": "响应头"
   },
   "variables": {
     "name": "变量名",
@@ -312,7 +314,70 @@
     "nextStep": "下一步",
     "openMarkdown": "在 Markdown 中打开",
     "responseFor": "响应",
-    "responseTruncated": "这是从本地历史恢复的有限长度响应副本。"
+    "responseTruncated": "这是从本地历史恢复的有限长度响应副本。",
+    "protoHttp": "HTTP",
+    "protoWebsocket": "WebSocket",
+    "protoSse": "SSE",
+    "tabTests": "测试",
+    "assertionsTitle": "响应断言（每次发送后检查）",
+    "addAssertion": "添加",
+    "assertionsEmpty": "暂无断言 — 添加后可校验状态码、JSONPath 或响应头。",
+    "assertionsHint": "所有断言通过才计为成功。",
+    "assert_status": "状态码",
+    "assert_latency": "延迟 ≤",
+    "assert_contains": "包含",
+    "assert_jsonpath": "JSONPath 存在",
+    "assert_header": "响应头",
+    "assertionsResults": "断言结果",
+    "extractTitle": "从响应提取变量",
+    "addExtract": "添加",
+    "extractEmpty": "暂无提取规则 — 响应值不会被捕获。",
+    "extractHint": "提取值写入提取作用域，后续请求可用 {{name}} 引用。",
+    "extractVarName": "变量名",
+    "extractGroup": "捕获组（0 = 整个匹配）",
+    "extractedResults": "已提取",
+    "extractedHint": "从响应中提取的会话变量，优先级高于环境和全局。",
+    "extractedEmpty": "暂无提取值 — 在测试标签添加规则。",
+    "clearExtracted": "全部清除",
+    "scopeEnv": "环境",
+    "scopeGlobal": "全局",
+    "scopeExtracted": "提取值",
+    "noEnv": "无环境（仅全局）",
+    "envHint": "创建或选择环境；环境变量会覆盖全局变量。",
+    "deleteEnv": "删除环境",
+    "newEnvPlaceholder": "新环境名称",
+    "createEnv": "创建环境",
+    "activeEnvTitle": "当前环境",
+    "globalHint": "跨环境共享 — API 密钥、基础 URL 等。",
+    "gqlQuery": "查询",
+    "gqlQueryPlaceholder": "query { me { id name } }",
+    "gqlVariables": "变量（JSON）",
+    "gqlVariablesPlaceholder": "{ \"id\": 7 }",
+    "export": "导出",
+    "exportPostman": "Postman 集合",
+    "exportOpenApi": "OpenAPI 3.0",
+    "wsConnecting": "正在连接",
+    "wsOpen": "已连接",
+    "wsClosed": "已断开",
+    "wsError": "WebSocket 错误",
+    "wsDisconnected": "已断开",
+    "wsNotConnected": "未连接",
+    "wsBinary": "二进制帧",
+    "wsEmptyHint": "输入 ws:// 或 wss:// 地址并点击连接，消息会显示在这里。",
+    "wsSendPlaceholder": "输入消息后回车发送…",
+    "sseConnecting": "正在连接",
+    "sseOpen": "流已打开",
+    "sseClosed": "流已关闭",
+    "sseStopped": "已停止",
+    "sseHttpError": "流请求失败：",
+    "sseOneWayHint": "SSE 是单向的 — 服务端推送事件，没有发送框。",
+    "sseHeadersPlaceholder": "Header: value",
+    "sseHeadersTitle": "自定义请求头（每行一个，如 Authorization: Bearer x）",
+    "sseEmptyHint": "输入事件流地址并点击连接，事件到达时显示在这里。",
+    "connect": "连接",
+    "connecting": "连接中…",
+    "disconnect": "断开",
+    "clearLog": "清空日志"
   },
   "common": {
     "delete": "删除",
@@ -356,7 +421,7 @@
     "base64": {
       "name": "Base64",
       "desc": "编码与解码 Base64 字符串",
-          "encode": "编码",
+      "encode": "编码",
       "decode": "解码",
       "input": "Base64 字符串",
       "placeholder": "输入要编码的文本…",
@@ -367,7 +432,7 @@
     "baseconv": {
       "name": "进制转换",
       "desc": "二进制、八进制、十进制、十六进制互转",
-          "input": "数字",
+      "input": "数字",
       "interpretAs": "按以下进制解析",
       "invalid": "不是所选进制的有效数字",
       "decimal": "十进制值",
@@ -376,7 +441,7 @@
     "json": {
       "name": "JSON 格式化",
       "desc": "格式化、校验与压缩 JSON",
-          "spaces": "空格缩进",
+      "spaces": "空格缩进",
       "keys": "键",
       "depth": "层深",
       "size": "大小",
@@ -386,7 +451,7 @@
     "jwt": {
       "name": "JWT",
       "desc": "本地解码与签名 JWT",
-          "decode": "解码",
+      "decode": "解码",
       "encode": "编码",
       "editEncode": "在编码模式编辑",
       "input": "粘贴 JWT",
@@ -408,7 +473,7 @@
     "regex": {
       "name": "正则测试器",
       "desc": "测试正则并提取捕获组",
-          "templates": "模板",
+      "templates": "模板",
       "pattern": "正则表达式",
       "test": "测试文本",
       "placeholder": "粘贴要匹配的文本…",
@@ -418,14 +483,14 @@
     "url": {
       "name": "URL 编码",
       "desc": "编码与解码 URL 组件",
-          "encode": "编码",
+      "encode": "编码",
       "decode": "解码",
       "invalid": "无效的百分号编码"
     },
     "urlparser": {
       "name": "URL 解析器",
       "desc": "拆解 URL 各部分，可直接编辑 query 参数",
-          "invalid": "不是有效的 URL（应形如 protocol://host/...）",
+      "invalid": "不是有效的 URL（应形如 protocol://host/...）",
       "samples": "示例",
       "protocol": "协议",
       "host": "Host",
@@ -442,13 +507,13 @@
     "html": {
       "name": "HTML 实体",
       "desc": "HTML 实体转义与还原",
-          "encode": "转义",
+      "encode": "转义",
       "decode": "还原"
     },
     "unicode": {
       "name": "Unicode",
       "desc": "\\uXXXX 转义与还原,查看码点信息",
-          "encode": "转义",
+      "encode": "转义",
       "decode": "还原",
       "scope_nonAscii": "非 ASCII",
       "scope_control": "仅控制字符",
@@ -461,16 +526,16 @@
     "uuid": {
       "name": "UUID 生成器",
       "desc": "生成 UUID v1 / v3 / v4 / v5 / v7",
-          "count": "数量",
+      "count": "数量",
       "generate": "生成",
       "nameLabel": "名称",
       "namespace": "命名空间",
       "customNamespace": "自定义命名空间 (UUID)"
-  },
+    },
     "timestamp": {
       "name": "时间戳转换",
       "desc": "Unix 时间戳与日期互转",
-          "epochSec": "秒级时间戳",
+      "epochSec": "秒级时间戳",
       "epochMs": "毫秒时间戳",
       "local": "本地时间",
       "input": "时间戳或日期字符串",
@@ -480,7 +545,7 @@
     "cron": {
       "name": "Cron 解析器",
       "desc": "解析 Cron 并预览执行时间",
-          "input": "Cron 表达式（5 段）",
+      "input": "Cron 表达式（5 段）",
       "minute": "分钟",
       "hour": "小时",
       "dayOfMonth": "日",
@@ -488,20 +553,20 @@
       "dayOfWeek": "星期",
       "next": "接下来 5 次执行",
       "invalid": "无效的 Cron 表达式（应为 5 段）"
-  },
+    },
     "sql": {
       "name": "SQL 格式化",
       "desc": "格式化与美化 SQL 语句",
-          "uppercase": "关键字大写"
+      "uppercase": "关键字大写"
     },
     "hash": {
       "name": "哈希",
       "desc": "计算 MD5 / SHA-1 / SHA-256 / SHA-512"
-  },
+    },
     "color": {
       "name": "颜色取色器",
       "desc": "HEX、RGB、HSL 互转与可视化调色",
-          "hex": "HEX",
+      "hex": "HEX",
       "preview": "实时预览"
     },
     "requests": {
@@ -511,7 +576,7 @@
     "screenshot": {
       "name": "元素截图",
       "desc": "把当前页某个元素截成 PNG 或 JPEG",
-          "selector": "CSS 选择器",
+      "selector": "CSS 选择器",
       "selectorNotFound": "找不到匹配 \"{{selector}}\" 的元素",
       "format": "格式",
       "background": "背景",
@@ -532,7 +597,7 @@
     "gradient": {
       "name": "CSS 渐变",
       "desc": "可视化生成 linear / radial CSS 渐变",
-          "type": "类型",
+      "type": "类型",
       "angle": "角度",
       "presets": "预设",
       "stops": "色标",
@@ -542,7 +607,7 @@
     "markdown": {
       "name": "Markdown",
       "desc": "Markdown 实时预览",
-          "source": "源码",
+      "source": "源码",
       "preview": "渲染结果",
       "empty": "在左侧开始输入 Markdown…",
       "outline": "大纲",
@@ -656,7 +721,7 @@
     "diff": {
       "name": "文本对比",
       "desc": "对比两段文本的差异",
-          "samples": "示例",
+      "samples": "示例",
       "original": "原文本",
       "changed": "新文本",
       "unified": "合并视图",
@@ -666,7 +731,7 @@
     "jsonpath": {
       "name": "JSONPath",
       "desc": "用路径表达式从 JSON 提取数据",
-          "presets": "快速:",
+      "presets": "快速:",
       "matches": "匹配"
     }
   },

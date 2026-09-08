@@ -15,30 +15,40 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { storageGet, storageSet } from '../storage';
+import { evaluateAssertions } from '@/engine/core';
 import type { ApiCollection, ApiHistoryEntry, ApiRequest, ApiResponse } from './apiTypes';
 import { createApiRequest, requestDisplayTitle, requestFingerprint, snapshotResponse, uid } from './apiTypes';
 import {
   addHistoryEntry,
   clearHistory,
   deleteCollection as deleteCollectionInStore,
+  deleteEnvironment as deleteEnvironmentInStore,
   deleteRequest as deleteRequestInStore,
   loadWorkspace,
   saveCollection,
   saveCollections,
+  saveEnvironment,
   saveRequest,
   saveRequests,
 } from './apiStore';
 import { exportPostmanCollection, parsePostmanCollection } from './postmanImport';
+import { exportOpenApiSpec } from './openapiExport';
+import { parseOpenApiSpec } from './openapiImport';
 import { byOrderCreated, byOrderRecency, planReorder } from '../ordering';
 import { buildRawRequest, sendRequest, type SendHandle } from './requestRunner';
+import { applyExtractRules, createEnvironment, mergedVars, type ApiEnvironment } from './variables';
+import type { Assertion } from '@/shared/types';
 import { ApiSidebar } from './ApiSidebar';
 import { RequestEditor } from './RequestEditor';
 import { ResponseView } from './ResponseView';
+import { RealtimePanel, type RealtimeMode } from './RealtimePanel';
 import { SplitDivider } from './SplitDivider';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 
 const CURRENT_KEY = 'loadix-api:current';
-const VARS_KEY = 'loadix-api:vars';
+const VARS_KEY = 'loadix-api:vars'; // global-scope variables (pre-environment legacy key)
+const ACTIVE_ENV_KEY = 'loadix-api:active-env';
+const EXTRACTED_KEY = 'loadix-api:extracted';
 const EDITOR_HEIGHT_KEY = 'loadix-api:editor-height';
 const SAVE_DEBOUNCE_MS = 600;
 
@@ -63,7 +73,12 @@ export function ApiClientTool({ onOpenInLoadTest, onOpenInMarkdown }: ApiClientT
   const [previousResponse, setPreviousResponse] = useState<ApiResponse | null>(null);
   const [responseRequest, setResponseRequest] = useState<ApiRequest | null>(null);
   const [sending, setSending] = useState(false);
-  const [vars, setVars] = useState<[string, string][]>([]);
+  const [globalVars, setGlobalVars] = useState<[string, string][]>([]);
+  const [environments, setEnvironments] = useState<ApiEnvironment[]>([]);
+  const [activeEnvId, setActiveEnvId] = useState<string | null>(null);
+  const [extracted, setExtracted] = useState<[string, string][]>([]);
+  const [assertionResults, setAssertionResults] = useState<{ assertion: Assertion; pass: boolean }[] | null>(null);
+  const [mode, setMode] = useState<RealtimeMode | 'http'>('http');
   // Split-divider preference: null = editor at natural height, otherwise px.
   const [editorHeight, setEditorHeight] = useState<number | null>(() => {
     const raw = localStorage.getItem(EDITOR_HEIGHT_KEY);
@@ -80,23 +95,30 @@ export function ApiClientTool({ onOpenInLoadTest, onOpenInMarkdown }: ApiClientT
   const [confirm, setConfirm] = useState<{ message: string; confirmLabel: string; onConfirm: () => void } | null>(null);
 
   const current = requests.find((r) => r.id === currentId) ?? null;
-  const varsRef = useRef(vars);
-  varsRef.current = vars;
+  const activeEnv = environments.find((e) => e.id === activeEnvId) ?? null;
+  // Resolved variables for the active scope (extracted > env > global).
+  const varsRef = useRef<Record<string, string>>({});
+  varsRef.current = mergedVars({ env: activeEnv?.vars ?? [], global: globalVars, extracted });
 
   /* ——— Boot: load the workspace, vars, and last-opened request ——— */
 
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const [workspace, savedVars, lastId] = await Promise.all([
+      const [workspace, savedVars, activeEnv, savedExtracted, lastId] = await Promise.all([
         loadWorkspace(),
         storageGet<[string, string][]>(VARS_KEY),
+        storageGet<string>(ACTIVE_ENV_KEY),
+        storageGet<[string, string][]>(EXTRACTED_KEY),
         storageGet<string>(CURRENT_KEY),
       ]);
       if (cancelled) return;
       setCollections(workspace.collections);
       setHistory(workspace.history);
-      if (savedVars) setVars(savedVars);
+      setEnvironments(workspace.environments);
+      if (savedVars) setGlobalVars(savedVars);
+      if (savedExtracted) setExtracted(savedExtracted);
+      if (activeEnv && workspace.environments.some((e) => e.id === activeEnv)) setActiveEnvId(activeEnv);
 
       let requestsList = workspace.requests;
       // Make sure there is always at least one working draft — the editor
@@ -184,13 +206,42 @@ export function ApiClientTool({ onOpenInLoadTest, onOpenInMarkdown }: ApiClientT
         .sort((a, b) => b.sentAt - a.sentAt)[0]?.response ?? null;
       setPreviousResponse(baseline);
       setResponse(null);
+      setAssertionResults(null);
       setResponseRequest(request);
       setSending(true);
-      const handle = sendRequest(buildRawRequest(request, Object.fromEntries(varsRef.current)));
+      const handle = sendRequest(buildRawRequest(request, varsRef.current));
       sendHandleRef.current = handle;
       try {
         const res = await handle.promise;
         setResponse(res);
+        // Request-level assertions: evaluated right after each send so the
+        // response view can show pass/fail per rule.
+        if (request.assertions.length > 0) {
+          const failures = evaluateAssertions(
+            {
+              status: res.status,
+              ms: res.ms,
+              body: res.body,
+              ok: res.ok,
+              error: res.error,
+              responseHeaders: Object.fromEntries(res.headers),
+            },
+            request.assertions,
+          );
+          setAssertionResults(request.assertions.map((a) => ({ assertion: a, pass: !failures.includes(a) })));
+        }
+        // Response → variable extraction: writes into the extracted scope,
+        // which then feeds interpolation for the next request in the chain.
+        const extractedNew = applyExtractRules(res, request.extract);
+        if (extractedNew.length > 0) {
+          setExtracted((prev) => {
+            const map = new Map(prev);
+            for (const [k, v] of extractedNew) map.set(k, v);
+            const next = Array.from(map.entries());
+            void storageSet(EXTRACTED_KEY, next);
+            return next;
+          });
+        }
         const entry: ApiHistoryEntry = {
           id: uid(),
           request: { ...request, updatedAt: Date.now() },
@@ -383,11 +434,28 @@ export function ApiClientTool({ onOpenInLoadTest, onOpenInMarkdown }: ApiClientT
   const handleImportFile = useCallback((file: File) => {
     void file.text().then((text) => {
       try {
-        const result = parsePostmanCollection(text);
+        // Postman v2.1 first, then OpenAPI 3.0 — both land in the same
+        // workspace model (collections + requests).
+        let result: ReturnType<typeof parsePostmanCollection> | ReturnType<typeof parseOpenApiSpec>;
+        try {
+          result = parsePostmanCollection(text);
+        } catch {
+          result = parseOpenApiSpec(text);
+        }
         setCollections((prev) => [...prev, ...result.collections]);
         setRequests((prev) => [...prev, ...result.requests]);
         for (const c of result.collections) void saveCollection(c);
         for (const r of result.requests) void saveRequest(r);
+        // OpenAPI servers → global variables (baseUrl, server1, …).
+        if ('globalVars' in result && result.globalVars.length > 0) {
+          setGlobalVars((prev) => {
+            const map = new Map(prev);
+            for (const [k, v] of result.globalVars) if (!map.has(k)) map.set(k, v);
+            const next = Array.from(map.entries());
+            void storageSet(VARS_KEY, next);
+            return next;
+          });
+        }
         const first = result.requests[0];
         if (first) {
           setCurrentId(first.id);
@@ -412,6 +480,16 @@ export function ApiClientTool({ onOpenInLoadTest, onOpenInMarkdown }: ApiClientT
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = 'loadix-requests.json';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }, [collections, requests, t]);
+
+  const handleExportOpenApi = useCallback(() => {
+    const spec = exportOpenApiSpec(collections, requests, t('api.exportName'));
+    const blob = new Blob([spec], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'loadix-openapi.json';
     a.click();
     URL.revokeObjectURL(a.href);
   }, [collections, requests, t]);
@@ -442,10 +520,62 @@ export function ApiClientTool({ onOpenInLoadTest, onOpenInMarkdown }: ApiClientT
     });
   }, [t]);
 
-  const handleVarsChange = useCallback((next: [string, string][]) => {
-    setVars(next);
+  /* ——— Variables: global scope + environments + extracted ——— */
+
+  const handleGlobalVarsChange = useCallback((next: [string, string][]) => {
+    setGlobalVars(next);
     void storageSet(VARS_KEY, next);
   }, []);
+
+  const handleSelectEnv = useCallback((id: string | null) => {
+    setActiveEnvId(id);
+    if (id === null) void storageSet(ACTIVE_ENV_KEY, '');
+    else void storageSet(ACTIVE_ENV_KEY, id);
+  }, []);
+
+  const handleCreateEnv = useCallback((name: string) => {
+    const env = createEnvironment(name.trim() || 'New environment');
+    setEnvironments((prev) => [...prev, env]);
+    void saveEnvironment(env);
+    setActiveEnvId(env.id);
+    void storageSet(ACTIVE_ENV_KEY, env.id);
+  }, []);
+
+  const handleRenameEnv = useCallback((id: string, name: string) => {
+    setEnvironments((prev) => prev.map((e) => (e.id === id ? { ...e, name } : e)));
+    const target = environments.find((e) => e.id === id);
+    if (target) void saveEnvironment({ ...target, name });
+  }, [environments]);
+
+  const handleDeleteEnv = useCallback((id: string) => {
+    setEnvironments((prev) => prev.filter((e) => e.id !== id));
+    void deleteEnvironmentInStore(id);
+    if (activeEnvId === id) {
+      setActiveEnvId(null);
+      void storageSet(ACTIVE_ENV_KEY, '');
+    }
+  }, [activeEnvId]);
+
+  const handleEnvVarsChange = useCallback((id: string, vars: [string, string][]) => {
+    setEnvironments((prev) => prev.map((e) => (e.id === id ? { ...e, vars } : e)));
+    const target = environments.find((e) => e.id === id);
+    if (target) void saveEnvironment({ ...target, vars });
+  }, [environments]);
+
+  const handleClearExtracted = useCallback(() => {
+    setExtracted([]);
+    void storageSet(EXTRACTED_KEY, []);
+  }, []);
+
+  /* ——— Protocol mode ——— */
+
+  const handleModeChange = useCallback(
+    (m: RealtimeMode | 'http') => {
+      if (current) void saveRequest({ ...current, updatedAt: Date.now() });
+      setMode(m);
+    },
+    [current],
+  );
 
   /* ——— Split divider ——— */
 
@@ -462,56 +592,104 @@ export function ApiClientTool({ onOpenInLoadTest, onOpenInMarkdown }: ApiClientT
   /* ——— Render ——— */
 
   const collectionName = current?.collectionId ? (collections.find((c) => c.id === current.collectionId)?.name ?? '') : '';
+  const varContext = {
+    environments,
+    activeEnvId,
+    globalVars,
+    extracted,
+    onSelectEnv: handleSelectEnv,
+    onCreateEnv: handleCreateEnv,
+    onRenameEnv: handleRenameEnv,
+    onDeleteEnv: handleDeleteEnv,
+    onEnvVarsChange: handleEnvVarsChange,
+    onGlobalVarsChange: handleGlobalVarsChange,
+    onClearExtracted: handleClearExtracted,
+  };
 
   return (
-    <div className="flex h-full min-h-0 w-full">
-      <ApiSidebar
-        requests={requests}
-        collections={collections}
-        history={history}
-        currentId={currentId}
-        showImportHint={!importedOnce}
-        onOpenRequest={switchTo}
-        onNewRequest={handleNewRequest}
-        onNewRequestIn={handleNewRequestIn}
-        onNewCollection={handleNewCollection}
-        onKeepRequest={handleKeepRequest}
-        onRenameCollection={handleRenameCollection}
-        onReorderRequest={handleReorderRequest}
-        onReorderCollection={handleReorderCollection}
-        onDuplicateRequest={handleDuplicateRequest}
-        onDeleteRequest={handleDeleteRequest}
-        onDeleteCollection={handleDeleteCollection}
-        onImportFile={handleImportFile}
-        onExport={handleExport}
-        onOpenHistory={handleOpenHistory}
-        onClearHistory={handleClearHistory}
-      />
-      <div className="flex min-w-0 flex-1 flex-col bg-panel">
-        {current ? (
-          <>
-            <RequestEditor request={current} onChange={patchCurrent} onSend={handleSend} onCancel={handleCancel} sending={sending} collectionName={collectionName} vars={vars} onVarsChange={handleVarsChange} editorHeight={editorHeight} />
-            <SplitDivider onResize={handleResizeEditor} onReset={handleResetEditor} />
-            <ResponseView
-              response={response}
-              previousResponse={previousResponse}
-              sending={sending}
-              request={responseRequest ?? current}
-              vars={vars}
-              onLoadTest={onOpenInLoadTest ?? (() => {})}
-              onOpenInMarkdown={onOpenInMarkdown ?? (() => {})}
-              onLaunch={handleLaunch}
-            />
-          </>
-        ) : (
-          <div className="flex flex-1 flex-col items-center justify-center gap-2">
-            <p className="text-[13px] text-muted">{t('api.emptyEditor')}</p>
-            <button onClick={handleNewRequest} className="primary-btn">
-              {t('api.newRequest')}
+    <div className="flex h-full min-h-0 w-full flex-col">
+      {/* ——— Protocol switcher: HTTP client / WebSocket / SSE ——— */}
+      <div className="flex shrink-0 items-center gap-2 border-b border-line px-3 py-1.5">
+        <div className="flex items-center gap-0.5 rounded-lg border border-line bg-hover p-0.5">
+          {([['http', t('api.protoHttp')], ['websocket', t('api.protoWebsocket')], ['sse', t('api.protoSse')]] as [RealtimeMode | 'http', string][]).map(([id, label]) => (
+            <button
+              key={id}
+              onClick={() => handleModeChange(id)}
+              className={`cursor-pointer rounded-md px-2.5 py-1 text-xs transition-colors duration-150 ${
+                mode === id ? 'bg-panel font-semibold text-ink shadow-sm' : 'text-muted hover:text-ink'
+              }`}
+            >
+              {label}
             </button>
-          </div>
-        )}
+          ))}
+        </div>
       </div>
+
+      {mode !== 'http' ? (
+        <RealtimePanel mode={mode} />
+      ) : (
+        <div className="flex min-h-0 w-full flex-1">
+          <ApiSidebar
+            requests={requests}
+            collections={collections}
+            history={history}
+            currentId={currentId}
+            showImportHint={!importedOnce}
+            onOpenRequest={switchTo}
+            onNewRequest={handleNewRequest}
+            onNewRequestIn={handleNewRequestIn}
+            onNewCollection={handleNewCollection}
+            onKeepRequest={handleKeepRequest}
+            onRenameCollection={handleRenameCollection}
+            onReorderRequest={handleReorderRequest}
+            onReorderCollection={handleReorderCollection}
+            onDuplicateRequest={handleDuplicateRequest}
+            onDeleteRequest={handleDeleteRequest}
+            onDeleteCollection={handleDeleteCollection}
+            onImportFile={handleImportFile}
+            onExportPostman={handleExport}
+            onExportOpenApi={handleExportOpenApi}
+            onOpenHistory={handleOpenHistory}
+            onClearHistory={handleClearHistory}
+          />
+          <div className="flex min-w-0 flex-1 flex-col bg-panel">
+            {current ? (
+              <>
+                <RequestEditor
+                  request={current}
+                  onChange={patchCurrent}
+                  onSend={handleSend}
+                  onCancel={handleCancel}
+                  sending={sending}
+                  collectionName={collectionName}
+                  varContext={varContext}
+                  editorHeight={editorHeight}
+                />
+                <SplitDivider onResize={handleResizeEditor} onReset={handleResetEditor} />
+                <ResponseView
+                  response={response}
+                  previousResponse={previousResponse}
+                  sending={sending}
+                  request={responseRequest ?? current}
+                  resolvedVars={varsRef.current}
+                  assertionResults={assertionResults}
+                  extracted={extracted}
+                  onLoadTest={onOpenInLoadTest ?? (() => {})}
+                  onOpenInMarkdown={onOpenInMarkdown ?? (() => {})}
+                  onLaunch={handleLaunch}
+                />
+              </>
+            ) : (
+              <div className="flex flex-1 flex-col items-center justify-center gap-2">
+                <p className="text-[13px] text-muted">{t('api.emptyEditor')}</p>
+                <button onClick={handleNewRequest} className="primary-btn">
+                  {t('api.newRequest')}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
       {confirm && (
         <ConfirmDialog
           title={confirm.confirmLabel}
