@@ -44,6 +44,7 @@ import { ResponseView } from './ResponseView';
 import { RealtimePanel, type RealtimeMode } from './RealtimePanel';
 import { ApiDirectoryPanel } from './ApiDirectoryPanel';
 import type { DirectoryApi } from './apiDirectory';
+import { parseQueryParams } from './urlUtil';
 import { SplitDivider } from './SplitDivider';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 
@@ -605,6 +606,7 @@ export function ApiClientTool({ onOpenInLoadTest, onOpenInMarkdown }: ApiClientT
     draft.name = api.name;
     draft.method = api.example.method;
     draft.url = api.example.url;
+    draft.params = parseQueryParams(api.example.url);
     draft.headers = api.example.headers ? api.example.headers.map(([k, v]) => [k, v] as [string, string]) : draft.headers;
     if (api.example.body) draft.body = { ...api.example.body, form: [...(api.example.body.form ?? [])] };
     void saveRequest(draft);
