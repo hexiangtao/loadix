@@ -1,3 +1,12 @@
+# [1.56.0](https://github.com/hexiangtao/loadix/compare/v1.55.0...v1.56.0) (2026-09-13)
+
+
+### Features
+
+* **api:** live traffic recorder — capture real fetch/XHR usage into requests and a replayable Journey ([7191057](https://github.com/hexiangtao/loadix/commit/7191057118775bda1477af196e324fb2c03e83ea))
+* **api:** live traffic recorder — capture real fetch/XHR usage into requests and a replayable Journey ([df1a8cf](https://github.com/hexiangtao/loadix/commit/df1a8cf265dcb1491871d4efb36166f10a2db6e6))
+* **media:** video extractor — live sniffer + HLS download as a new top-level module ([2977ac9](https://github.com/hexiangtao/loadix/commit/2977ac9fce8e73577898e7178f34252981bfb966))
+
 # [1.55.0](https://github.com/hexiangtao/loadix/compare/v1.54.1...v1.55.0) (2026-09-08)
 
 
