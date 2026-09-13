@@ -1,3 +1,10 @@
+## [1.56.1](https://github.com/hexiangtao/loadix/compare/v1.56.0...v1.56.1) (2026-09-13)
+
+
+### Bug Fixes
+
+* **media:** target the browsed tab, collapse segment floods, scrape video-page URLs ([9d10de3](https://github.com/hexiangtao/loadix/commit/9d10de320cd48db9c3d9672412fd994ad77bc35b))
+
 # [1.56.0](https://github.com/hexiangtao/loadix/compare/v1.55.0...v1.56.0) (2026-09-13)
 
 
