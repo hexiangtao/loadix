@@ -22,7 +22,7 @@ import { executeRawRequest, type RawRequest } from '@/engine/runner';
 import type { EngineCommand, EngineEvent, EngineState, MetricsSnapshot } from '@/shared/types';
 import type { CaptureRequest, CaptureResult, PickedElement, PickedRegion, PickerResult } from '@/shared/capture';
 import { handleMediaMessage, startMediaSniffer } from '@/entrypoints/dashboard/media/mediaSniffer';
-import { extractMediaFromHtml } from '@/entrypoints/dashboard/media/mediaScrape';
+import { resolvePageUrl } from '@/entrypoints/dashboard/media/mediaResolver';
 
 class EngineHost {
   private ports = new Set<chrome.runtime.Port>();
@@ -613,28 +613,28 @@ export default defineBackground(() => {
     return handleMediaMessage(msg as { type?: string; tabId?: number }, sendResponse);
   });
 
-  // Media page-scrape: the user pasted a video PAGE url (bilibili.com/video/…).
-  // Fetch it here — host_permissions make the SW CORS-exempt, so the raw HTML
-  // (with its embedded __playinfo__ manifest) is readable — and mine it for
-  // media assets. Pure extraction logic lives in mediaScrape.ts (unit-tested).
+  // Media page-resolve: the user pasted a video PAGE url (bilibili.com/video/…).
+  // All network runs here — host_permissions make the SW CORS-exempt, so the
+  // watch page AND Bilibili's html5 playurl API are readable. resolvePageUrl
+  // (unit-tested, network injected) returns the selectable format list:
+  // muxed MP4s with sound first, DASH tracks labeled video-only as fallback.
   chrome.runtime.onMessage.addListener((msg: unknown, _sender, sendResponse) => {
     if (!msg || typeof msg !== 'object') return false;
     if ((msg as { type?: string }).type !== 'media:scrape') return false;
     const pageUrl = (msg as { pageUrl?: string }).pageUrl ?? '';
     if (!/^https?:\/\//i.test(pageUrl)) {
-      sendResponse({ type: 'media:scrape', assets: [], error: 'not-http' });
+      sendResponse({ type: 'media:scrape', error: 'not-http' });
       return false;
     }
-    fetch(pageUrl, { credentials: 'omit' })
-      .then((res) => {
+    const fetchText = (url: string) =>
+      fetch(url, { credentials: 'omit' }).then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const type = res.headers.get('content-type') ?? '';
-        if (!/text\/html|application\/xhtml/i.test(type)) throw new Error('not-html');
         return res.text();
-      })
-      .then((html) => sendResponse({ type: 'media:scrape', assets: extractMediaFromHtml(html, pageUrl) }))
+      });
+    resolvePageUrl(pageUrl, fetchText)
+      .then((resolved) => sendResponse({ type: 'media:scrape', resolved }))
       .catch((err: unknown) => {
-        sendResponse({ type: 'media:scrape', assets: [], error: err instanceof Error ? err.message : 'fetch-failed' });
+        sendResponse({ type: 'media:scrape', error: err instanceof Error ? err.message : 'resolve-failed' });
       });
     return true; // async response
   });

@@ -922,6 +922,14 @@
     "emptyTitleWeb": "Analyze a media URL",
     "emptyHintWeb": "Paste a direct media link or an HLS playlist (.m3u8) above to inspect and download it.",
     "scrapeEmpty": "No media found on that page. Play the video once and use the live sniffer, or paste a direct .m3u8/.mp4 link.",
-    "scrapeFailed": "Could not fetch that page. Some sites block non-browser fetches."
+    "scrapeFailed": "Could not fetch that page. Some sites block non-browser fetches.",
+    "needsExtension": "Page URLs need the browser extension (it can read the page and its player API). Paste a direct .m3u8/.mp4 link here, or load the extension.",
+    "dismiss": "Dismiss",
+    "withAudio": "with sound",
+    "dashOnlyNote": "This video only exposes separate video/audio tracks (DASH). Download both and merge them with any muxer — one-click merging is coming.",
+    "fmtMp4": "MP4",
+    "fmtHls": "HLS",
+    "fmtDashVideo": "video track",
+    "fmtDashAudio": "audio track"
   }
 }

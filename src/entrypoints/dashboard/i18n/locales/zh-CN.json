@@ -921,6 +921,14 @@
     "emptyTitleWeb": "分析媒体地址",
     "emptyHintWeb": "在上方粘贴直链媒体文件或 HLS 播放列表（.m3u8），即可解析并下载。",
     "scrapeEmpty": "页面里没有找到媒体。建议先播放一次视频让嗅探器捕获，或直接粘贴 .m3u8 / .mp4 直链。",
-    "scrapeFailed": "无法获取该页面——部分站点会拦截非浏览器请求。"
+    "scrapeFailed": "无法获取该页面——部分站点会拦截非浏览器请求。",
+    "needsExtension": "解析播放页需要浏览器扩展（它才能读取页面和播放器接口）。这里可直接粘贴 .m3u8 / .mp4 直链，或加载扩展后使用。",
+    "dismiss": "收起",
+    "withAudio": "含声音",
+    "dashOnlyNote": "该视频只提供分离的视频/音频轨道（DASH）。可分别下载后用任意合成工具合并——一键合并即将上线。",
+    "fmtMp4": "MP4",
+    "fmtHls": "HLS",
+    "fmtDashVideo": "视频轨",
+    "fmtDashAudio": "音频轨"
   }
 }

@@ -688,6 +688,14 @@
     "emptyTitleWeb": "Analyser une URL média",
     "emptyHintWeb": "Collez ci-dessus un lien direct ou une playlist HLS (.m3u8) pour l’analyser et la télécharger.",
     "scrapeEmpty": "Aucun média trouvé sur cette page. Lisez la vidéo une fois puis utilisez la détection en direct, ou collez un lien direct .m3u8 / .mp4.",
-    "scrapeFailed": "Impossible de récupérer cette page."
+    "scrapeFailed": "Impossible de récupérer cette page.",
+    "needsExtension": "L’analyse des pages nécessite l’extension (pour lire la page et son API lecteur). Collez ici un lien direct .m3u8 / .mp4.",
+    "dismiss": "Fermer",
+    "withAudio": "avec son",
+    "dashOnlyNote": "Cette vidéo n’expose que des pistes vidéo/audio séparées (DASH). Téléchargez-les puis fusionnez-les — la fusion en un clic arrive bientôt.",
+    "fmtMp4": "MP4",
+    "fmtHls": "HLS",
+    "fmtDashVideo": "piste vidéo",
+    "fmtDashAudio": "piste audio"
   }
 }

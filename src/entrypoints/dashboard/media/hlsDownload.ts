@@ -36,6 +36,8 @@ export interface DownloadOptions {
   concurrency?: number;
   /** Base filename without extension (defaults from the asset). */
   fileName?: string;
+  /** Alternate CDN mirrors tried in order when the primary URL fails. */
+  backupUrls?: string[];
 }
 
 export interface DownloadHandle {
@@ -101,7 +103,7 @@ export function startDownload(asset: MediaAsset, options: DownloadOptions = {}, 
       if (asset.container === 'hls') {
         await downloadHls(asset, task, writer, options, controller.signal, update);
       } else {
-        await downloadFile(asset, task, writer, controller.signal, update);
+        await downloadFile(asset, task, writer, controller.signal, update, options.backupUrls);
       }
 
       await writer.close();
@@ -137,8 +139,8 @@ export function startDownload(asset: MediaAsset, options: DownloadOptions = {}, 
 /* Direct file download (mp4/mp3/…) with byte progress                 */
 /* ------------------------------------------------------------------ */
 
-async function downloadFile(asset: MediaAsset, task: MediaTask, writer: FSWritable, signal: AbortSignal, update: () => void): Promise<void> {
-  const response = await fetch(asset.url, { signal, credentials: 'omit' });
+async function downloadFile(asset: MediaAsset, task: MediaTask, writer: FSWritable, signal: AbortSignal, update: () => void, backupUrls: string[] = []): Promise<void> {
+  const response = await fetchWithBackups([asset.url, ...backupUrls], signal);
   if (!response.ok || !response.body) throw new Error(`HTTP ${response.status}`);
   const type = response.headers.get('content-type') ?? '';
   if (/text\/html/i.test(type)) throw new Error('Server returned a web page instead of the media file (link may be expired)');
@@ -276,6 +278,23 @@ async function downloadHls(
   task.receivedBytes = decryptedBytes;
   task.progress = 1;
   update();
+}
+
+/** Try each URL in order; first success wins. Protected CDNs (Bilibili's
+ *  upos mirrors) rotate hosts — a 403 on the primary mirror is routine. */
+async function fetchWithBackups(urls: string[], signal: AbortSignal): Promise<Response> {
+  let lastError: unknown = null;
+  for (const url of urls) {
+    try {
+      const response = await fetch(url, { signal, credentials: 'omit' });
+      if (response.ok) return response;
+      lastError = new Error(`HTTP ${response.status}`);
+    } catch (err) {
+      if (signal.aborted) throw err;
+      lastError = err;
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error('All download sources failed');
 }
 
 async function fetchPlaylist(url: string, signal: AbortSignal): Promise<{ url: string; body: string }> {

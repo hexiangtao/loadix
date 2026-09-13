@@ -33,6 +33,7 @@ import { assetIdFor, classifyRequest } from './mediaClassify';
 import type { MediaAsset, MediaTask } from './mediaTypes';
 import { KIND_META } from './mediaTypes';
 import { canStreamToDisk, startDownload, type DownloadHandle } from './hlsDownload';
+import { fileNameForFormat, type MediaFormatOption, type ResolvedPageAsset } from './mediaResolver';
 
 interface MediaPanelProps {
   /** false on the web build — no sniffer, paste-URL mode only. */
@@ -68,6 +69,8 @@ export function MediaPanel({ extensionMode }: MediaPanelProps) {
   const [pasteUrl, setPasteUrl] = useState('');
   const [pasteError, setPasteError] = useState('');
   const [scraping, setScraping] = useState(false);
+  /** Resolved watch-page result — the format-picker row shown on top. */
+  const [resolved, setResolved] = useState<ResolvedPageAsset | null>(null);
   const handlesRef = useRef(new Map<string, DownloadHandle>());
 
   /* ——— Sniffer wiring (extension only) ——— */
@@ -131,9 +134,9 @@ export function MediaPanel({ extensionMode }: MediaPanelProps) {
       setPasteUrl('');
       return;
     }
-    // Not a media URL — try page scraping (extension builds only).
+    // Not a media URL — resolve it as a watch page (extension builds only).
     if (!extensionMode) {
-      setPasteError(t('media.pasteUnrecognized'));
+      setPasteError(t('media.needsExtension'));
       return;
     }
     setScraping(true);
@@ -141,20 +144,16 @@ export function MediaPanel({ extensionMode }: MediaPanelProps) {
       .sendMessage({ type: 'media:scrape', pageUrl: url })
       .then((response) => {
         setScraping(false);
-        if (response?.type !== 'media:scrape') {
+        if (response?.type !== 'media:scrape' || response.error) {
           setPasteError(t('media.scrapeFailed'));
           return;
         }
-        const found = (response.assets ?? []) as MediaAsset[];
-        if (response.error === 'not-html' || found.length === 0) {
+        const result = response.resolved as ResolvedPageAsset | undefined;
+        if (!result || result.formats.length === 0) {
           setPasteError(t('media.scrapeEmpty'));
           return;
         }
-        setAssets((prev) => {
-          const known = new Set(prev.map((a) => a.id));
-          return [...found.filter((a) => !known.has(a.id)), ...prev];
-        });
-        setSelectedId(found[0]?.id ?? null);
+        setResolved(result);
         setPasteUrl('');
       })
       .catch(() => {
@@ -162,6 +161,66 @@ export function MediaPanel({ extensionMode }: MediaPanelProps) {
         setPasteError(t('media.scrapeFailed'));
       });
   }, [pasteUrl, t, extensionMode]);
+
+  /* ——— Format download: one complete playable file for the chosen option ——— */
+
+  const startFormatDownload = useCallback(
+    (format: MediaFormatOption) => {
+      if (!resolved) return;
+      const fileName = fileNameForFormat(resolved.title, format);
+      if (format.container === 'hls') {
+        const asset: MediaAsset = {
+          id: assetIdFor(format.url),
+          kind: 'stream',
+          container: 'hls',
+          url: format.url,
+          method: 'GET',
+          contentType: 'application/vnd.apple.mpegurl',
+          size: null,
+          fileName,
+          encryption: 'unknown',
+          requestHeaders: [],
+          live: false,
+          pageUrl: resolved.pageUrl,
+          firstSeenAt: Date.now(),
+          lastSeenAt: Date.now(),
+          hits: 1,
+        };
+        startAssetDownload(asset);
+        return;
+      }
+      // Direct file (muxed MP4 / DASH track): byte-stream to disk with
+      // CDN-mirror fallback.
+      const handle = startDownload(
+        {
+          id: assetIdFor(format.url),
+          kind: format.container === 'dash-audio' ? 'audio' : 'video',
+          container: 'file',
+          url: format.url,
+          method: 'GET',
+          contentType: '',
+          size: format.size || null,
+          fileName,
+          encryption: 'none',
+          requestHeaders: [],
+          live: false,
+          pageUrl: resolved.pageUrl,
+          firstSeenAt: Date.now(),
+          lastSeenAt: Date.now(),
+          hits: 1,
+        },
+        { fileName, backupUrls: format.backupUrls },
+        {
+          onTask: (task) => setTasks((prev) => upsert(prev, task)),
+          onDone: (task) => setTasks((prev) => upsert(prev, task)),
+          onError: (task) => setTasks((prev) => upsert(prev, task)),
+        },
+      );
+      handlesRef.current.set(handle.task.id, handle);
+      setTasks((prev) => upsert(prev, handle.task));
+    },
+    [resolved],
+  );
 
   /* ——— Download flow ——— */
 
@@ -264,9 +323,10 @@ export function MediaPanel({ extensionMode }: MediaPanelProps) {
       <div className="flex min-h-0 flex-1">
         {/* Asset list */}
         <div className="min-w-0 flex-1 overflow-y-auto px-6 py-4">
-          {assets.length === 0 ? (
+          {resolved && <ResolvedPageCard resolved={resolved} onDownload={startFormatDownload} onDismiss={() => setResolved(null)} />}
+          {assets.length === 0 && !resolved ? (
             <EmptyState extensionMode={extensionMode} />
-          ) : (
+          ) : assets.length > 0 ? (
             <div className="space-y-5">
               {GROUP_ORDER.map((kind) => {
                 const bucket = grouped.get(kind);
@@ -294,7 +354,7 @@ export function MediaPanel({ extensionMode }: MediaPanelProps) {
                 );
               })}
             </div>
-          )}
+          ) : null}
         </div>
 
         {/* Details rail */}
@@ -317,6 +377,65 @@ export function MediaPanel({ extensionMode }: MediaPanelProps) {
       )}
     </div>
   );
+}
+
+/** The resolved watch page: title + one download button per format. */
+function ResolvedPageCard({
+  resolved,
+  onDownload,
+  onDismiss,
+}: {
+  resolved: ResolvedPageAsset;
+  onDownload: (format: MediaFormatOption) => void;
+  onDismiss: () => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <section className="mb-5 rounded-xl border border-primary/30 bg-primary/5 px-4 py-3.5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h3 className="truncate text-[14px] font-semibold text-ink">{resolved.title}</h3>
+          <p className="mt-0.5 truncate text-[11px] text-muted">{resolved.pageUrl}</p>
+        </div>
+        <button className="btn-ghost shrink-0 text-[11px] text-muted" onClick={onDismiss}>
+          {t('media.dismiss')}
+        </button>
+      </div>
+      {resolved.notice === 'dash-only' && (
+        <p className="mt-2 rounded-lg bg-warning/10 px-3 py-2 text-[11px] text-warning">{t('media.dashOnlyNote')}</p>
+      )}
+      <div className="mt-3 flex flex-wrap gap-2">
+        {resolved.formats.map((format) => (
+          <button
+            key={format.key}
+            className="group flex items-center gap-2 rounded-lg border border-line bg-surface px-3 py-2 text-[12px] transition-colors hover:border-primary/60 hover:bg-primary/5"
+            onClick={() => onDownload(format)}
+          >
+            <Download className="size-3.5 text-primary" />
+            <span className="font-medium text-ink">{format.quality}</span>
+            <span className="text-[10px] text-muted">{formatLabel(format, t)}</span>
+            {format.hasAudio && <span className="rounded bg-success/10 px-1 py-0.5 text-[9px] text-success">{t('media.withAudio')}</span>}
+            {format.size > 0 && <span className="text-[10px] text-muted">{formatBytes(format.size)}</span>}
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function formatLabel(format: MediaFormatOption, t: (key: string) => string): string {
+  switch (format.container) {
+    case 'mp4':
+      return t('media.fmtMp4');
+    case 'hls':
+      return t('media.fmtHls');
+    case 'dash-video':
+      return t('media.fmtDashVideo');
+    case 'dash-audio':
+      return t('media.fmtDashAudio');
+    default:
+      return '';
+  }
 }
 
 function upsert(list: MediaTask[], task: MediaTask): MediaTask[] {
