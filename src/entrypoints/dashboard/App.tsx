@@ -7,6 +7,7 @@ import type { Assertion, ContentType, HttpMethod, TestConfig } from '@/shared/ty
 import type { EngineHost } from '@/engine/engine-host';
 import type { ApiRequest } from './api/apiTypes';
 import { ApiClientTool } from './api/ApiClientTool';
+import { MediaPanel } from './media/MediaPanel';
 import { changeLanguage, SUPPORTED_LANGUAGES, type SupportedLanguage } from './i18n';
 import { Breakdown } from './components/Breakdown';
 import { LineChart } from './components/LineChart';
@@ -113,14 +114,18 @@ export default function App({ host }: { host: EngineHost }) {
   const { activeSection, engineState, resultMessage, metrics, setActiveSection, setEngineState, setMetrics, theme, setTheme, selectedRequest, setSelectedRequest } =
     useUiStore();
 
-  const [view, setView] = useState<'loadtest' | 'tools' | 'markdown' | 'api'>(() => {
+  const [view, setView] = useState<'loadtest' | 'tools' | 'markdown' | 'api' | 'media'>(() => {
     const tool = toolFromUrl();
     if (tool === 'markdown') return 'markdown';
     if (tool === 'api') return 'api';
+    if (tool === 'media') return 'media';
     if (tool) return 'tools';
     const saved = localStorage.getItem('loadix-view');
-    return saved === 'tools' || saved === 'markdown' || saved === 'api' ? saved : 'loadtest';
+    return saved === 'tools' || saved === 'markdown' || saved === 'api' || saved === 'media' ? saved : 'loadtest';
   });
+
+  /** The sniffer needs chrome.* APIs — the web build degrades to paste-URL. */
+  const extensionMode = typeof chrome !== 'undefined' && !!chrome.runtime?.id;
 
   // Immersive mode: on the Markdown page the sticky header retreats while the
   // user scrolls the document, so reading/editing reclaims the full viewport.
@@ -148,9 +153,9 @@ export default function App({ host }: { host: EngineHost }) {
   }, [view]);
 
   const openTool = (id: string, payload?: string) => {
-    setActiveTool(id === 'markdown' || id === 'api' ? null : id);
+    setActiveTool(id === 'markdown' || id === 'api' || id === 'media' ? null : id);
     setToolPayload(payload);
-    setView(id === 'markdown' ? 'markdown' : id === 'api' ? 'api' : 'tools');
+    setView(id === 'markdown' ? 'markdown' : id === 'api' ? 'api' : id === 'media' ? 'media' : 'tools');
   };
 
   const openInMarkdown = useCallback((markdown: string) => {
@@ -159,7 +164,7 @@ export default function App({ host }: { host: EngineHost }) {
     setView('markdown');
   }, []);
 
-  const switchView = (v: 'loadtest' | 'tools' | 'markdown' | 'api') => {
+  const switchView = (v: 'loadtest' | 'tools' | 'markdown' | 'api' | 'media') => {
     setView(v);
     if (v !== 'tools') setActiveTool(null);
   };
@@ -446,6 +451,18 @@ export default function App({ host }: { host: EngineHost }) {
             </button>
 
             <button
+              onClick={() => switchView('media')}
+              className={`relative rounded-lg px-3 py-2 text-sm transition-colors duration-150 ${
+                view === 'media' ? 'font-bold text-primary' : 'text-muted hover:bg-hover hover:text-ink'
+              }`}
+            >
+              {view === 'media' && (
+                <motion.span layoutId="view-active" className="absolute inset-0 rounded-lg bg-primary/10" />
+              )}
+              <span className="relative">{t('media.nav')}</span>
+            </button>
+
+            <button
               onClick={() => switchView('loadtest')}
               className={`relative rounded-lg px-3 py-2 text-sm transition-colors duration-150 ${
                 view === 'loadtest' ? 'font-bold text-primary' : 'text-muted hover:bg-hover hover:text-ink'
@@ -688,6 +705,10 @@ export default function App({ host }: { host: EngineHost }) {
             onOpenInLoadTest={openInLoadTest}
             onOpenInMarkdown={openInMarkdown}
           />
+        </main>
+      ) : view === 'media' ? (
+        <main className="h-[calc(100vh-3.5rem)] w-full overflow-hidden">
+          <MediaPanel extensionMode={extensionMode} />
         </main>
       ) : (
         <main className="mx-auto w-full px-7 py-7">

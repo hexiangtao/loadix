@@ -655,5 +655,37 @@
       "scope_all_hint": "모든 문자 이스케이프(완전히 이식 가능한 리터럴)",
       "codepoints": "코드 포인트"
     }
+  },
+  "media": {
+    "nav": "동영상 추출",
+    "title": "미디어 추출",
+    "subtitleExtension": "모든 탭에서 재생 중인 동영상을 실시간으로 감지합니다.",
+    "subtitleWeb": "미디어 또는 m3u8 URL을 붙여넣어 분석하고 다운로드하세요.",
+    "refresh": "새로고침",
+    "clear": "지우기",
+    "pastePlaceholder": "https://example.com/video.m3u8 또는 .mp4 …",
+    "pasteFromClipboard": "붙여넣기",
+    "analyze": "분석",
+    "pasteUnrecognized": "인식할 수 없는 주소입니다. 미디어 파일이나 .m3u8 재생목록 링크를 붙여넣으세요.",
+    "download": "다운로드",
+    "cancel": "취소",
+    "kind": "종류",
+    "container": "컨테이너",
+    "size": "크기",
+    "encryption": "암호화",
+    "encNone": "없음",
+    "hits": "감지 횟수",
+    "drmNote": "이 스트림은 DRM으로 보호됩니다——키는 DRM 시스템이 관리하여 추출할 수 없습니다. 구조적 한계입니다.",
+    "memorySinkNote": "이 브라우저에서는 대용량 파일을 메모리에 버퍼링한 후 저장합니다.",
+    "taskError": "실패",
+    "kind_stream": "스트림 (HLS / DASH)",
+    "kind_video": "동영상",
+    "kind_audio": "오디오",
+    "kind_subtitle": "자막",
+    "kind_other": "기타",
+    "emptyTitle": "아직 감지된 미디어가 없습니다",
+    "emptyHint": "아무 탭에서 동영상을 재생하면 재생목록과 세그먼트가 실시간으로 표시됩니다.",
+    "emptyTitleWeb": "미디어 URL 분석",
+    "emptyHintWeb": "위에 직접 링크나 HLS 재생목록(.m3u8)을 붙여넣어 분석·다운로드하세요."
   }
 }

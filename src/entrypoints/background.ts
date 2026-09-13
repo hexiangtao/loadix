@@ -21,6 +21,7 @@ import { LoadEngine } from '@/engine/load-engine';
 import { executeRawRequest, type RawRequest } from '@/engine/runner';
 import type { EngineCommand, EngineEvent, EngineState, MetricsSnapshot } from '@/shared/types';
 import type { CaptureRequest, CaptureResult, PickedElement, PickedRegion, PickerResult } from '@/shared/capture';
+import { handleMediaMessage, startMediaSniffer } from '@/entrypoints/dashboard/media/mediaSniffer';
 
 class EngineHost {
   private ports = new Set<chrome.runtime.Port>();
@@ -600,6 +601,18 @@ export default defineBackground(() => {
     sendResponse({ type: 'recorder:tabid', tabId: sender.tab?.id ?? null });
     return false;
   });
+
+  // Media sniffer: the dashboard asks for the current tab's captured assets
+  // (media:list) and can clear them (media:clear). Classification + buffering
+  // live in mediaSniffer.ts; downloads run in the dashboard page itself.
+  chrome.runtime.onMessage.addListener((msg: unknown, _sender, sendResponse) => {
+    if (!msg || typeof msg !== 'object') return false;
+    const { type } = msg as { type?: string };
+    if (type !== 'media:list' && type !== 'media:clear') return false;
+    return handleMediaMessage(msg as { type?: string; tabId?: number }, sendResponse);
+  });
+
+  startMediaSniffer();
 
   // Content-script replies routed back to the right tab.
   chrome.runtime.onMessage.addListener((raw, sender) => {

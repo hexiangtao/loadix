@@ -10,7 +10,7 @@ const MENU_MAX_W = 760;
 
 interface ToolsMenuProps {
   activeTool: string | null;
-  view: 'loadtest' | 'tools' | 'markdown' | 'api';
+  view: 'loadtest' | 'tools' | 'markdown' | 'api' | 'media';
   onSelect: (id: string) => void;
 }
 

@@ -656,5 +656,37 @@
       "scope_all_hint": "全文字をエスケープ(完全に可搬なリテラル)",
       "codepoints": "コードポイント"
     }
+  },
+  "media": {
+    "nav": "動画抽出",
+    "title": "メディア抽出",
+    "subtitleExtension": "任意のタブで再生中の動画をリアルタイムに検知します。",
+    "subtitleWeb": "メディアや m3u8 の URL を貼り付けて解析・ダウンロード。",
+    "refresh": "更新",
+    "clear": "クリア",
+    "pastePlaceholder": "https://example.com/video.m3u8 または .mp4 …",
+    "pasteFromClipboard": "貼り付け",
+    "analyze": "解析",
+    "pasteUnrecognized": "認識できない URL です。メディアファイルまたは .m3u8 プレイリストのリンクを貼ってください。",
+    "download": "ダウンロード",
+    "cancel": "キャンセル",
+    "kind": "種類",
+    "container": "コンテナ",
+    "size": "サイズ",
+    "encryption": "暗号化",
+    "encNone": "なし",
+    "hits": "検出回数",
+    "drmNote": "このストリームは DRM 保護されています——鍵は DRM システムが管理しており抽出できません。仕様上の制限です。",
+    "memorySinkNote": "このブラウザでは大きなファイルをメモリに蓄えてから保存します。",
+    "taskError": "失敗",
+    "kind_stream": "ストリーム（HLS / DASH）",
+    "kind_video": "動画",
+    "kind_audio": "音声",
+    "kind_subtitle": "字幕",
+    "kind_other": "その他",
+    "emptyTitle": "まだ何も検出されていません",
+    "emptyHint": "任意のタブで動画を再生すると、プレイリストとセグメントがここに表示されます。",
+    "emptyTitleWeb": "メディア URL を解析",
+    "emptyHintWeb": "上に直接リンクまたは HLS プレイリスト（.m3u8）を貼り付けて解析・ダウンロードできます。"
   }
 }

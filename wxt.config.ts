@@ -22,7 +22,7 @@ export default defineConfig({
       48: 'icon-48.png',
       128: 'icon-128.png',
     },
-    permissions: ['storage', 'tabs', 'scripting', 'activeTab'],
+    permissions: ['storage', 'tabs', 'scripting', 'activeTab', 'downloads', 'webRequest'],
     host_permissions: ['<all_urls>'],
     action: {
       default_title: 'Loadix',

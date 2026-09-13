@@ -655,5 +655,37 @@
       "scope_all_hint": "Échapper tous les caractères (littéral totalement portable)",
       "codepoints": "Points de code"
     }
+  },
+  "media": {
+    "nav": "Extraction vidéo",
+    "title": "Extracteur de médias",
+    "subtitleExtension": "Les vidéos lues dans n’importe quel onglet sont détectées ici en direct.",
+    "subtitleWeb": "Collez une URL média ou m3u8 pour l’analyser et la télécharger.",
+    "refresh": "Actualiser",
+    "clear": "Effacer",
+    "pastePlaceholder": "https://example.com/video.m3u8 ou .mp4 …",
+    "pasteFromClipboard": "Coller",
+    "analyze": "Analyser",
+    "pasteUnrecognized": "URL non reconnue. Collez un lien de fichier média ou de playlist .m3u8.",
+    "download": "Télécharger",
+    "cancel": "Annuler",
+    "kind": "Type",
+    "container": "Conteneur",
+    "size": "Taille",
+    "encryption": "Chiffrement",
+    "encNone": "Aucun",
+    "hits": "Détections",
+    "drmNote": "Flux protégé par DRM — les clés sont gérées par le système DRM et ne peuvent pas être extraites. Limite absolue, pas un bug.",
+    "memorySinkNote": "Les gros téléchargements sont mis en mémoire dans ce navigateur.",
+    "taskError": "Échec",
+    "kind_stream": "Flux (HLS / DASH)",
+    "kind_video": "Vidéo",
+    "kind_audio": "Audio",
+    "kind_subtitle": "Sous-titres",
+    "kind_other": "Autre",
+    "emptyTitle": "Rien de détecté pour le moment",
+    "emptyHint": "Lisez une vidéo dans un onglet : playlists et segments apparaissent ici en temps réel.",
+    "emptyTitleWeb": "Analyser une URL média",
+    "emptyHintWeb": "Collez ci-dessus un lien direct ou une playlist HLS (.m3u8) pour l’analyser et la télécharger."
   }
 }
