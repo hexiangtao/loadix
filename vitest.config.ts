@@ -9,6 +9,14 @@ export default defineConfig({
     alias: {
       // Same `@` convention as wxt and the standalone web build.
       '@': path.resolve(__dirname, 'src'),
+      // functions/ backend cores are plain ESM (.mjs); they import the
+      // dashboard's TS resolver with an explicit .js that must map to .ts.
+      // Alias matches the bare specifier (esbuild resolves .js → .ts the
+      // same way when bundling the Pages Functions).
+      '../../src/entrypoints/dashboard/media/mediaResolver.js': path.resolve(
+        __dirname,
+        'src/entrypoints/dashboard/media/mediaResolver.ts',
+      ),
     },
   },
   test: {

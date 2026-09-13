@@ -113,8 +113,9 @@ export function MediaPanel({ extensionMode }: MediaPanelProps) {
 
   /* ——— Paste-URL ingestion (both builds) ———
    * Direct media URLs classify instantly. Page URLs (bilibili.com/video/…)
-   * are scraped: the SW fetches the HTML (CORS-exempt) and mines embedded
-   * manifests (__playinfo__ / generic m3u8). Web build: direct URLs only. */
+   * resolve to a format list: web build → /api/resolve (our backend; Bilibili
+   * 403s cross-origin browser calls, the CDN bytes are open so downloads go
+   * direct); extension → the service worker performs the identical chain. */
 
   const ingestPaste = useCallback(() => {
     const url = pasteUrl.trim();
@@ -134,21 +135,21 @@ export function MediaPanel({ extensionMode }: MediaPanelProps) {
       setPasteUrl('');
       return;
     }
-    // Not a media URL — resolve it as a watch page (extension builds only).
-    if (!extensionMode) {
-      setPasteError(t('media.needsExtension'));
-      return;
-    }
+    // Not a media URL — resolve it as a watch page.
     setScraping(true);
-    void chrome.runtime
-      .sendMessage({ type: 'media:scrape', pageUrl: url })
-      .then((response) => {
+    const request = extensionMode
+      ? chrome.runtime.sendMessage({ type: 'media:scrape', pageUrl: url }).then((response) => {
+          if (response?.type !== 'media:scrape' || response.error) throw new Error(String(response?.error ?? 'resolve-failed'));
+          return response.resolved as ResolvedPageAsset;
+        })
+      : fetch('/api/resolve?pageUrl=' + encodeURIComponent(url)).then(async (res) => {
+          const body = (await res.json().catch(() => null)) as { resolved?: ResolvedPageAsset; error?: string } | null;
+          if (!res.ok || !body || body.error) throw new Error(String(body?.error ?? `HTTP ${res.status}`));
+          return body.resolved!;
+        });
+    void request
+      .then((result) => {
         setScraping(false);
-        if (response?.type !== 'media:scrape' || response.error) {
-          setPasteError(t('media.scrapeFailed'));
-          return;
-        }
-        const result = response.resolved as ResolvedPageAsset | undefined;
         if (!result || result.formats.length === 0) {
           setPasteError(t('media.scrapeEmpty'));
           return;

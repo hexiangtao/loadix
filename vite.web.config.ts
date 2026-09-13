@@ -1,6 +1,8 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
+// @ts-expect-error — plain-ESM plugin, typed by scripts/dev-resolve.d.ts
+import { mediaResolvePlugin } from './scripts/dev-resolve.mjs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -13,7 +15,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // in-page via BrowserEngineHost (no Chrome API, subject to CORS).
 export default defineConfig({
   root: path.resolve(__dirname, 'src/web'),
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwindcss(), mediaResolvePlugin()],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, 'src'),
