@@ -39,6 +39,23 @@ interface MediaPanelProps {
   extensionMode: boolean;
 }
 
+/** Resolve the tab whose media the user cares about: the active tab unless
+ *  that IS the dashboard (the normal case — the dashboard is an extension
+ *  page), then the last real page browsed in this window. The sniffer
+ *  keys captures by that page's tab id, not the dashboard's. */
+async function resolveTargetTab(): Promise<number | null> {
+  const [active] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (active?.id && !active.url?.startsWith('chrome-extension://')) return active.id;
+  const currentWindow = await chrome.windows.getCurrent();
+  const tabs = await chrome.tabs.query({ active: false, windowId: currentWindow?.id });
+  // Most recently browsed non-dashboard tab with captured media potential:
+  // prefer http(s) pages over new-tab/special pages.
+  const candidates = tabs
+    .filter((tab) => tab.id != null && /^https?:/i.test(tab.url ?? ''))
+    .sort((a, b) => (b.lastAccessed ?? 0) - (a.lastAccessed ?? 0));
+  return candidates[0]?.id ?? null;
+}
+
 const GROUP_ORDER = ['stream', 'video', 'audio', 'subtitle', 'other'] as const;
 type GroupKind = (typeof GROUP_ORDER)[number];
 
@@ -50,6 +67,7 @@ export function MediaPanel({ extensionMode }: MediaPanelProps) {
   const [tabId, setTabId] = useState<number | null>(null);
   const [pasteUrl, setPasteUrl] = useState('');
   const [pasteError, setPasteError] = useState('');
+  const [scraping, setScraping] = useState(false);
   const handlesRef = useRef(new Map<string, DownloadHandle>());
 
   /* ——— Sniffer wiring (extension only) ——— */
@@ -62,42 +80,88 @@ export function MediaPanel({ extensionMode }: MediaPanelProps) {
   useEffect(() => {
     if (!extensionMode) return;
     let disposed = false;
-    void chrome.tabs.query({ active: true, currentWindow: true }).then(([tab]) => {
-      if (disposed || !tab?.id) return;
-      setTabId(tab.id);
-      void refresh(tab.id);
-    });
+    const resolveAndRefresh = () => {
+      void resolveTargetTab().then((id) => {
+        if (disposed) return;
+        setTabId(id);
+        if (id != null) void refresh(id);
+        else setAssets([]);
+      });
+    };
+    resolveAndRefresh();
+    // Re-resolve on tab switches: the user flips to Loadix after playing a
+    // video, and the list must follow the tab that actually has captures.
+    const onActivated = (info: chrome.tabs.TabActiveInfo) => {
+      void chrome.tabs.get(info.tabId).then((tab) => {
+        if (disposed || !tab.url?.startsWith('chrome-extension://')) return;
+        resolveAndRefresh();
+      });
+    };
+    chrome.tabs.onActivated.addListener(onActivated);
     const timer = window.setInterval(() => {
       if (tabId != null) void refresh(tabId);
     }, 2000);
     return () => {
       disposed = true;
+      chrome.tabs.onActivated.removeListener(onActivated);
       window.clearInterval(timer);
     };
   }, [extensionMode, tabId, refresh]);
 
-  /* ——— Paste-URL ingestion (web) ——— */
+  /* ——— Paste-URL ingestion (both builds) ———
+   * Direct media URLs classify instantly. Page URLs (bilibili.com/video/…)
+   * are scraped: the SW fetches the HTML (CORS-exempt) and mines embedded
+   * manifests (__playinfo__ / generic m3u8). Web build: direct URLs only. */
 
   const ingestPaste = useCallback(() => {
     const url = pasteUrl.trim();
     setPasteError('');
     if (!url) return;
     const asset = classifyRequest({ url, live: false, pageUrl: '' });
-    if (!asset) {
+    if (asset) {
+      const full: MediaAsset = {
+        ...asset,
+        id: assetIdFor(url),
+        firstSeenAt: Date.now(),
+        lastSeenAt: Date.now(),
+        hits: 1,
+      };
+      setAssets((prev) => [full, ...prev.filter((a) => a.id !== full.id)]);
+      setSelectedId(full.id);
+      setPasteUrl('');
+      return;
+    }
+    // Not a media URL — try page scraping (extension builds only).
+    if (!extensionMode) {
       setPasteError(t('media.pasteUnrecognized'));
       return;
     }
-    const full: MediaAsset = {
-      ...asset,
-      id: assetIdFor(url),
-      firstSeenAt: Date.now(),
-      lastSeenAt: Date.now(),
-      hits: 1,
-    };
-    setAssets((prev) => [full, ...prev.filter((a) => a.id !== full.id)]);
-    setSelectedId(full.id);
-    setPasteUrl('');
-  }, [pasteUrl, t]);
+    setScraping(true);
+    void chrome.runtime
+      .sendMessage({ type: 'media:scrape', pageUrl: url })
+      .then((response) => {
+        setScraping(false);
+        if (response?.type !== 'media:scrape') {
+          setPasteError(t('media.scrapeFailed'));
+          return;
+        }
+        const found = (response.assets ?? []) as MediaAsset[];
+        if (response.error === 'not-html' || found.length === 0) {
+          setPasteError(t('media.scrapeEmpty'));
+          return;
+        }
+        setAssets((prev) => {
+          const known = new Set(prev.map((a) => a.id));
+          return [...found.filter((a) => !known.has(a.id)), ...prev];
+        });
+        setSelectedId(found[0]?.id ?? null);
+        setPasteUrl('');
+      })
+      .catch(() => {
+        setScraping(false);
+        setPasteError(t('media.scrapeFailed'));
+      });
+  }, [pasteUrl, t, extensionMode]);
 
   /* ——— Download flow ——— */
 
@@ -188,7 +252,8 @@ export function MediaPanel({ extensionMode }: MediaPanelProps) {
           <button className="btn-ghost flex items-center gap-1.5 text-[12px]" onClick={() => void navigator.clipboard?.readText?.().then((text) => setPasteUrl(text)).catch(() => undefined)}>
             <ClipboardPaste className="size-3.5" /> {t('media.pasteFromClipboard')}
           </button>
-          <button className="btn-primary px-3 py-1.5 text-[12px]" onClick={ingestPaste}>
+          <button className="btn-primary flex items-center gap-1.5 px-3 py-1.5 text-[12px]" onClick={ingestPaste} disabled={scraping}>
+            {scraping && <Loader2 className="size-3.5 animate-spin" />}
             {t('media.analyze')}
           </button>
         </div>

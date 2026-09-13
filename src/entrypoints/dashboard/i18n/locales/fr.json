@@ -686,6 +686,8 @@
     "emptyTitle": "Rien de détecté pour le moment",
     "emptyHint": "Lisez une vidéo dans un onglet : playlists et segments apparaissent ici en temps réel.",
     "emptyTitleWeb": "Analyser une URL média",
-    "emptyHintWeb": "Collez ci-dessus un lien direct ou une playlist HLS (.m3u8) pour l’analyser et la télécharger."
+    "emptyHintWeb": "Collez ci-dessus un lien direct ou une playlist HLS (.m3u8) pour l’analyser et la télécharger.",
+    "scrapeEmpty": "Aucun média trouvé sur cette page. Lisez la vidéo une fois puis utilisez la détection en direct, ou collez un lien direct .m3u8 / .mp4.",
+    "scrapeFailed": "Impossible de récupérer cette page."
   }
 }

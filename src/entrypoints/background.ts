@@ -22,6 +22,7 @@ import { executeRawRequest, type RawRequest } from '@/engine/runner';
 import type { EngineCommand, EngineEvent, EngineState, MetricsSnapshot } from '@/shared/types';
 import type { CaptureRequest, CaptureResult, PickedElement, PickedRegion, PickerResult } from '@/shared/capture';
 import { handleMediaMessage, startMediaSniffer } from '@/entrypoints/dashboard/media/mediaSniffer';
+import { extractMediaFromHtml } from '@/entrypoints/dashboard/media/mediaScrape';
 
 class EngineHost {
   private ports = new Set<chrome.runtime.Port>();
@@ -610,6 +611,32 @@ export default defineBackground(() => {
     const { type } = msg as { type?: string };
     if (type !== 'media:list' && type !== 'media:clear') return false;
     return handleMediaMessage(msg as { type?: string; tabId?: number }, sendResponse);
+  });
+
+  // Media page-scrape: the user pasted a video PAGE url (bilibili.com/video/…).
+  // Fetch it here — host_permissions make the SW CORS-exempt, so the raw HTML
+  // (with its embedded __playinfo__ manifest) is readable — and mine it for
+  // media assets. Pure extraction logic lives in mediaScrape.ts (unit-tested).
+  chrome.runtime.onMessage.addListener((msg: unknown, _sender, sendResponse) => {
+    if (!msg || typeof msg !== 'object') return false;
+    if ((msg as { type?: string }).type !== 'media:scrape') return false;
+    const pageUrl = (msg as { pageUrl?: string }).pageUrl ?? '';
+    if (!/^https?:\/\//i.test(pageUrl)) {
+      sendResponse({ type: 'media:scrape', assets: [], error: 'not-http' });
+      return false;
+    }
+    fetch(pageUrl, { credentials: 'omit' })
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const type = res.headers.get('content-type') ?? '';
+        if (!/text\/html|application\/xhtml/i.test(type)) throw new Error('not-html');
+        return res.text();
+      })
+      .then((html) => sendResponse({ type: 'media:scrape', assets: extractMediaFromHtml(html, pageUrl) }))
+      .catch((err: unknown) => {
+        sendResponse({ type: 'media:scrape', assets: [], error: err instanceof Error ? err.message : 'fetch-failed' });
+      });
+    return true; // async response
   });
 
   startMediaSniffer();

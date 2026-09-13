@@ -920,6 +920,8 @@
     "emptyTitle": "Nothing captured yet",
     "emptyHint": "Play a video in any tab, then come back — segments and playlists appear here in real time.",
     "emptyTitleWeb": "Analyze a media URL",
-    "emptyHintWeb": "Paste a direct media link or an HLS playlist (.m3u8) above to inspect and download it."
+    "emptyHintWeb": "Paste a direct media link or an HLS playlist (.m3u8) above to inspect and download it.",
+    "scrapeEmpty": "No media found on that page. Play the video once and use the live sniffer, or paste a direct .m3u8/.mp4 link.",
+    "scrapeFailed": "Could not fetch that page. Some sites block non-browser fetches."
   }
 }

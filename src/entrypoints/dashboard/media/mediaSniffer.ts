@@ -40,6 +40,21 @@ function persist(tabId: number): void {
   void chrome.storage.session.set({ [`${STORAGE_PREFIX}${tabId}`]: assets }).catch(() => undefined);
 }
 
+/** Coalesce bursts of persists (every sniffed segment fires one) — the
+ *  trailing call wins and the map holds the freshest state anyway. */
+const persistTimers = new Map<number, ReturnType<typeof setTimeout>>();
+function schedulePersist(tabId: number): void {
+  const existing = persistTimers.get(tabId);
+  if (existing) clearTimeout(existing);
+  persistTimers.set(
+    tabId,
+    setTimeout(() => {
+      persistTimers.delete(tabId);
+      persist(tabId);
+    }, 1500),
+  );
+}
+
 async function restore(tabId: number): Promise<Map<string, MediaAsset>> {
   const existing = tabs.get(tabId);
   if (existing && existing.size > 0) return existing;
@@ -66,8 +81,43 @@ function record(tabId: number, asset: MediaAsset): void {
     if (asset.contentType && !existing.contentType) existing.contentType = asset.contentType;
     return;
   }
+  // Segment flood guard: .ts/.m4s files under one directory are HLS/DASH
+  // siblings. A VOD playlist downloads hundreds of them; showing each as a
+  // row would drown the playlist the user actually wants. Aggregate into
+  // the first sibling's row and keep the playlist (already captured) as
+  // the downloadable entry.
+  if (/\.(ts|m4s)(\?|$)/i.test(asset.url)) {
+    for (const row of map.values()) {
+      if (row.segmentCount && sameSegmentFamily(row.url, asset.url)) {
+        row.segmentCount++;
+        row.lastSeenAt = asset.firstSeenAt;
+        row.size = (row.size ?? 0) + (asset.size ?? 0);
+        return;
+      }
+    }
+  }
   map.set(asset.id, asset);
   prune(map);
+}
+
+/** True when two segment URLs share a directory and differ only by a
+ *  trailing identifier (number / hash token) — a segment family. */
+function sameSegmentFamily(a: string, b: string): boolean {
+  try {
+    const pa = new URL(a);
+    const pb = new URL(b);
+    if (pa.origin !== pb.origin) return false;
+    const da = pa.pathname.split('/');
+    const db = pb.pathname.split('/');
+    const lastA = da.pop() ?? '';
+    const lastB = db.pop() ?? '';
+    if (da.join('/') !== db.join('/')) return false;
+    // Same extension family, differing (or empty) trailing token.
+    const stem = (name: string) => name.replace(/\.[a-z0-9]{1,5}(\?|$)/i, '').replace(/\d+$/, '');
+    return stem(lastA) === stem(lastB) && /\.[a-z0-9]{1,5}(\?|$)/i.test(lastA);
+  } catch {
+    return false;
+  }
 }
 
 /** Keep the buffer useful: drop oldest 'image'/'other' first, then oldest. */
@@ -147,7 +197,7 @@ function handleDetail(detail: WebRequestDetail): void {
     lastSeenAt: Date.now(),
     hits: 1,
   });
-  void persist(detail.tabId);
+  schedulePersist(detail.tabId);
 }
 
 function installObserver(): void {

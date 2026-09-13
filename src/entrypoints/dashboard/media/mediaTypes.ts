@@ -45,6 +45,10 @@ export interface MediaAsset {
   firstSeenAt: number;
   lastSeenAt: number;
   hits: number;
+  /** When the sniffer collapsed many sibling segment URLs (same directory,
+   *  counter-style names) into this row: how many were seen. The row itself
+   *  stays a representative URL — download it via the playlist, not this. */
+  segmentCount?: number;
   /** webRequest saw these request headers — replay-friendly. */
   requestHeaders: [string, string][];
   /** true when the capture came from the live sniffer (vs paste-URL). */
