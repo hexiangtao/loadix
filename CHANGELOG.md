@@ -1,3 +1,10 @@
+# [1.57.0](https://github.com/hexiangtao/loadix/compare/v1.56.1...v1.57.0) (2026-09-13)
+
+
+### Features
+
+* **media:** paste a watch page, pick a format, download one complete file ([2a20568](https://github.com/hexiangtao/loadix/commit/2a2056829b33069134ede75cd963b1f02d15bf98))
+
 ## [1.56.1](https://github.com/hexiangtao/loadix/compare/v1.56.0...v1.56.1) (2026-09-13)
 
 
