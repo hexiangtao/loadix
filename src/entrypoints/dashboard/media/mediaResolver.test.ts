@@ -9,6 +9,7 @@ import {
   partsFromWatchPage,
   preferredFormat,
   resolvePageUrl,
+  SUPPORTED_PLATFORMS,
   titleFromWatchPage,
   withPartParam,
 } from './mediaResolver';
@@ -435,6 +436,279 @@ describe('extractUrlFromText', () => {
     expect(extractUrlFromText('   https://a.com/v.m3u8  ')).toBe('https://a.com/v.m3u8');
     // No URL at all — pass the trimmed text through for the caller to judge.
     expect(extractUrlFromText('  hello  ')).toBe('hello');
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/* AcFun (site adapter)                                                */
+/* ------------------------------------------------------------------ */
+
+/** AcFun's real page shape: `ksPlayJson` is a JSON *string* inside a JSON
+ *  blob inside a <script>, so the fixture reproduces that escaping exactly
+ *  rather than hand-writing it (which is how it would drift from reality). */
+const acfunPage = (representations: unknown[], title = '乌军展示新装备的歼10CE'): string =>
+  `<html><head><title>${title} - AcFun弹幕视频网 ( ゜- ゜)つロ</title></head><body>
+   <h1 class="title"><span>${title}</span></h1>
+   <script>window.pageInfo = ${JSON.stringify({
+     currentVideoInfo: {
+       priority: 0,
+       ksPlayJson: JSON.stringify({
+         version: '1.0.0',
+         videoId: '08e1f4da6fb0a4c4',
+         adaptationSet: [{ id: 0, duration: 660200, representation: representations }],
+       }),
+     },
+   })};</script></body></html>`;
+
+const acfunRep = (height: number, frameRate: number, codecs = 'avc1.640033') => ({
+  id: 1,
+  url: `https://tx-safety-video.acfun.cn/mediacloud/x-${height}-${frameRate}.m3u8?pkey=t`,
+  backupUrl: [`https://ali-safety-video.acfun.cn/mediacloud/x-${height}-${frameRate}.m3u8?pkey=a`],
+  width: Math.round((height * 16) / 9),
+  height,
+  frameRate,
+  codecs,
+  qualityType: `${height}p${frameRate > 30 ? frameRate : ''}`,
+  qualityLabel: `${height}P${frameRate > 30 ? frameRate : ''}`,
+});
+
+describe('resolvePageUrl — AcFun', () => {
+  it('resolves one HLS row per quality, with the mirror CDN as backup', async () => {
+    const pageUrl = 'https://www.acfun.cn/v/ac48825923';
+    const fetchText = stubFetch({
+      [pageUrl]: acfunPage([
+        acfunRep(1080, 60),
+        acfunRep(1080, 30),
+        acfunRep(720, 30),
+        acfunRep(540, 30),
+        acfunRep(360, 30),
+      ]),
+    });
+    const resolved = await resolvePageUrl(pageUrl, fetchText);
+
+    // AcFun is HLS with its own audio, so every row is a complete file and
+    // none of them can be "dash-only". Two 1080 representations collapsed
+    // into one row — the 60fps one.
+    expect(resolved.title).toBe('乌军展示新装备的歼10CE');
+    expect(resolved.formats.map((format) => format.quality)).toEqual(['1080P60', '720P', '540P', '360P']);
+    expect(resolved.formats.every((format) => format.container === 'hls' && format.hasAudio)).toBe(true);
+    expect(resolved.dashOnly).toBe(false);
+    expect(resolved.notice).toBe('');
+    expect(resolved.formats[0]!.url).toContain('tx-safety-video.acfun.cn');
+    expect(resolved.formats[0]!.backupUrls[0]).toContain('ali-safety-video.acfun.cn');
+  });
+
+  it('prefers H.264 over a higher frame rate at the same height', async () => {
+    const pageUrl = 'https://www.acfun.cn/v/ac48825923';
+    const fetchText = stubFetch({
+      [pageUrl]: acfunPage([
+        { ...acfunRep(1080, 60, 'hev1.1.6.L120.90'), qualityType: '1080p60', qualityLabel: '1080P60' },
+        { ...acfunRep(1080, 30, 'avc1.640033'), qualityType: '1080p', qualityLabel: '1080P' },
+      ]),
+    });
+    const resolved = await resolvePageUrl(pageUrl, fetchText);
+
+    // One row for 1080: the H.264 one, because it plays anywhere.
+    expect(resolved.formats).toHaveLength(1);
+    expect(resolved.formats[0]!.url).toContain('-1080-30');
+  });
+
+  it('handles the mobile share shape (?ac=)', async () => {
+    const pageUrl = 'https://m.acfun.cn/v/?ac=48825923';
+    const fetchText = stubFetch({ [pageUrl]: acfunPage([acfunRep(720, 30)]) });
+    const resolved = await resolvePageUrl(pageUrl, fetchText);
+    expect(resolved.formats).toHaveLength(1);
+  });
+
+  it('does not claim a lookalike host', async () => {
+    const fetchText = stubFetch({ __fallback: '<html><title>nope</title></html>' });
+    const resolved = await resolvePageUrl('https://acfun.cn.evil.com/v/ac48825923', fetchText);
+    expect(resolved.formats).toHaveLength(0);
+    expect(resolved.notice).toBe('empty');
+  });
+
+  it('falls through to the generic scan when the page has no play info', async () => {
+    const pageUrl = 'https://www.acfun.cn/v/ac48825923';
+    const fetchText = stubFetch({
+      [pageUrl]: '<html><title>AcFun</title><p>https://cdn.example.com/backup.mp4</p></html>',
+    });
+    const resolved = await resolvePageUrl(pageUrl, fetchText);
+    expect(resolved.formats.map((format) => format.url)).toEqual(['https://cdn.example.com/backup.mp4']);
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/* Bilibili 番剧 / 课程 (site adapter)                                  */
+/* ------------------------------------------------------------------ */
+
+/** Real values: PGC reports length in MILLISECONDS (this episode is 48:57),
+ *  unlike a /video/ page's 分P which are in seconds. */
+const PGC_EPISODES = [
+  { id: 826497, cid: 1602741036, long_title: '为了消灭鬼舞辻无惨', duration: 2937220 },
+  { id: 826498, cid: 1602741037, long_title: '水柱·富冈义勇的痛楚', duration: 1435000 },
+];
+
+const pgcSeason = (episodes: unknown[]) =>
+  JSON.stringify({
+    code: 0,
+    result: { title: '鬼灭之刃 柱训练篇', cover: '//i0.hdslb.com/bfs/archive/cover.jpg', episodes },
+  });
+
+/** Real PGC tracks: snake_case mirrors of every field, plus a measured
+ *  `size` that the `x/player` endpoint does not provide. */
+const pgcPlayurl = (video: unknown[], audio: unknown[]) =>
+  JSON.stringify({ code: 0, result: { dash: { video, audio } } });
+
+const PGC_VIDEO = [
+  { id: 32, base_url: 'https://cn-jsnt.bilivideo.com/v-480.m4s', baseUrl: 'https://cn-jsnt.bilivideo.com/v-480.m4s', backup_url: ['https://upos.bilivideo.com/v-480.m4s'], height: 480, bandwidth: 502934, size: 12345678, codecs: 'avc1.64001F' },
+  { id: 16, base_url: 'https://cn-jsnt.bilivideo.com/v-360.m4s', baseUrl: 'https://cn-jsnt.bilivideo.com/v-360.m4s', height: 360, bandwidth: 301212, size: 7654321, codecs: 'avc1.64001E' },
+];
+const PGC_AUDIO = [{ id: 30280, base_url: 'https://cn-jsnt.bilivideo.com/a.m4s', baseUrl: 'https://cn-jsnt.bilivideo.com/a.m4s', bandwidth: 191304, size: 2345678 }];
+
+const pgcRoutes = (season: string, play: string) => ({
+  'https://api.bilibili.com/pgc/view/web/season?ep_id=826497': season,
+  'https://api.bilibili.com/pgc/view/web/season?season_id=47836': season,
+  'https://api.bilibili.com/pgc/player/web/playurl?ep_id=826497&fnval=4048&qn=127&fnver=0&fourk=1': play,
+});
+
+describe('resolvePageUrl — bilibili 番剧 (PGC)', () => {
+  it('resolves the episode ladder and the whole season as parts', async () => {
+    const pageUrl = 'https://www.bilibili.com/bangumi/play/ep826497';
+    const fetchText = stubFetch(pgcRoutes(pgcSeason(PGC_EPISODES), pgcPlayurl(PGC_VIDEO, PGC_AUDIO)));
+    const resolved = await resolvePageUrl(pageUrl, fetchText);
+
+    expect(resolved.title).toBe('鬼灭之刃 柱训练篇');
+    expect(resolved.cover).toBe('https://i0.hdslb.com/bfs/archive/cover.jpg');
+    expect(resolved.formats.map((format) => format.quality)).toEqual(['480p', '360p', '191kbps']);
+    // Video+audio merge into ONE playable file, which is the product promise.
+    expect(resolved.formats[0]!.container).toBe('dash-mux');
+    expect(resolved.formats[0]!.companionUrl).toContain('/a.m4s');
+    // Sizes come from the declared byte count, not a bandwidth guess.
+    expect(resolved.formats[0]!.size).toBe(12345678 + 2345678);
+    expect(resolved.formats[0]!.requiresReferer).toBe(true);
+    // dash-mux rows ARE complete files (the two tracks are merged on
+    // download), so this is not a "video-only" result and must not be
+    // labelled as one.
+    expect(resolved.dashOnly).toBe(false);
+    expect(resolved.notice).toBe('');
+
+    // A season IS a part list — and each episode is its own URL, which is
+    // what lets the batch downloader reach the others.
+    expect(resolved.parts?.map((part) => part.title)).toEqual(['为了消灭鬼舞辻无惨', '水柱·富冈义勇的痛楚']);
+    expect(resolved.parts?.[1]?.url).toBe('https://www.bilibili.com/bangumi/play/ep826498');
+    expect(resolved.partIndex).toBe(1);
+    // ms → s, or the UI renders "816:07:40" for a 49-minute episode.
+    expect(resolved.parts?.[0]?.durationSeconds).toBe(2937);
+    // A TV season has episodes, and the copy has to say so.
+    expect(resolved.partsLabel).toBe('episodes');
+  });
+
+  it('resolves a season URL to its first episode', async () => {
+    const pageUrl = 'https://www.bilibili.com/bangumi/play/ss47836';
+    const fetchText = stubFetch(pgcRoutes(pgcSeason(PGC_EPISODES), pgcPlayurl(PGC_VIDEO, PGC_AUDIO)));
+    const resolved = await resolvePageUrl(pageUrl, fetchText);
+
+    expect(resolved.partIndex).toBe(1);
+    expect(resolved.formats.length).toBeGreaterThan(0);
+    // Every episode URL keeps the season's own origin and path prefix.
+    expect(resolved.parts?.[0]?.url).toBe('https://www.bilibili.com/bangumi/play/ep826497');
+  });
+
+  it('names a single-episode page after the episode, not just the series', async () => {
+    const pageUrl = 'https://www.bilibili.com/bangumi/play/ep826497';
+    const fetchText = stubFetch(pgcRoutes(pgcSeason([PGC_EPISODES[0]!]), pgcPlayurl(PGC_VIDEO, PGC_AUDIO)));
+    const resolved = await resolvePageUrl(pageUrl, fetchText);
+
+    // With no list to disambiguate, the title has to say which episode.
+    expect(resolved.title).toBe('鬼灭之刃 柱训练篇 - 为了消灭鬼舞辻无惨');
+    expect(resolved.parts).toBeUndefined();
+  });
+
+  it('falls back to the generic scan when the season API refuses', async () => {
+    const pageUrl = 'https://www.bilibili.com/bangumi/play/ep826497';
+    const fetchText = stubFetch({ __fallback: '<html><title>番剧</title></html>' });
+    const resolved = await resolvePageUrl(pageUrl, fetchText);
+    expect(resolved.formats).toHaveLength(0);
+    expect(resolved.notice).toBe('empty');
+  });
+});
+
+describe('resolvePageUrl — generic sites', () => {
+  it('reads a schema.org VideoObject', async () => {
+    const pageUrl = 'https://news.example.com/story';
+    const fetchText = stubFetch({
+      [pageUrl]: `<html><head><title>报道</title>
+        <script type="application/ld+json">{"@context":"https://schema.org","@graph":[
+          {"@type":"Article","name":"outer"},
+          {"@type":"VideoObject","name":"示例影片","contentUrl":"https://cdn.example.com/feature.mp4?token=9","thumbnailUrl":"https://cdn.example.com/poster.jpg"}
+        ]}</script></head></html>`,
+    });
+    const resolved = await resolvePageUrl(pageUrl, fetchText);
+
+    expect(resolved.formats.map((format) => format.url)).toEqual(['https://cdn.example.com/feature.mp4?token=9']);
+    expect(resolved.title).toBe('示例影片');
+    expect(resolved.cover).toBe('https://cdn.example.com/poster.jpg');
+  });
+
+  it('reads og:video but never an embed page', async () => {
+    const pageUrl = 'https://www.example.com/watch';
+    const fetchText = stubFetch({
+      [pageUrl]: `<html><head>
+        <meta property="og:video" content="https://player.example.com/embed/12345" />
+        <meta property="og:video:secure_url" content="https://cdn.example.com/og.mp4" />
+      </head></html>`,
+    });
+    const resolved = await resolvePageUrl(pageUrl, fetchText);
+
+    // The embed URL is a player page, not a file: offering it would hand the
+    // user a download that is really an HTML document.
+    expect(resolved.formats.map((format) => format.url)).toEqual(['https://cdn.example.com/og.mp4']);
+  });
+
+  it('reads a Maccms player_aaaa config, which is what most CN CMS sites embed', async () => {
+    const pageUrl = 'https://www.example.com/play/123';
+    const fetchText = stubFetch({
+      [pageUrl]: `<html><title>剧集</title>
+        <script>var player_aaaa={"flag":"play","encrypt":0,"url":"https://cdn.example.com/cms/index.m3u8"};</script></html>`,
+    });
+    const resolved = await resolvePageUrl(pageUrl, fetchText);
+
+    expect(resolved.formats).toHaveLength(1);
+    expect(resolved.formats[0]!.container).toBe('hls');
+  });
+
+  it('reads a plain <video> element', async () => {
+    const pageUrl = 'https://blog.example.com/post';
+    const fetchText = stubFetch({
+      [pageUrl]: '<html><title>博文</title><video controls src="https://cdn.example.com/clip.mp4"></video></html>',
+    });
+    const resolved = await resolvePageUrl(pageUrl, fetchText);
+    expect(resolved.formats.map((format) => format.url)).toEqual(['https://cdn.example.com/clip.mp4']);
+  });
+
+  it('does not offer a DASH manifest it cannot mux', async () => {
+    const pageUrl = 'https://www.example.com/dash';
+    const fetchText = stubFetch({ [pageUrl]: '<html><title>dash</title><p>https://cdn.example.com/stream.mpd</p></html>' });
+    const resolved = await resolvePageUrl(pageUrl, fetchText);
+
+    // Downloading an .mpd would save an XML file named video.mp4.
+    expect(resolved.formats).toHaveLength(0);
+    expect(resolved.notice).toBe('empty');
+  });
+});
+
+describe('SUPPORTED_PLATFORMS', () => {
+  it('lists every adapter the resolver actually dispatches to', () => {
+    expect(SUPPORTED_PLATFORMS.map((platform) => platform.id)).toEqual([
+      'bilibili-pgc',
+      'acfun',
+      'bilibili',
+      'douyin',
+    ]);
+    for (const platform of SUPPORTED_PLATFORMS) {
+      expect(platform.label.length).toBeGreaterThan(0);
+      expect(platform.example).toMatch(/^https?:/);
+    }
   });
 });
 

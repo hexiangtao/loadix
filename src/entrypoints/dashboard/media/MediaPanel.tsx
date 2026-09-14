@@ -74,6 +74,7 @@ import {
   fileNameForPart,
   originalImageUrl,
   preferredFormat,
+  SUPPORTED_PLATFORMS,
   withPartParam,
   type MediaFormatOption,
   type ResolvedPageAsset,
@@ -139,6 +140,21 @@ async function resolvePageForBuild(pageUrl: string, extensionMode: boolean): Pro
  *  replaces the failed row instead of stacking a duplicate beside it. */
 function queueId(format: MediaFormatOption, page: ResolvedPageAsset, label?: string): string {
   return `fmt:${page.pageUrl}:${format.key}:${label ?? ''}`;
+}
+
+/** Where a part lives. A Bilibili 分P is the same page with `?p=n`, but a
+ *  番剧 episode is its own URL — the adapter says which, and anything
+ *  without one falls back to the query-parameter convention. */
+function partPageUrl(pageUrl: string, part: VideoPart): string {
+  return part.url ?? withPartParam(pageUrl, part.index);
+}
+
+/** How a part is named in the dock and on disk. The site's own episode
+ *  title beats a bare P-number, but the number stays in front so a batch is
+ *  still ordered and identifiable. */
+function partLabel(part: VideoPart): string {
+  const auto = `P${part.index}`;
+  return part.title && part.title !== auto ? `${auto} ${part.title}` : auto;
 }
 
 /** Build the asset + options the download engine consumes for one format.
@@ -240,13 +256,13 @@ function runMediaJob(job: QueueJob<MediaJob>, context: JobContext, extensionMode
   if (meta.kind === 'format') return formatSpawn(meta.format, meta.page, extensionMode, context.callbacks, meta.label);
 
   return (async (): Promise<DownloadHandle> => {
-    const resolved = await resolvePageForBuild(withPartParam(meta.pageUrl, meta.part.index), extensionMode);
+    const resolved = await resolvePageForBuild(partPageUrl(meta.pageUrl, meta.part), extensionMode);
     // The user may have canceled while this was in flight; the queue aborts
     // the signal, and the caller turns this rejection into a canceled row.
     if (context.signal.aborted) throw new DOMException('aborted', 'AbortError');
     const format = preferredFormat(resolved.formats, meta.prefer) ?? resolved.formats[0];
     if (!format) throw new Error('resolve-failed');
-    return formatSpawn(format, resolved, extensionMode, context.callbacks, `P${meta.part.index}`);
+    return formatSpawn(format, resolved, extensionMode, context.callbacks, partLabel(meta.part));
   })();
 }
 
@@ -326,10 +342,10 @@ export function MediaPanel({ extensionMode }: MediaPanelProps) {
    * 403s cross-origin browser calls, the CDN bytes are open so downloads go
    * direct); extension → the service worker performs the identical chain. */
 
-  const ingestPaste = useCallback(() => {
+  const ingestPaste = useCallback((raw: string) => {
     // Users paste the whole share sheet (「【标题】 https://b23.tv/…」), not a
     // bare URL — take the link out of it before classifying.
-    const url = extractUrlFromText(pasteUrl);
+    const url = extractUrlFromText(raw);
     setPasteError('');
     if (!url) return;
     const asset = classifyRequest({ url, live: false, pageUrl: '' });
@@ -364,7 +380,7 @@ export function MediaPanel({ extensionMode }: MediaPanelProps) {
         setScraping(false);
         setPasteError(t('media.scrapeFailed'));
       });
-  }, [pasteUrl, t, extensionMode]);
+  }, [t, extensionMode]);
 
   /* ——— Download flow ———
    * Nothing here downloads. Every action only ENQUEUES, and the queue decides
@@ -391,9 +407,9 @@ export function MediaPanel({ extensionMode }: MediaPanelProps) {
     (parts: VideoPart[], page: ResolvedPageAsset, prefer?: { quality?: string; container?: MediaFormatOption['container'] }) => {
       for (const part of parts) {
         queue.add({
-          id: `part:${part.cid}`,
-          title: `${page.title} · P${part.index} ${part.title}`.trim(),
-          fileName: fileNameForPart(page.title, part.index),
+          id: `part:${part.cid || part.index}`,
+          title: `${page.title} · ${partLabel(part)}`.trim(),
+          fileName: fileNameForPart(page.title, part.index, part.title),
           meta: { kind: 'part', pageUrl: page.pageUrl, part, prefer },
         });
       }
@@ -431,7 +447,7 @@ export function MediaPanel({ extensionMode }: MediaPanelProps) {
   const openPart = useCallback(
     (page: ResolvedPageAsset, part: VideoPart) => {
       setScraping(true);
-      void resolvePageForBuild(withPartParam(page.pageUrl, part.index), extensionMode)
+      void resolvePageForBuild(partPageUrl(page.pageUrl, part), extensionMode)
         .then((result) => {
           setScraping(false);
           if (result.formats.length > 0) setResolved(result);
@@ -536,7 +552,7 @@ export function MediaPanel({ extensionMode }: MediaPanelProps) {
               value={pasteUrl}
               onChange={(e) => setPasteUrl(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter') ingestPaste();
+                if (e.key === 'Enter') ingestPaste(pasteUrl);
               }}
             />
           </div>
@@ -546,7 +562,11 @@ export function MediaPanel({ extensionMode }: MediaPanelProps) {
           >
             <ClipboardPaste className="size-3.5" /> {t('media.pasteFromClipboard')}
           </button>
-          <button className="primary-btn flex shrink-0 items-center gap-1.5" onClick={ingestPaste} disabled={scraping}>
+          <button
+            className="primary-btn flex shrink-0 items-center gap-1.5"
+            onClick={() => ingestPaste(pasteUrl)}
+            disabled={scraping}
+          >
             {scraping ? <Loader2 className="size-3.5 animate-spin" /> : null}
             {t('media.analyze')}
           </button>
@@ -568,7 +588,12 @@ export function MediaPanel({ extensionMode }: MediaPanelProps) {
                 onDismiss={() => setResolved(null)}
               />
             ) : (
-              <ResolveEmptyState />
+              <ResolveEmptyState
+                onTry={(url) => {
+                  setPasteUrl(url);
+                  ingestPaste(url);
+                }}
+              />
             )
           ) : assets.length === 0 ? (
             <CaptureEmptyState />
@@ -795,6 +820,7 @@ function ResultCard({
       {resolved.parts && resolved.parts.length > 1 && (
         <PartsShelf
           parts={resolved.parts}
+          labelKind={resolved.partsLabel ?? 'parts'}
           currentPart={resolved.partIndex ?? 1}
           onDownload={(parts) =>
             onDownloadParts(parts, resolved, { quality: recommended?.quality, container: recommended?.container })
@@ -807,7 +833,9 @@ function ResultCard({
         <Shelf
           title={
             resolved.parts && resolved.parts.length > 1
-              ? t('media.shelfVideoPart', { part: resolved.partIndex ?? 1 })
+              ? t(resolved.partsLabel === 'episodes' ? 'media.shelfVideoEpisode' : 'media.shelfVideoPart', {
+                  part: resolved.partIndex ?? 1,
+                })
               : t('media.shelfVideo')
           }
           icon={<Film className="size-3.5" />}
@@ -852,16 +880,21 @@ function ResultCard({
  * action lives here where the selection is. */
 function PartsShelf({
   parts,
+  labelKind,
   currentPart,
   onDownload,
   onOpen,
 }: {
   parts: VideoPart[];
+  /** 分P or episodes — same list, the site's own word for its parts. */
+  labelKind: 'parts' | 'episodes';
   currentPart: number;
   onDownload: (parts: VideoPart[]) => void;
   onOpen: (part: VideoPart) => void;
 }) {
   const { t } = useTranslation();
+  const episodes = labelKind === 'episodes';
+  const ordinal = (index: number) => `${episodes ? 'EP' : 'P'}${index}`;
   const [selected, setSelected] = useState<Set<number>>(() => new Set());
   const allSelected = selected.size === parts.length;
   const toggle = (index: number) =>
@@ -877,7 +910,7 @@ function PartsShelf({
       <div className="mb-2 flex items-center gap-2">
         <h4 className="flex shrink-0 items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-muted">
           <ListVideo className="size-3.5" />
-          {t('media.partsTitle', { count: parts.length })}
+          {t(episodes ? 'media.episodesTitle' : 'media.partsTitle', { count: parts.length })}
         </h4>
         <button
           className="ghost-btn shrink-0 !px-2 !py-0.5 !text-[11px]"
@@ -894,7 +927,9 @@ function PartsShelf({
           {t('media.downloadParts', { count: selected.size })}
         </button>
       </div>
-      <p className="mb-2 text-[11px] text-muted">{t('media.partsHint', { part: currentPart })}</p>
+      <p className="mb-2 text-[11px] text-muted">
+        {t(episodes ? 'media.episodesHint' : 'media.partsHint', { part: currentPart })}
+      </p>
       <div className="max-h-56 space-y-1 overflow-y-auto pr-1">
         {parts.map((part) => (
           <div
@@ -908,9 +943,9 @@ function PartsShelf({
               className="size-3.5 shrink-0 cursor-pointer accent-primary"
               checked={selected.has(part.index)}
               onChange={() => toggle(part.index)}
-              aria-label={`P${part.index}`}
+              aria-label={ordinal(part.index)}
             />
-            <span className="w-8 shrink-0 text-[11px] tabular-nums text-muted">P{part.index}</span>
+            <span className="w-8 shrink-0 text-[11px] tabular-nums text-muted">{ordinal(part.index)}</span>
             <button
               className="min-w-0 flex-1 truncate text-left text-[12px] text-ink"
               title={part.title}
@@ -1332,24 +1367,63 @@ function formatEta(seconds: number): string {
 
 /* ————————————————— Empty states ————————————————— */
 
-function ResolveEmptyState() {
+/**
+ * The first screen a new user sees, so it has to do two jobs: teach the
+ * two-step flow, and prove what the tool can actually open.
+ *
+ * The platform list is generated from the resolver's own adapter registry
+ * rather than written out in copy. That is deliberate — hard-coded
+ * "supports Bilibili and Douyin" text is how a product ends up advertising
+ * three platforms while its registry holds five, and it is why adding an
+ * adapter previously also meant remembering to edit the translations. Each
+ * entry is a button that resolves its own example, so the list doubles as
+ * the fastest way to try the feature.
+ */
+function ResolveEmptyState({ onTry }: { onTry: (url: string) => void }) {
   const { t } = useTranslation();
   return (
-    <div className="grid place-items-center py-14 text-center">
-      <div className="max-w-md space-y-3">
-        <span className="mx-auto grid size-12 place-items-center rounded-2xl bg-primary/10 text-primary">
-          <LinkIcon className="size-6" />
-        </span>
-        <h3 className="text-[15px] font-semibold text-ink">{t('media.resolveEmptyTitle')}</h3>
-        <p className="text-[12px] leading-relaxed text-muted">{t('media.resolveEmptyHint')}</p>
-        <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
-          {['Bilibili', 'Douyin'].map((site) => (
-            <span key={site} className="rounded-full border border-line px-2.5 py-1 text-[11px] text-muted">
-              {site}
-            </span>
-          ))}
+    // Full width on purpose. A narrower centred column here is what turns a
+    // wide window into two margins of empty background and makes the tool
+    // read as a form rather than a workbench.
+    <div className="panel overflow-hidden">
+        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-line px-5 py-3.5">
+          <h3 className="text-[15px] font-semibold text-ink">{t('media.resolveEmptyTitle')}</h3>
+          <p className="text-[12px] text-muted">{t('media.resolveEmptyHint')}</p>
         </div>
-      </div>
+
+        <div className="px-5 py-4">
+          <p className="mb-2.5 text-[11px] font-semibold uppercase tracking-wide text-muted">
+            {t('media.platformsTitle')}
+          </p>
+          {/* Fills the row instead of stacking into a single column: a
+              platform is one short line, so a wide window should show more
+              of them, not a taller list beside empty space. */}
+          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+            {SUPPORTED_PLATFORMS.map((platform) => (
+              <button
+                key={platform.id}
+                onClick={() => onTry(platform.example)}
+                title={platform.example}
+                className="group flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-line bg-panel px-3 py-2.5 text-left transition-colors duration-150 hover:border-primary/40 hover:bg-hover"
+              >
+                <span className="min-w-0">
+                  <span className="block truncate text-[12.5px] font-medium text-ink">{platform.label}</span>
+                  <span className="block truncate font-mono text-[11px] text-muted">
+                    {shortenUrl(platform.example)}
+                  </span>
+                </span>
+                <span className="shrink-0 text-[11px] text-primary opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+                  {t('media.tryExample')}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          <div className="mt-4 space-y-1 border-t border-line pt-3">
+            <p className="max-w-3xl text-[11.5px] leading-relaxed text-muted">{t('media.directHint')}</p>
+            <p className="max-w-3xl text-[11.5px] leading-relaxed text-muted">{t('media.limitHint')}</p>
+          </div>
+        </div>
     </div>
   );
 }
@@ -1357,12 +1431,12 @@ function ResolveEmptyState() {
 function CaptureEmptyState() {
   const { t } = useTranslation();
   return (
-    <div className="grid place-items-center py-14 text-center">
-      <div className="max-w-md space-y-2">
-        <span className="mx-auto grid size-12 place-items-center rounded-2xl bg-muted/10 text-muted">
-          <Radio className="size-6" />
-        </span>
-        <h3 className="text-[15px] font-semibold text-ink">{t('media.emptyTitle')}</h3>
+    <div className="panel flex items-start gap-3 px-5 py-4">
+      <span className="mt-0.5 grid size-9 shrink-0 place-items-center rounded-lg bg-muted/10 text-muted">
+        <Radio className="size-4" />
+      </span>
+      <div className="min-w-0 space-y-0.5">
+        <h3 className="text-[14px] font-semibold text-ink">{t('media.emptyTitle')}</h3>
         <p className="text-[12px] leading-relaxed text-muted">{t('media.emptyHint')}</p>
       </div>
     </div>

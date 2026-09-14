@@ -21,6 +21,25 @@
 
 import { assetIdFor } from './mediaClassify';
 import type { MediaAsset, MediaVariant } from './mediaTypes';
+import {
+  dashEntriesToFormats,
+  decodeEntities,
+  embeddedJson,
+  normalizeImageUrl,
+  pageTitle,
+  partsFromWatchPage,
+  posterFromMeta,
+  resolutionOf,
+  titleFromWatchPage,
+  type DashEntry,
+  type DashTracks,
+} from './pageHtml';
+import { BUILT_IN_ADAPTERS, type SiteAdapter } from './siteAdapters';
+
+// Pure HTML readers that used to live here. Re-exported because they are
+// part of this module's public surface (the tests read them) even though
+// the site adapters are now their main consumer.
+export { partsFromWatchPage, titleFromWatchPage } from './pageHtml';
 
 /** One selectable download format for an asset row. */
 export interface MediaFormatOption {
@@ -51,13 +70,20 @@ export interface MediaFormatOption {
   requiresReferer?: boolean;
 }
 
-/** One part of a multi-part video (Bilibili 分P). */
+/** One part of a multi-part video: a Bilibili 分P, or one episode of a
+ *  番剧/课程 season. Both are "a piece of a larger thing that the user can
+ *  resolve and download on its own", which is why they share a model. */
 export interface VideoPart {
   /** 1-based position, as the site presents it. */
   index: number;
   cid: string;
   title: string;
   durationSeconds: number;
+  /** Where to resolve THIS part. A Bilibili 分P is the same page with
+   *  `?p=n`, but a PGC episode is its own URL — so an adapter that cannot
+   *  express a part as a query parameter supplies one instead, and the
+   *  batch downloader follows it. Absent ⇒ derive from the page URL. */
+  url?: string;
 }
 
 /** A resolved page: one row per logical stream, each with its formats. */
@@ -75,6 +101,11 @@ export interface ResolvedPageAsset {
    *  shows a part list and a format ladder with nothing tying them together,
    *  which is how a user ends up downloading P2 believing it is P1. */
   partIndex?: number;
+  /** What this site calls its parts. A Bilibili video has 分P; a 番剧 season
+   *  has episodes. The model is the same, the vocabulary is not — calling a
+   *  TV episode "P2" is exactly the kind of detail that makes a tool feel
+   *  machine-generated. Absent ⇒ 分P. */
+  partsLabel?: 'parts' | 'episodes';
   /** Set when resolution only found DASH (no muxed option). */
   dashOnly: boolean;
   /** Site-specific explanation shown in the UI (i18n key suffix). */
@@ -126,19 +157,52 @@ const BILI_MP4_QUALITY: Record<number, string> = {
   64: '720p',
 };
 
+/**
+ * The complete dispatch order.
+ *
+ * Site-specific adapters first (most specific wins), then the generic HTML
+ * scan as the floor — which is what makes the tool work on a site nobody
+ * wrote an adapter for. The two original platforms are registered here
+ * rather than in `siteAdapters.ts` because their chains share this module's
+ * DASH helpers; adding a platform does NOT require editing this list, only
+ * adding an adapter to the registry.
+ */
+const ADAPTERS: readonly SiteAdapter[] = [
+  ...BUILT_IN_ADAPTERS,
+  {
+    id: 'bilibili',
+    label: 'Bilibili 视频',
+    example: 'https://www.bilibili.com/video/BV1RNYu6iEjB',
+    match: (url) => BILIBILI_PAGE.test(url),
+    resolve: ({ pageUrl, fetchText }) => resolveBilibili(pageUrl, fetchText),
+  },
+  {
+    id: 'douyin',
+    label: 'Douyin 抖音',
+    example: 'https://v.douyin.com/iAbCdEf/',
+    match: (url) => isDouyinUrl(url),
+    resolve: ({ pageUrl, fetchText }) => resolveDouyin(pageUrl, fetchText),
+  },
+];
+
+/** What the UI advertises as supported — derived from the dispatch order
+ *  above, so the copy cannot drift from what actually resolves. */
+export const SUPPORTED_PLATFORMS: readonly { id: string; label: string; example: string }[] = ADAPTERS.map(
+  ({ id, label, example }) => ({ id, label, example }),
+);
+
 export async function resolvePageUrl(
   pageUrl: string,
   fetchText: FetchText,
   fetchWithUrl?: FetchTextWithUrl,
 ): Promise<ResolvedPageAsset> {
   const target = await canonicalizeShortLink(pageUrl, fetchWithUrl);
-  if (isDouyinUrl(target)) {
-    const douyin = await resolveDouyin(target, fetchText).catch(() => null);
-    if (douyin) return douyin;
-  }
-  if (BILIBILI_PAGE.test(target)) {
-    const bili = await resolveBilibili(target, fetchText).catch(() => null);
-    if (bili) return bili;
+  for (const adapter of ADAPTERS) {
+    if (!adapter.match(target)) continue;
+    // An adapter that fails must not take the whole resolve down with it:
+    // the next adapter (and finally the generic scan) still gets a turn.
+    const resolved = await adapter.resolve({ pageUrl: target, fetchText }).catch(() => null);
+    if (resolved) return resolved;
   }
   return resolveGeneric(target, fetchText);
 }
@@ -312,77 +376,6 @@ interface VideoMeta {
   parts?: VideoPart[];
 }
 
-/** Read a JSON array starting at `open` (the index of its `[`), tracking
- *  nesting so an object inside it cannot end the scan early. Bracket
- *  counting rather than a regex because the entries are real objects with
- *  nested objects in them, and a lazy `\[.*?\]` stops at the wrong one. */
-function sliceJsonArray(text: string, open: number): string | null {
-  let depth = 0;
-  let inString = false;
-  let escaped = false;
-  for (let at = open; at < text.length; at += 1) {
-    const char = text[at]!;
-    if (inString) {
-      if (escaped) escaped = false;
-      else if (char === '\\') escaped = true;
-      else if (char === '"') inString = false;
-      continue;
-    }
-    if (char === '"') inString = true;
-    else if (char === '[') depth += 1;
-    else if (char === ']') {
-      depth -= 1;
-      if (depth === 0) return text.slice(open, at + 1);
-    }
-  }
-  return null;
-}
-
-/** The part list Bilibili embeds in the watch page. The `x/web-interface/
- *  view` API is the cleaner source, but it is WAF-gated and treated the
- *  answer as "this video has no parts" whenever it refused — which reads to
- *  the user as a single video, so they download one part of many believing
- *  it is the whole thing. Export for tests. */
-export function partsFromWatchPage(html: string): VideoPart[] | undefined {
-  const marker = html.match(/"pages"\s*:\s*\[/);
-  if (!marker || marker.index == null) return undefined;
-  const json = sliceJsonArray(html, marker.index + marker[0].length - 1);
-  if (!json) return undefined;
-  try {
-    const pages = JSON.parse(json) as { page?: number; cid?: number; part?: string; duration?: number }[];
-    const parts = pages
-      .filter((page) => page.cid != null)
-      .map((page, at) => ({
-        index: page.page ?? at + 1,
-        cid: String(page.cid),
-        title: page.part?.trim() || `P${page.page ?? at + 1}`,
-        durationSeconds: page.duration ?? 0,
-      }));
-    // One page is not a part list — it is simply the video.
-    return parts.length > 1 ? parts : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-/** The video's own title, from the page's <h1 title="…">. The page's
- *  <title> is the PART's name (「无字幕」), so it cannot stand in for this. */
-export function titleFromWatchPage(html: string): string | undefined {
-  const raw = html.match(/<h1[^>]*\btitle="([^"]+)"/i)?.[1];
-  if (!raw) return undefined;
-  return decodeEntities(raw).trim() || undefined;
-}
-
-/** HTML entities that appear in Bilibili titles and attributes. */
-function decodeEntities(value: string): string {
-  return value
-    .replaceAll('&amp;', '&')
-    .replaceAll('&quot;', '"')
-    .replaceAll('&#39;', "'")
-    .replaceAll('&lt;', '<')
-    .replaceAll('&gt;', '>');
-}
-
 /** Video metadata + part list from `x/web-interface/view`. Optional: when it
  *  refuses, the watch page's own title/cid still resolve a single part. */
 async function fetchVideoMeta(bvid: string, fetchText: FetchText): Promise<VideoMeta> {
@@ -418,36 +411,11 @@ async function fetchVideoMeta(bvid: string, fetchText: FetchText): Promise<Video
   }
 }
 
-/** Covers arrive protocol-relative or over plain http; downloads need https. */
-function normalizeImageUrl(url?: string): string | undefined {
-  if (!url) return undefined;
-  if (url.startsWith('//')) return `https:${url}`;
-  return url.replace(/^http:\/\//i, 'https://');
-}
-
-/** One DASH track as Bilibili's playurl payload describes it. */
-interface DashEntry {
-  baseUrl?: string;
-  backupUrl?: string[];
-  bandwidth?: number;
-  width?: number;
-  height?: number;
-  id?: number;
-  codecs?: string;
-}
-
-/** Vertical resolution of a format label — '1080p' → 1080, 'MP4' → 0.
- *  Drives both the "best quality" ordering and the redundant-dash filter. */
-function resolutionOf(format: MediaFormatOption): number {
-  const match = format.quality.match(/^(\d+)p/i);
-  return match ? Number(match[1]) : 0;
-}
-
-/** DASH playurl (`fnval=4048`). Returns one merged row per quality above
+/** DASH playurl (`fnval=4048`). One merged row per quality above
  *  `coveredHeight`, plus the audio track as its own playable M4A — the
  *  audio-only extraction the page-embedded blob cannot provide. Sizes are
- *  estimated from the declared bandwidth × the manifest's own duration
- *  (the DASH response has no per-track byte count). */
+ *  estimated from the declared bandwidth × the manifest's own duration,
+ *  because this endpoint declares no per-track byte count. */
 async function fetchDashFormats(
   bvid: string,
   cid: string,
@@ -457,140 +425,47 @@ async function fetchDashFormats(
   const api =
     `https://api.bilibili.com/x/player/playurl?bvid=${bvid}&cid=${cid}` +
     '&platform=pc&fnval=4048&qn=127&fnver=0&fourk=1';
-  let dash: { duration?: number; video?: DashEntry[]; audio?: DashEntry[] } | undefined;
   try {
     const payload = JSON.parse(await fetchText(api)) as {
       data?: { dash?: { duration?: number; video?: DashEntry[]; audio?: DashEntry[] } };
     };
-    dash = payload.data?.dash;
+    return dashEntriesToFormats(payload.data?.dash, { coveredHeight, audio: 'always' });
   } catch {
     return [];
   }
-  if (!dash?.video?.length) return [];
-
-  const seconds = typeof dash.duration === 'number' && dash.duration > 0 ? dash.duration : 0;
-  const estimate = (bandwidth?: number) => (seconds && bandwidth ? Math.round((bandwidth / 8) * seconds) : 0);
-  const audio = [...(dash.audio ?? [])].sort((a, b) => (b.bandwidth ?? 0) - (a.bandwidth ?? 0))[0];
-
-  const out: MediaFormatOption[] = [];
-  const seen = new Set<number>();
-  const videos = [...dash.video].sort(
-    (a, b) => (b.height ?? 0) - (a.height ?? 0) || (b.bandwidth ?? 0) - (a.bandwidth ?? 0),
-  );
-  for (const video of videos) {
-    const height = video.height ?? 0;
-    if (!video.baseUrl || !height || height <= coveredHeight || seen.has(height)) continue;
-    seen.add(height);
-    out.push(
-      audio?.baseUrl
-        ? {
-            key: `dash-mux-${height}`,
-            container: 'dash-mux',
-            quality: `${height}p`,
-            hasAudio: true,
-            size: estimate(video.bandwidth) + estimate(audio.bandwidth),
-            url: video.baseUrl,
-            backupUrls: video.backupUrl ?? [],
-            requiresReferer: true,
-            companionUrl: audio.baseUrl,
-            companionBackupUrls: audio.backupUrl ?? [],
-          }
-        : {
-            key: `dash-video-${height}`,
-            container: 'dash-video',
-            quality: `${height}p`,
-            hasAudio: false,
-            size: estimate(video.bandwidth),
-            url: video.baseUrl,
-            backupUrls: video.backupUrl ?? [],
-            requiresReferer: true,
-          },
-    );
-  }
-
-  // The audio track is a complete, playable M4A on its own — offer it even
-  // when every video quality is already covered above.
-  if (audio?.baseUrl) {
-    out.push({
-      key: 'bili-audio',
-      container: 'dash-audio',
-      quality: audio.bandwidth ? `${Math.round(audio.bandwidth / 1000)}kbps` : '',
-      hasAudio: true,
-      size: estimate(audio.bandwidth),
-      url: audio.baseUrl,
-      backupUrls: audio.backupUrl ?? [],
-    });
-  }
-  return out;
 }
 
-/** `window.__playinfo__` → format options. Prefer ONE complete file per
- *  quality: DASH pairs become `dash-mux` rows (video+audio merged into a
- *  single MP4 at download time by dashMux.ts) so the user never sees
- *  "video-only" tracks that need extra software. Separate tracks are
- *  emitted only when no audio exists to pair with. */
+/** The two embedded play-info containers, normalized. `__playinfo__` hangs
+ *  its manifest off `data`; PGC nests it one level deeper at
+ *  `data.result`. */
+interface PlayInfo {
+  data?: { dash?: DashTracks; result?: { dash?: DashTracks } };
+  result?: { dash?: DashTracks };
+}
+
+/** The DASH manifest a watch page embeds → format options.
+ *
+ *  Two containers to dig out of: `window.__playinfo__` on `/video/` pages,
+ *  and `playurlSSRData` on PGC pages — the latter because the PGC page
+ *  writes `window.__playinfo__ = playurlSSRData.data`, a *reference*, so the
+ *  definition is the only thing actually parseable.
+ *
+ *  `pageUrl` stays in the signature deliberately: PGC's own payload carries
+ *  no base URLs at all (they are minted client-side), so tracks without one
+ *  are skipped rather than emitted as a guaranteed 404. */
 function extractPlayinfoFormats(html: string, pageUrl: string, coveredHeight = 0): MediaFormatOption[] {
-  const match = html.match(/window\.__playinfo__\s*=\s*(\{[\s\S]*?\})\s*<\/script>/i);
-  if (!match?.[1]) return [];
-  let info: { data?: { dash?: { video?: DashEntry[]; audio?: DashEntry[] } } };
-  try {
-    info = JSON.parse(match[1]);
-  } catch {
-    return [];
-  }
-  const dash = info.data?.dash;
-  const videos = [...(dash?.video ?? [])].sort(
-    (a, b) => (b.height ?? 0) - (a.height ?? 0) || (b.bandwidth ?? 0) - (a.bandwidth ?? 0),
-  );
-  const audios = [...(dash?.audio ?? [])].sort((a, b) => (b.bandwidth ?? 0) - (a.bandwidth ?? 0));
-  const audio = audios[0];
-  const out: MediaFormatOption[] = [];
-  const seenHeights = new Set<number>();
-  for (const video of videos) {
-    if (!video.baseUrl || !video.height || seenHeights.has(video.height)) continue;
-    seenHeights.add(video.height);
-    // A muxed MP4 at this height or better already covers the user.
-    if (video.height <= coveredHeight) continue;
-    if (audio?.baseUrl) {
-      out.push({
-        key: `dash-mux-${video.height}`,
-        container: 'dash-mux',
-        quality: `${video.height}p`,
-        hasAudio: true,
-        size: 0,
-        url: video.baseUrl,
-        backupUrls: video.backupUrl ?? [],
-        requiresReferer: true,
-        companionUrl: audio.baseUrl,
-        companionBackupUrls: audio.backupUrl ?? [],
-      });
-    } else {
-      out.push({
-        key: `dash-video-${video.height}`,
-        container: 'dash-video',
-        quality: `${video.height}p`,
-        hasAudio: false,
-        size: 0,
-        url: video.baseUrl,
-        backupUrls: video.backupUrl ?? [],
-        requiresReferer: true,
-      });
-    }
-  }
-  // Bare audio only when nothing could carry it in a complete file.
-  if (!out.length && audio?.baseUrl) {
-    out.push({
-      key: 'dash-audio',
-      container: 'dash-audio',
-      quality: '音频',
-      hasAudio: true,
-      size: 0,
-      url: audio.baseUrl,
-      backupUrls: audio.backupUrl ?? [],
-    });
-  }
+  // The *definition* is tried first: on PGC pages `window.__playinfo__` is
+  // only an alias, and scanning after an alias would find whatever object
+  // happens to follow it.
+  const info =
+    embeddedJson<PlayInfo>(html, 'playurlSSRData') ?? embeddedJson<PlayInfo>(html, '__playinfo__');
+  if (!info) return [];
+  const dash = info.data?.dash ?? info.data?.result?.dash ?? info.result?.dash;
   void pageUrl;
-  return out;
+  // `fallback` audio: a page blob must not re-list the audio track the API
+  // path already offered, so the standalone row appears only when no video
+  // representation could carry sound.
+  return dashEntriesToFormats(dash, { coveredHeight, audio: 'fallback' });
 }
 
 /* ------------------------------------------------------------------ */
@@ -719,31 +594,130 @@ function douyinItemFromHtml(html: string): DouyinVideoItem | null {
 /* Generic sites                                                       */
 /* ------------------------------------------------------------------ */
 
-async function resolveGeneric(pageUrl: string, fetchText: FetchText): Promise<ResolvedPageAsset> {
-  const html = await fetchText(pageUrl);
-  const title = html.match(/<title[^>]*>([^<]+)/)?.[1]?.trim() || safeHost(pageUrl);
-  const formats: MediaFormatOption[] = [];
+/** A URL that is a media FILE, not a player or embed page. Without this
+ *  check, `og:video` (which frequently points at `/embed/xxxx`) would be
+ *  offered as a downloadable "MP4" and 404 the user. */
+const MEDIA_FILE = /\.(?:m3u8|mp4|m4a|mp3|webm|mov)(?:\?|#|$)/i;
 
-  const pattern = /https?:\/\/[^"'\\\s<>]+?\.(?:m3u8|mp4|mpd)(?:\?[^"'\\\s<>]*)?/gi;
-  const seen = new Set<string>();
-  for (const match of html.matchAll(pattern)) {
-    const url = match[0];
-    const id = assetIdFor(url);
-    if (seen.has(id)) continue;
-    seen.add(id);
-    if (/\.m3u8(\?|$)/i.test(url)) {
-      formats.push({ key: `hls-${formats.length}`, container: 'hls', quality: 'HLS', hasAudio: true, size: 0, url, backupUrls: [] });
-    } else {
-      formats.push({ key: `mp4-${formats.length}`, container: 'mp4', quality: 'MP4', hasAudio: true, size: 0, url, backupUrls: [] });
+/** `VideoObject` entries from schema.org JSON-LD, flattened. */
+function jsonLdVideos(html: string): { name?: string; contentUrl?: string; thumbnail?: string }[] {
+  const out: { name?: string; contentUrl?: string; thumbnail?: string }[] = [];
+  const walk = (node: unknown): void => {
+    if (Array.isArray(node)) {
+      for (const item of node) walk(item);
+      return;
+    }
+    if (!node || typeof node !== 'object') return;
+    const record = node as Record<string, unknown>;
+    const type = record['@type'];
+    const isVideo = Array.isArray(type)
+      ? type.some((entry) => /videoobject/i.test(String(entry)))
+      : typeof type === 'string' && /videoobject/i.test(type);
+    if (isVideo) {
+      out.push({
+        name: typeof record.name === 'string' ? record.name : undefined,
+        contentUrl: typeof record.contentUrl === 'string' ? record.contentUrl : undefined,
+        thumbnail: typeof record.thumbnailUrl === 'string' ? record.thumbnailUrl : undefined,
+      });
+    }
+    for (const value of Object.values(record)) walk(value);
+  };
+  for (const blob of html.matchAll(/<script[^>]+application\/ld\+json[^>]*>([\s\S]*?)<\/script>/gi)) {
+    try {
+      walk(JSON.parse(blob[1]!));
+    } catch {
+      /* malformed structured data is common — skip that block only */
     }
   }
+  return out;
+}
 
+/**
+ * Direct media a page advertises, best source first.
+ *
+ * The ordering is the value here: a site that publishes proper structured
+ * data should be read from that, not from a regex over its markup. The raw
+ * scan is last because it is the one that picks up navigation and
+ * thumbnails alongside the real stream.
+ *
+ * `.mpd` (a DASH manifest) is deliberately NOT collected: the engine has no
+ * generic DASH muxer, so offering one would hand the user an XML file named
+ * `video.mp4`. Better to report nothing than to ship a broken download.
+ */
+function directMediaFromHtml(html: string): { formats: MediaFormatOption[]; title?: string; cover?: string } {
+  const found: { url: string; hls: boolean }[] = [];
+  const seen = new Set<string>();
+  const push = (raw?: string) => {
+    if (!raw) return;
+    const url = decodeEntities(raw).replace(/\\\//g, '/').trim();
+    if (!/^https?:/i.test(url) || !MEDIA_FILE.test(url)) return;
+    const id = assetIdFor(url);
+    if (seen.has(id)) return;
+    seen.add(id);
+    found.push({ url, hls: /\.m3u8(\?|#|$)/i.test(url) });
+  };
+
+  let title: string | undefined;
+  let cover: string | undefined;
+
+  // 1. schema.org VideoObject — the source a publisher maintains on purpose.
+  for (const video of jsonLdVideos(html)) {
+    title ??= video.name?.trim() || undefined;
+    cover ??= normalizeImageUrl(video.thumbnail);
+    push(video.contentUrl);
+  }
+
+  // 2. The social card every CMS emits (both attribute orders occur).
+  const OG_VIDEO = /(?:property|name)=["'](?:og:video(?::secure_url|:url)?|twitter:player:stream)["']/;
+  for (const match of html.matchAll(/<meta\b[^>]*>/gi)) {
+    const tag = match[0];
+    if (!OG_VIDEO.test(tag)) continue;
+    push(tag.match(/content=["']([^"']+)["']/i)?.[1]);
+  }
+
+  // 3. A plain <video>/<source> element.
+  for (const match of html.matchAll(/<(?:video|source)\b[^>]+src=["']([^"']+)["']/gi)) push(match[1]);
+
+  // 4. Maccms/苹果CMS `player_aaaa` — the stock player config on thousands
+  //    of Chinese video sites. Reading it is the difference between working
+  //    on "any site" and working on the three we wrote adapters for.
+  push(embeddedJson<{ url?: string }>(html, 'player_aaaa')?.url);
+
+  // 5. Last resort: any absolute media URL in the markup.
+  for (const match of html.matchAll(/https?:\/\/[^"'\\\s<>]+?\.(?:m3u8|mp4|webm|mov)(?:\?[^"'\\\s<>]*)?/gi)) {
+    push(match[0]);
+  }
+
+  const formats: MediaFormatOption[] = found.map((item, at) => ({
+    key: `${item.hls ? 'hls' : 'mp4'}-${at}`,
+    container: item.hls ? 'hls' : 'mp4',
+    quality: item.hls ? 'HLS' : 'MP4',
+    hasAudio: true,
+    size: 0,
+    url: item.url,
+    backupUrls: [],
+  }));
+  return { formats, title, cover };
+}
+
+/**
+ * The floor of the dispatch order: a site nobody wrote an adapter for.
+ *
+ * Everything it finds is a direct URL the page itself published, so it
+ * needs no per-site knowledge — which is what makes "paste any playback
+ * page" a promise the tool can keep beyond the named platforms.
+ */
+async function resolveGeneric(pageUrl: string, fetchText: FetchText): Promise<ResolvedPageAsset> {
+  const html = await fetchText(pageUrl);
+  const media = directMediaFromHtml(html);
+  const title = media.title ?? pageTitle(html) ?? safeHost(pageUrl);
   return {
     title,
+    cover: media.cover,
     pageUrl,
-    formats,
+    formats: media.formats,
     dashOnly: false,
-    notice: formats.length === 0 ? 'empty' : '',
+    notice: media.formats.length === 0 ? 'empty' : '',
   };
 }
 
@@ -785,9 +759,16 @@ export function fileNameForFormat(title: string, format: MediaFormatOption, labe
 
 /** Filename for one part of a multi-part batch. Exists separately so the
  *  batch can name its rows BEFORE the part is resolved — the file that
- *  eventually lands must still match the name shown while it queued. */
-export function fileNameForPart(title: string, partIndex: number): string {
-  const safe = sanitizeFileName(`${title} - P${partIndex}`) || 'video';
+ *  eventually lands must still match the name shown while it queued.
+ *
+ *  `partTitle` is what the site calls the part (「为了消灭鬼舞辻无惨」, a
+ *  番剧 episode name). A batch of a box set named only `P1…P12` is unusable
+ *  in a file manager, so the name leads with the ordinal — which keeps the
+ *  batch ordered — and then says what the part actually is. */
+export function fileNameForPart(title: string, partIndex: number, partTitle?: string): string {
+  const auto = `P${partIndex}`;
+  const label = partTitle && partTitle.trim() && partTitle.trim() !== auto ? `${auto} ${partTitle.trim()}` : auto;
+  const safe = sanitizeFileName(`${title} - ${label}`) || 'video';
   return `${safe}.mp4`;
 }
 
