@@ -26,6 +26,7 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  AlertTriangle,
   Ban,
   Check,
   CheckCircle2,
@@ -40,16 +41,21 @@ import {
   FolderOpen,
   Image as ImageIcon,
   Link as LinkIcon,
+  Link2Off,
   ListVideo,
   Loader2,
   Lock,
+  LogIn,
   Music,
   Pause,
   Play,
   Radio,
   RefreshCw,
   RotateCcw,
+  ServerCrash,
+  ShieldAlert,
   Trash2,
+  WifiOff,
   XCircle,
 } from 'lucide-react';
 import { assetIdFor, classifyRequest } from './mediaClassify';
@@ -68,6 +74,7 @@ import {
 import { DownloadQueue, type JobContext, type QueueEntry, type QueueJob } from './downloadQueue';
 import {
   extractUrlFromText,
+  failedResolveAsset,
   fetchableUrl,
   fileNameForCover,
   fileNameForFormat,
@@ -80,6 +87,7 @@ import {
   type ResolvedPageAsset,
   type VideoPart,
 } from './mediaResolver';
+import { classifyClientFailure, FAILURE_COPY_KEY, type ResolveFailure, type ResolveFailureReason } from './resolveFailure';
 
 interface MediaPanelProps {
   /** false on the web build — no sniffer, paste-URL mode only. */
@@ -123,17 +131,42 @@ type MediaJob =
 
 /** Resolve a watch page on whichever build this is. The extension asks its
  *  service worker (which can send browser-shaped headers); the web build asks
- *  its own backend, because Bilibili refuses cross-origin browser calls. */
+ *  its own backend, because Bilibili refuses cross-origin browser calls.
+ *
+ *  Returns ONE shape and never throws. A resolve that failed comes back as an
+ *  asset carrying `failure`, because throwing is where the reason used to die:
+ *  the caller held nothing but a message and had to answer with one generic
+ *  sentence. Whichever side saw the real error classifies it (the worker, the
+ *  server); this only classifies what never left this machine. */
 async function resolvePageForBuild(pageUrl: string, extensionMode: boolean): Promise<ResolvedPageAsset> {
-  if (extensionMode) {
-    const response = await chrome.runtime.sendMessage({ type: 'media:scrape', pageUrl });
-    if (response?.type !== 'media:scrape' || response.error) throw new Error(String(response?.error ?? 'resolve-failed'));
-    return response.resolved as ResolvedPageAsset;
+  try {
+    if (extensionMode) {
+      const response = await chrome.runtime.sendMessage({ type: 'media:scrape', pageUrl });
+      if (response?.resolved) return response.resolved as ResolvedPageAsset;
+      const error = String(response?.error ?? 'resolve-failed');
+      return failedResolveAsset(
+        pageUrl,
+        (response?.failure as ResolveFailure | undefined) ?? classifyClientFailure({ error, pageUrl }),
+      );
+    }
+    const res = await fetch('/api/resolve?pageUrl=' + encodeURIComponent(pageUrl));
+    const body = (await res.json().catch(() => null)) as {
+      resolved?: ResolvedPageAsset;
+      error?: string;
+      failure?: ResolveFailure;
+    } | null;
+    if (body?.resolved) return body.resolved;
+    // The status is thrown away by an exception, and it is often the whole
+    // story (a 429 is not a 502) — so it is classified here, with it.
+    return failedResolveAsset(
+      pageUrl,
+      body?.failure ?? classifyClientFailure({ error: body?.error, status: res.status, pageUrl }),
+    );
+  } catch (err) {
+    // The request never completed — our own endpoint unreachable, or the
+    // service worker gone. Nothing about the site can be concluded from that.
+    return failedResolveAsset(pageUrl, classifyClientFailure({ error: err instanceof Error ? err.message : String(err), pageUrl }));
   }
-  const res = await fetch('/api/resolve?pageUrl=' + encodeURIComponent(pageUrl));
-  const body = (await res.json().catch(() => null)) as { resolved?: ResolvedPageAsset; error?: string } | null;
-  if (!res.ok || !body || body.error) throw new Error(String(body?.error ?? `HTTP ${res.status}`));
-  return body.resolved!;
 }
 
 /** One row per (page, format, part). Retrying reuses the id, so the dock
@@ -365,21 +398,27 @@ export function MediaPanel({ extensionMode }: MediaPanelProps) {
     }
     // Not a media URL — resolve it as a watch page.
     setScraping(true);
-    void resolvePageForBuild(url, extensionMode)
-      .then((result) => {
-        setScraping(false);
-        if (!result || result.formats.length === 0) {
-          setPasteError(t('media.scrapeEmpty'));
+    void resolvePageForBuild(url, extensionMode).then((result) => {
+      setScraping(false);
+      const failure = result.failure;
+      if (result.formats.length === 0 && failure) {
+        // A bad link belongs under the box the user typed it into; anything
+        // else gets a card that names the host and says what to do. Collapsing
+        // them into one sentence is what made a proxy misconfiguration look
+        // like a site refusing us.
+        if (failure.reason === 'bad-url') {
+          setPasteError(t(`media.${FAILURE_COPY_KEY['bad-url']}Hint`));
           return;
         }
         setResolved(result);
         setTab('resolve');
         setPasteUrl('');
-      })
-      .catch(() => {
-        setScraping(false);
-        setPasteError(t('media.scrapeFailed'));
-      });
+        return;
+      }
+      setResolved(result);
+      setTab('resolve');
+      setPasteUrl('');
+    });
   }, [t, extensionMode]);
 
   /* ——— Download flow ———
@@ -447,15 +486,12 @@ export function MediaPanel({ extensionMode }: MediaPanelProps) {
   const openPart = useCallback(
     (page: ResolvedPageAsset, part: VideoPart) => {
       setScraping(true);
-      void resolvePageForBuild(partPageUrl(page.pageUrl, part), extensionMode)
-        .then((result) => {
-          setScraping(false);
-          if (result.formats.length > 0) setResolved(result);
-        })
-        .catch(() => {
-          setScraping(false);
-          setPasteError(t('media.scrapeFailed'));
-        });
+      void resolvePageForBuild(partPageUrl(page.pageUrl, part), extensionMode).then((result) => {
+        setScraping(false);
+        // Shows the reason for THIS part — a region-locked episode in an
+        // otherwise downloadable season is exactly the case that needs it.
+        setResolved(result);
+      });
     },
     [extensionMode, t],
   );
@@ -772,6 +808,10 @@ function ResultCard({
   const audio = resolved.formats.filter((f) => f.container === 'dash-audio');
   const recommended = video.find((f) => f.hasAudio && f.container !== 'dash-video') ?? video[0];
   const initials = resolved.title.replace(/[^\p{L}\p{N}]/gu, '').slice(0, 2) || '▶';
+  // A failed resolve has no artwork, and two big letters cut out of a HOST
+  // ("ww" from www.bilibili.com) look like a broken thumbnail rather than a
+  // reason. The reason's own icon says what went wrong at a glance.
+  const FailureIcon = resolved.failure ? FAILURE_ICON[resolved.failure.reason] : null;
   const best =
     recommended && recommended.size > 0
       ? `${recommended.quality} · ${formatBytes(recommended.size)}`
@@ -789,6 +829,12 @@ function ResultCard({
             className="h-28 w-48 shrink-0 rounded-xl object-cover"
             onError={() => setImgOk(false)}
           />
+        ) : FailureIcon ? (
+          <div
+            className={`grid h-28 w-48 shrink-0 place-items-center rounded-xl border ${FAILURE_TONE_CLASS[FAILURE_TONE[resolved.failure!.reason]]}`}
+          >
+            <FailureIcon className="size-9" />
+          </div>
         ) : (
           <div className="grid h-28 w-48 shrink-0 place-items-center rounded-xl bg-muted/10 text-2xl font-bold text-muted">
             {initials}
@@ -801,7 +847,7 @@ function ResultCard({
               {t('media.dismiss')}
             </button>
           </div>
-          <p className="mt-1 truncate text-[11px] text-muted">{shortenUrl(resolved.pageUrl)}</p>
+          <p className="mt-1 truncate text-[11px] text-muted">{shortenPageUrl(resolved.pageUrl)}</p>
           {recommended && (
             <div className="mt-3 flex items-center gap-3">
               <button className="primary-btn flex items-center gap-2 !px-4 !py-2" onClick={() => onDownload(recommended, resolved)}>
@@ -814,6 +860,8 @@ function ResultCard({
           )}
         </div>
       </div>
+
+      {resolved.failure && <FailureNotice failure={resolved.failure} />}
 
       {/* Multi-part videos come BEFORE the ladder: a user who only sees 720p
           and clicks it would otherwise download one twelfth of a box set. */}
@@ -866,10 +914,90 @@ function ResultCard({
         </Shelf>
       )}
 
-      {resolved.notice === 'dash-only' && (
-        <p className="border-t border-line px-5 py-3 text-[11px] text-warning">{t('media.dashOnlyNote')}</p>
+      {/* Why this result is thinner than the user expects, said plainly — a
+          silent short list reads as "the tool does not support this site",
+          and a silent PARTIAL file reads as success. */}
+      {(resolved.notice === 'dash-only' || resolved.notice === 'sd-only') && (
+        <p className="border-t border-line px-5 py-3 text-[11px] text-warning">
+          {t(resolved.notice === 'dash-only' ? 'media.dashOnlyNote' : 'media.sdOnlyNote')}
+        </p>
       )}
     </section>
+  );
+}
+
+/**
+ * One reason, one instruction.
+ *
+ * The panel used to answer EVERY failure with "some sites reject non-browser
+ * requests, try again later". That sentence named a class of failure it could
+ * not actually observe, and it was flatly wrong the first time it mattered:
+ * our own dev proxy was resetting every bilibili connection, the site was
+ * fine, and the user was told the site was blocking them. Nothing in it was
+ * checkable and nothing in it was actionable.
+ *
+ * So the notice carries three things a sentence cannot guess:
+ *   - an instruction, chosen by the reason (retry, sign in, straighten out
+ *     your proxy, stop trying because it is DRM);
+ *   - the host and HTTP status, so the claim can be checked at a glance;
+ *   - the site's own words, muted underneath, for everything no taxonomy
+ *     anticipates.
+ */
+const FAILURE_ICON: Record<ResolveFailureReason, typeof AlertTriangle> = {
+  network: WifiOff,
+  blocked: ShieldAlert,
+  login: LogIn,
+  'rate-limited': Clock,
+  unavailable: XCircle,
+  drm: Lock,
+  'no-format': Film,
+  'bad-url': Link2Off,
+  backend: ServerCrash,
+  unknown: AlertTriangle,
+};
+
+/** `danger` = the site said no and it is about THIS content; `warning` = the
+ *  transport or our own side, so retrying is worth a try; `neutral` = nothing
+ *  is broken, there is simply nothing to download here. */
+const FAILURE_TONE: Record<ResolveFailureReason, 'danger' | 'warning' | 'neutral'> = {
+  blocked: 'danger',
+  login: 'danger',
+  unavailable: 'danger',
+  drm: 'danger',
+  network: 'warning',
+  'rate-limited': 'warning',
+  backend: 'warning',
+  'no-format': 'neutral',
+  'bad-url': 'neutral',
+  unknown: 'neutral',
+};
+
+const FAILURE_TONE_CLASS: Record<'danger' | 'warning' | 'neutral', string> = {
+  danger: 'border-danger/30 bg-danger/5 text-danger',
+  warning: 'border-warning/30 bg-warning/5 text-warning',
+  neutral: 'border-line bg-muted/5 text-muted',
+};
+
+function FailureNotice({ failure }: { failure: ResolveFailure }) {
+  const { t } = useTranslation();
+  const key = FAILURE_COPY_KEY[failure.reason];
+  const Icon = FAILURE_ICON[failure.reason];
+  // The site's own words win the detail slot when it gave them (YouTube's
+  // `playabilityStatus.reason`, Bilibili's `-412 request was banned`): they are
+  // the line that turns "it failed" into a searchable bug report.
+  const meta = [failure.host, failure.status ? `HTTP ${failure.status}` : '', failure.detail].filter(Boolean).join(' · ');
+
+  return (
+    <div className={`border-t px-5 py-4 ${FAILURE_TONE_CLASS[FAILURE_TONE[failure.reason]]}`}>
+      <div className="flex items-start gap-3">
+        <Icon className="mt-0.5 size-4 shrink-0" />
+        <div className="min-w-0 flex-1">
+          <p className="text-[13px] font-semibold text-ink">{t(`media.${key}Title`)}</p>
+          <p className="mt-1 text-[11px] leading-relaxed text-muted">{t(`media.${key}Hint`)}</p>
+          {meta && <p className="mt-1.5 truncate font-mono text-[10px] text-muted">{meta}</p>}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -1409,7 +1537,7 @@ function ResolveEmptyState({ onTry }: { onTry: (url: string) => void }) {
                 <span className="min-w-0">
                   <span className="block truncate text-[12.5px] font-medium text-ink">{platform.label}</span>
                   <span className="block truncate font-mono text-[11px] text-muted">
-                    {shortenUrl(platform.example)}
+                    {shortenPageUrl(platform.example, 72)}
                   </span>
                 </span>
                 <span className="shrink-0 text-[11px] text-primary opacity-0 transition-opacity duration-150 group-hover:opacity-100">
@@ -1443,11 +1571,37 @@ function CaptureEmptyState() {
   );
 }
 
+/** A captured asset's URL for display. The query is a signed CDN token that
+ *  changes per request, so it is dropped outright — see `shortenPageUrl` for
+ *  why a PAGE link keeps its query. */
 function shortenUrl(url: string): string {
   try {
     const parsed = new URL(url);
+    return `${parsed.host}${parsed.pathname === '/' ? '' : parsed.pathname}`;
+  } catch {
+    return url;
+  }
+}
+
+/** Params a share sheet sprinkles on: they identify nothing about the content,
+ *  so dropping them lets two different videos stay distinguishable. */
+const TRACKING_PARAM = /^(spm_id_from|vd_source|share_source|share_medium|share_plat|share_tag|feature|si|utm_)/i;
+
+/** A PAGE link, shortened for display: host + path + the params that identify
+ *  the content, capped to fit the row.
+ *
+ *  Distinct from `shortenUrl`, which strips the query — right for a captured
+ *  CDN row (where it is a signed token, pure noise) and wrong here: for YouTube
+ *  the query IS the video, and a failure card whose whole job is to name what
+ *  failed cannot print `www.youtube.com/watch` for every video on the site. */
+function shortenPageUrl(url: string, max = 56): string {
+  try {
+    const parsed = new URL(url);
     const path = parsed.pathname === '/' ? '' : parsed.pathname;
-    return `${parsed.host}${path}`;
+    const params = [...parsed.searchParams.entries()].filter(([key]) => !TRACKING_PARAM.test(key));
+    const query = params.map(([key, value]) => (value ? `${key}=${value}` : key)).join('&');
+    const full = `${parsed.host}${path}${query ? `?${query}` : ''}`;
+    return full.length > max ? `${full.slice(0, max - 1)}…` : full;
   } catch {
     return url;
   }

@@ -17,6 +17,13 @@ export default defineConfig({
         __dirname,
         'src/entrypoints/dashboard/media/mediaResolver.ts',
       ),
+      // …and the failure taxonomy it reports through, so the backend core can
+      // classify a network error itself instead of shipping a bare string the
+      // client would have to guess at.
+      '../../src/entrypoints/dashboard/media/resolveFailure.js': path.resolve(
+        __dirname,
+        'src/entrypoints/dashboard/media/resolveFailure.ts',
+      ),
     },
   },
   test: {

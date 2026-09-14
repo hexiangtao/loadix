@@ -136,6 +136,19 @@ describe('media-resolve-core', () => {
       expect(/Windows/.test(init.headers['User-Agent'])).toBe(true);
     });
 
+    it('streams YouTube CDN hosts, which send no CORS headers at all', async () => {
+      const fetchMock = stubCdnFetch();
+      const url = 'https://rr2---sn-x.googlevideo.com/videoplayback?itag=18&sig=1';
+      const res = await handleResolve(req('http://local/api/resolve?proxyUrl=' + encodeURIComponent(url)));
+      expect(res.status).toBe(200);
+      // Nothing is demanded of this CDN (it answers 200/206 to any UA and with
+      // or without a Referer) — these bytes are proxied purely because a web
+      // page cannot READ the response (`Vary: Origin`, no ACAO header).
+      const init = fetchMock.mock.calls[0][1];
+      expect(init.headers.Referer).toBe('https://www.youtube.com/');
+      expect(/Windows/.test(init.headers['User-Agent'])).toBe(true);
+    });
+
     it('refuses non-allowlisted and internal hosts (not an open proxy)', async () => {
       for (const bad of ['https://evil.example.com/a.mp4', 'http://127.0.0.1:8080/x', 'http://192.168.1.10/v.mp4']) {
         const res = await handleResolve(req('http://local/api/resolve?proxyUrl=' + encodeURIComponent(bad)));

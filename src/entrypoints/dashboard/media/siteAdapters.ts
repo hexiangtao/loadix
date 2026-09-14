@@ -29,12 +29,24 @@ import {
   posterFromMeta,
 } from './pageHtml';
 import type { FetchText, MediaFormatOption, ResolvedPageAsset, VideoPart } from './mediaResolver';
+import { failureFromError, hostOf, type ResolveFailure } from './resolveFailure';
+
+// The local `hostName` below is the site-matching helper (returns '' so
+// `isHost` can compare safely); `hostOf` is the failure-reporting one that
+// yields `undefined` when a URL is unparseable.
 
 /** What an adapter is given. Kept deliberately thin: the page URL and a
- *  fetcher. Everything else an adapter needs it reads out of the HTML. */
+ *  fetcher. Everything else an adapter needs it reads out of the HTML.
+ *
+ *  `report` is how an adapter explains itself when it gives up. Returning
+ *  `null` alone used to mean the reason died with the adapter, and the UI could
+ *  only say "could not resolve this page" — so a login wall, a region lock and
+ *  our own broken network all looked identical. Reporting costs one call and
+ *  turns each of those into different advice. */
 export interface ResolveContext {
   pageUrl: string;
   fetchText: FetchText;
+  report: (failure: ResolveFailure) => void;
 }
 
 export interface SiteAdapter {
@@ -50,7 +62,7 @@ export interface SiteAdapter {
   resolve: (context: ResolveContext) => Promise<ResolvedPageAsset | null>;
 }
 
-function hostOf(pageUrl: string): string {
+function hostName(pageUrl: string): string {
   try {
     return new URL(pageUrl).hostname;
   } catch {
@@ -61,7 +73,7 @@ function hostOf(pageUrl: string): string {
 /** Host test that matches the domain and its subdomains only. A plain
  *  `includes()` here would let `acfun.cn.evil.com` through. */
 function isHost(pageUrl: string, domain: string): boolean {
-  const host = hostOf(pageUrl).toLowerCase();
+  const host = hostName(pageUrl).toLowerCase();
   return host === domain || host.endsWith(`.${domain}`);
 }
 
@@ -210,6 +222,7 @@ interface PgcEpisode {
 
 interface PgcSeason {
   code?: number;
+  message?: string;
   result?: {
     title?: string;
     cover?: string;
@@ -245,18 +258,30 @@ const bilibiliPgc: SiteAdapter = {
   label: 'Bilibili 番剧 / 课程',
   example: 'https://www.bilibili.com/bangumi/play/ep826497',
   match: (pageUrl) => isHost(pageUrl, 'bilibili.com') && BILI_PGC_PATH.test(pageUrl),
-  resolve: async ({ pageUrl, fetchText }) => {
+  resolve: async ({ pageUrl, fetchText, report }) => {
     const match = pageUrl.match(BILI_PGC_PATH);
     if (!match) return null;
     const kind = match[1]!.toLowerCase() === 'ep' ? 'ep_id' : 'season_id';
     const id = match[2]!;
+    const seasonApi = `https://api.bilibili.com/pgc/view/web/season?${kind}=${id}`;
 
     let season: PgcSeason;
     try {
-      season = JSON.parse(
-        await fetchText(`https://api.bilibili.com/pgc/view/web/season?${kind}=${id}`),
-      ) as PgcSeason;
-    } catch {
+      season = JSON.parse(await fetchText(seasonApi)) as PgcSeason;
+    } catch (err) {
+      report(failureFromError(err, seasonApi));
+      return null;
+    }
+    if (season.code != null && season.code !== 0) {
+      // `-404` is a missing episode/season and `-10403` is a region lock —
+      // both are "this content is not for you", which is a different
+      // instruction to the user than the WAF's `-412` or a plain refusal.
+      const gone = season.code === -404 || season.code === -10403;
+      report({
+        reason: gone ? 'unavailable' : 'blocked',
+        host: hostOf(seasonApi),
+        detail: season.message?.trim() || `code ${season.code}`,
+      });
       return null;
     }
     const episodes = (season.result?.episodes ?? []).filter((episode) => episode.id != null);
@@ -338,9 +363,220 @@ const bilibiliPgc: SiteAdapter = {
   },
 };
 
+/* ------------------------------------------------------------------ */
+/* YouTube                                                             */
+/* ------------------------------------------------------------------ */
+
+/**
+ * YouTube's public innertube key — the one every web client ships in its own
+ * bundle, not a secret. It only routes the request to a player endpoint.
+ */
+const YT_INNERTUBE_KEY = 'AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8';
+
+/**
+ * The client identity to ask as, and the ONE choice that decides whether this
+ * adapter can exist.
+ *
+ * The web clients (WEB / MWEB / WEB_EMBEDDED) answer `UNPLAYABLE` for an
+ * anonymous request, and — when they do answer — hand out format metadata
+ * with no `url` at all: media is delivered over SABR (a POST streaming
+ * session) and every adaptive entry is metadata-only. `ANDROID_VR` demands
+ * login, `IOS` and `TVHTML5` fail. The ANDROID client is the one that still
+ * answers `status=OK` with a `url` on every format (verified across several
+ * videos, 39/29/19 formats, zero ciphers), and it does so for ANY request
+ * User-Agent — which is what makes it usable from a page that cannot set its
+ * own UA. Bumping this version string is the maintenance cost of this adapter.
+ */
+const YT_CLIENT = {
+  clientName: 'ANDROID',
+  clientVersion: '20.10.38',
+  androidSdkVersion: 34,
+} as const;
+
+/** `/watch?v=…`, `/shorts/…`, `/embed/…`, `/live/…`, `youtu.be/…`. */
+const YT_ID_PATTERNS = [
+  /youtube\.com\/watch\?(?:[^#]*&)?v=([\w-]{11})/i,
+  /youtube\.com\/(?:shorts|embed|live|v)\/([\w-]{11})/i,
+  /youtu\.be\/([\w-]{11})/i,
+];
+
+function youtubeId(pageUrl: string): string | null {
+  for (const pattern of YT_ID_PATTERNS) {
+    const match = pageUrl.match(pattern);
+    if (match?.[1]) return match[1];
+  }
+  return null;
+}
+
+/** One entry of `streamingData.formats` / `adaptiveFormats`. */
+interface YoutubeFormat {
+  itag?: number;
+  url?: string;
+  /** Read for the codecs, not the container: the muxed entries list `mp4a` in
+   *  their codec string, which is how `hasAudio` is decided from data rather
+   *  than assumed. */
+  mimeType?: string;
+  qualityLabel?: string;
+  /** Declared byte size. Present on adaptive entries; the muxed one omits it. */
+  contentLength?: string;
+}
+
+interface YoutubePlayerResponse {
+  playabilityStatus?: { status?: string; reason?: string };
+  streamingData?: { formats?: YoutubeFormat[]; adaptiveFormats?: YoutubeFormat[] };
+  videoDetails?: {
+    title?: string;
+    author?: string;
+    lengthSeconds?: string;
+    thumbnail?: { thumbnails?: { url?: string; width?: number }[] };
+  };
+}
+
+/**
+ * The muxed entry declares NO size anywhere: `contentLength` is absent from
+ * the payload AND the URL carries no `clen` (verified — the adaptive entries
+ * have both; the progressive one has neither). So the honest answer for that
+ * row is "unknown", and the download's own `Content-Length` fills it in while
+ * it runs, rather than an estimate that would be wrong by megabytes.
+ */
+function declaredBytes(format: YoutubeFormat): number {
+  const declared = Number(format.contentLength);
+  return Number.isFinite(declared) && declared > 0 ? declared : 0;
+}
+
+/**
+ * YouTube's own size ladder, and the honest limit of what this adapter can do.
+ *
+ * Measured against the live CDN (reproducible, header- and UA-independent):
+ * every ADAPTIVE track is served only for roughly its first minute and then
+ * answers `403` with an empty body — 12 MiB of a 143.6 MiB 720p60 track, 1 MiB
+ * of its 9.8 MiB audio. The wall is a byte POSITION, not a budget: offsets past
+ * it are refused on a brand-new URL from a brand-new player call, and after a
+ * cooldown the same URL serves the same first 12 MiB again. So there is no
+ * rotation trick that reaches the rest of the track, and offering those rows
+ * would hand the user a one-minute file that looks complete.
+ *
+ * The pre-muxed `formats` entries are not capped: one URL delivered the whole
+ * 27.2 MiB 360p file, in 4 MiB windows, resumable at any offset. That is the
+ * complete, playable, resumable download this adapter offers — and why the UI
+ * is told so with the `sd-only` notice instead of silently listing less.
+ */
+const youtube: SiteAdapter = {
+  id: 'youtube',
+  label: 'YouTube',
+  example: 'https://www.youtube.com/watch?v=aqz-KE-bpKQ',
+  match: (pageUrl) => isHost(pageUrl, 'youtube.com') || isHost(pageUrl, 'youtu.be') || isHost(pageUrl, 'youtube-nocookie.com'),
+  resolve: async ({ pageUrl, fetchText, report }) => {
+    const videoId = youtubeId(pageUrl);
+    if (!videoId) return null;
+
+    let player: YoutubePlayerResponse;
+    try {
+      player = JSON.parse(
+        await fetchText(`https://www.youtube.com/youtubei/v1/player?key=${YT_INNERTUBE_KEY}&prettyPrint=false`, {
+          method: 'POST',
+          body: JSON.stringify({
+            context: { client: { ...YT_CLIENT, hl: 'en', gl: 'US' } },
+            videoId,
+            contentCheckOk: true,
+            racyCheckOk: true,
+          }),
+          headers: {
+            'Content-Type': 'application/json',
+            'X-YouTube-Client-Name': '3',
+            'X-YouTube-Client-Version': YT_CLIENT.clientVersion,
+          },
+        }),
+      ) as YoutubePlayerResponse;
+    } catch (err) {
+      // Endpoint unreachable (a proxy-less server, a network wall) — report it,
+      // then let the generic scan try the page itself.
+      report(failureFromError(err, 'https://www.youtube.com'));
+      return null;
+    }
+
+    const details = player.videoDetails;
+    const cover = normalizeImageUrl(
+      [...(details?.thumbnail?.thumbnails ?? [])].sort((a, b) => (b.width ?? 0) - (a.width ?? 0))[0]?.url,
+    );
+
+    if (player.playabilityStatus?.status !== 'OK') {
+      // YouTube's own words decide which advice applies: "Sign in to confirm
+      // you're not a bot" is a login wall the user can clear, while a private,
+      // deleted or region-locked video is simply not available. Both used to
+      // arrive as "found nothing".
+      const status = player.playabilityStatus?.status ?? 'ERROR';
+      const reason = player.playabilityStatus?.reason ?? '';
+      // Returned rather than reported-and-abandoned: the refusal replaces the
+      // page with a consent interstitial whose own title is literally
+      // `- YouTube`, so the generic scan would hand the card a junk title and no
+      // artwork. We already have the real ones here.
+      return {
+        title: details?.title?.trim() || videoId,
+        cover,
+        pageUrl,
+        formats: [],
+        dashOnly: false,
+        notice: 'empty',
+        failure: {
+          reason: status === 'LOGIN_REQUIRED' || /sign in|not a bot/i.test(reason) ? 'login' : 'unavailable',
+          host: 'www.youtube.com',
+          detail: reason || status,
+        },
+      };
+    }
+
+    const formats: MediaFormatOption[] = (player.streamingData?.formats ?? [])
+      .filter((format) => format.url)
+      .map((format, index) => ({
+        key: `mp4-yt-${format.itag ?? index}`,
+        container: 'mp4' as const,
+        // YouTube's own label (360p / 240p …) — the CDN ceiling moves with the
+        // video's age and the client version, so never hard-code a number.
+        quality: format.qualityLabel ?? 'MP4',
+        // Derived, not assumed: the muxed entries declare `mp4a` in their codec
+        // string (itag 18: `avc1.42001E, mp4a.40.2`). If a video ever offers a
+        // progressive entry with no audio, the row says so.
+        hasAudio: /mp4a/i.test(format.mimeType ?? ''),
+        size: declaredBytes(format),
+        url: format.url!,
+        backupUrls: [],
+      }))
+      .sort(
+        (a, b) => (Number.parseInt(b.quality, 10) || 0) - (Number.parseInt(a.quality, 10) || 0),
+      );
+
+    if (!formats.length) {
+      // Playback succeeded but handed out nothing muxed — rare (some VR and
+      // codec-gated uploads). Nothing the user can fix, but say so precisely
+      // rather than as a generic "could not resolve".
+      report({ reason: 'no-format', host: 'www.youtube.com', detail: player.playabilityStatus?.status });
+    }
+
+    return {
+      title: details?.title?.trim() || videoId,
+      cover,
+      pageUrl,
+      formats,
+      dashOnly: false,
+      notice: formats.length ? 'sd-only' : 'empty',
+    };
+  },
+};
+
+/** True for a YouTube watch-page URL.
+ *
+ *  Exported because the extension has to install a network rule for these
+ *  resolves specifically: youtubei's player endpoint answers `403` to any
+ *  request carrying an extension origin (verified: `Origin:
+ *  chrome-extension://…` → 403, `Origin: https://www.youtube.com` → 200,
+ *  absent → 200), and it is POST-only (GET → 405), so a browser stamps the
+ *  one header that breaks it and no page can take it back. */
+export const isYouTubePageUrl = (pageUrl: string): boolean => youtube.match(pageUrl);
+
 /** Everything this module contributes to the resolver's dispatch order.
  *  Site adapters are tried most-specific-first, so this list is ordered. */
-export const BUILT_IN_ADAPTERS: readonly SiteAdapter[] = [bilibiliPgc, acfun];
+export const BUILT_IN_ADAPTERS: readonly SiteAdapter[] = [bilibiliPgc, acfun, youtube];
 
 /** Platform list for the UI's "what can I paste" hint. Derived from the
  *  registry on purpose: a new adapter shows up in the UI by existing, so

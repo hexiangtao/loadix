@@ -24,6 +24,23 @@
  */
 
 import { resolvePageUrl } from '../../src/entrypoints/dashboard/media/mediaResolver.js';
+import { failureFromError } from '../../src/entrypoints/dashboard/media/resolveFailure.js';
+
+/**
+ * An error that says WHY it failed, in the shape the resolver's failure
+ * taxonomy reads (`FetcherErrorFields` in resolveFailure.ts).
+ *
+ * A bare `new Error('HTTP 403')` reaches the user as one generic sentence that
+ * cannot distinguish "the site refused you" from "we could not reach the site"
+ * — and that sentence has already blamed a site for our own broken network
+ * once. The fields are plain data so they survive `postMessage` and JSON, and
+ * they are attached HERE because this is the only frame that knows the truth.
+ */
+function fetchFailure(message, fields) {
+  const error = new Error(message);
+  Object.assign(error, fields);
+  return error;
+}
 
 const WINDOW_MS = 60_000;
 const MAX_PER_WINDOW = 20;
@@ -96,35 +113,54 @@ const refererFor = (url, fallbackHost) => {
 
 const makeBrowserFetchText = (pageUrl) => {
   const jar = cookieJarFor(pageUrl);
-  const fetchOnce = async (url, mobile) => {
+  const fetchOnce = async (url, options = {}) => {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 20_000);
     try {
       const cookie = jar.header();
       const headers = {
-        'User-Agent': mobile ? MOBILE_UA : DESKTOP_UA,
+        'User-Agent': options.mobile === true ? MOBILE_UA : DESKTOP_UA,
         Referer: refererFor(url, jar.host),
         Accept: 'text/html,application/json;q=0.9,*/*;q=0.8',
         'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.6',
+        // A site's OWN client identity goes last so it wins: YouTube's player
+        // endpoint is POST-only and discriminated by these headers, and the
+        // generic defaults above (plus a Referer) do not describe that client.
+        ...(options.headers ?? {}),
       };
       if (cookie) headers.Cookie = cookie;
-      const res = await fetch(url, { redirect: 'follow', signal: controller.signal, headers });
+      const res = await fetch(url, {
+        redirect: 'follow',
+        signal: controller.signal,
+        method: options.method ?? 'GET',
+        headers,
+        ...(options.body != null ? { body: options.body } : {}),
+      });
       jar.store(res);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (!res.ok) throw fetchFailure(`HTTP ${res.status}`, { kind: 'http', url, status: res.status });
       const text = await res.text();
       // Guard against someone pointing us at a huge non-page resource.
       return {
         text: text.length > 3_000_000 ? text.slice(0, 3_000_000) : text,
         finalUrl: res.url || url,
       };
+    } catch (err) {
+      // A network-level rejection (proxy reset, DNS, TLS, timeout) arrives as a
+      // bare TypeError whose real cause is on `cause` — undici's design. Keep
+      // the message for the detail line and lift the code out where the
+      // classifier can see it.
+      if (err && typeof err === 'object' && err.kind) throw err;
+      const base = err instanceof Error ? err : new Error(String(err));
+      const code = base.cause?.code ?? (base.name === 'AbortError' ? 'ETIMEDOUT' : undefined);
+      throw fetchFailure(base.message, { kind: 'network', url, ...(code ? { code } : {}) });
     } finally {
       clearTimeout(timer);
     }
   };
-  const fetchText = (url, options) => fetchOnce(url, options?.mobile === true).then((result) => result.text);
+  const fetchText = (url, options) => fetchOnce(url, options).then((result) => result.text);
   // The post-redirect URL is the only place a b23.tv share code's canonical
   // watch page exists — hand it to the resolver's short-link path.
-  fetchText.withUrl = (url, options) => fetchOnce(url, options?.mobile === true);
+  fetchText.withUrl = (url, options) => fetchOnce(url, options);
   return fetchText;
 };
 
@@ -168,7 +204,9 @@ async function handleProxy(req, target) {
   // downloads need this origin. Douyin's CDN instead keys off the mobile UA.
   const headers = BILI_CDN_HOST.test(parsed.hostname)
     ? { 'User-Agent': DESKTOP_UA, Referer: 'https://www.bilibili.com/', Accept: '*/*' }
-    : { 'User-Agent': MOBILE_UA, Referer: 'https://www.douyin.com/', Accept: '*/*' };
+    : YOUTUBE_CDN_HOST.test(parsed.hostname)
+      ? { 'User-Agent': DESKTOP_UA, Referer: 'https://www.youtube.com/', Accept: '*/*' }
+      : { 'User-Agent': MOBILE_UA, Referer: 'https://www.douyin.com/', Accept: '*/*' };
   const range = req.headers?.get('range');
   if (range) headers.Range = range;
   const controller = new AbortController();
@@ -234,7 +272,14 @@ function isInternalHost(hostname) {
 /** Hosts the proxy will fetch from — the video CDNs this app downloads
  *  from, and nothing else. This is NOT a general open proxy: anything else
  *  is refused at the door. */
-const MEDIA_CDN_HOST = /(?:^|\.)(douyinvod\.com|zjcdn\.com|snssdk\.com|iesdouyin\.com|douyin\.com|bilivideo\.com|bilivideo\.cn|akamaized\.net)$/i;
+const MEDIA_CDN_HOST =
+  /(?:^|\.)(douyinvod\.com|zjcdn\.com|snssdk\.com|iesdouyin\.com|douyin\.com|bilivideo\.com|bilivideo\.cn|akamaized\.net|googlevideo\.com|ytimg\.com)$/i;
+
+/** YouTube's media CDNs. They ignore Referer and User-Agent (verified: 200/206
+ *  for a Chrome UA with no Referer, an Android UA, and a YouTube Referer
+ *  alike) — these bytes are proxied only because the browser cannot read them
+ *  from a page origin, not because the CDN demands anything. */
+const YOUTUBE_CDN_HOST = /(?:^|\.)(googlevideo\.com|ytimg\.com)$/i;
 
 /** The subset that is hotlink-gated: Bilibili serves the DASH video track
  *  only when the Referer is a bilibili origin. The muxed html5 MP4 and the
@@ -286,6 +331,12 @@ export async function handleResolve(req) {
     const resolved = await resolvePageUrl(pageUrl, fetcher, fetcher.withUrl);
     return jsonResponse({ resolved });
   } catch (err) {
-    return jsonResponse({ error: err instanceof Error ? err.message : 'resolve-failed' }, 502);
+    // Only unexpected throws reach here — the resolver returns expected
+    // failures inside `resolved.failure`. Ship the classification anyway, so
+    // the panel never has to reconstruct a reason from a string.
+    return jsonResponse(
+      { error: err instanceof Error ? err.message : 'resolve-failed', failure: failureFromError(err, pageUrl) },
+      502,
+    );
   }
 }

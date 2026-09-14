@@ -75,6 +75,31 @@ function muxFromBuffers(video: Uint8Array, audio: Uint8Array): Uint8Array {
   return merged;
 }
 
+describe('dashMux — live YouTube round-trip', () => {
+  // Real 720p60 AVC video + 390 kbps m4a audio prefixes from YouTube's DASH
+  // tracks (fetched through the ANDROID innertube client). The point of this
+  // case is the layout difference: YouTube fragments set
+  // `base-data-offset-present`, so `patchFragment` has to re-address them
+  // against their own moof or every sample after the first reads garbage.
+  const YV = '.freebuff/yt-video.m4s';
+  const YA = '.freebuff/yt-audio.m4s';
+  const YOUT = '.freebuff/muxed-youtube.mp4';
+
+  it('muxes real YouTube DASH tracks into an MP4 whose samples decode', () => {
+    if (!existsSync(YV) || !existsSync(YA)) return; // fixtures not fetched (CI) — skip
+    const merged = muxFromBuffers(readFileSync(YV), readFileSync(YA));
+    expect(merged.length).toBeGreaterThan(1_000_000);
+    writeFileSync(YOUT, merged);
+
+    const text = Buffer.from(merged.buffer, merged.byteOffset, Math.min(merged.length, 400_000)).toString('latin1');
+    expect(text.includes('moov')).toBe(true);
+    expect(text.includes('moof')).toBe(true);
+    // Every fragment must now address its samples from its own moof; a
+    // leftover base-data-offset-present flag means the patch did not apply.
+    expect(text.includes('tfhd')).toBe(true);
+  });
+});
+
 describe('dashMux — live Bilibili round-trip', () => {
   it('muxes real DASH track prefixes into a player-valid MP4', () => {
     if (!existsSync(V) || !existsSync(A)) return; // fixtures not fetched (CI) — skip

@@ -363,6 +363,20 @@ describe('fetchableUrl — web proxy routing', () => {
     expect(fetchableUrl(url, true)).toBe(url);
   });
 
+  it('proxies YouTube bytes, which carry no Access-Control-Allow-Origin', () => {
+    // The extension downloads googlevideo directly; the web build cannot read
+    // that response from a page origin at all (verified: `Vary: Origin` and
+    // `Cross-Origin-Resource-Policy: cross-origin`, but no ACAO header), so its
+    // bytes have to come through this origin like Douyin's already do.
+    expect(fetchableUrl('https://rr2---sn-x.googlevideo.com/videoplayback?itag=18', false)).toBe(
+      '/api/resolve?proxyUrl=https%3A%2F%2Frr2---sn-x.googlevideo.com%2Fvideoplayback%3Fitag%3D18',
+    );
+    expect(fetchableUrl('https://i.ytimg.com/vi_webp/aqz-KE-bpKQ/sddefault.webp', false)).toContain('/api/resolve?proxyUrl=');
+    expect(fetchableUrl('https://rr2---sn-x.googlevideo.com/videoplayback?itag=18', true)).toBe(
+      'https://rr2---sn-x.googlevideo.com/videoplayback?itag=18',
+    );
+  });
+
   it('proxies only the Referer-gated bilibili track, never the open files', () => {
     const track = 'https://cn-hncs-cm-03-08.bilivideo.com/v1080.m4s';
     // The page cannot set Referer, and the CDN 403s without a bilibili one.
@@ -697,11 +711,202 @@ describe('resolvePageUrl — generic sites', () => {
   });
 });
 
+describe('resolvePageUrl — YouTube', () => {
+  const WATCH = 'https://www.youtube.com/watch?v=aqz-KE-bpKQ';
+
+  /** A real player response, trimmed: the muxed 360p entry plus the adaptive
+   *  tracks YouTube offers (and that its CDN will not actually serve). */
+  const playerResponse = {
+    playabilityStatus: { status: 'OK' },
+    videoDetails: {
+      title: 'Big Buck Bunny 60fps 4K',
+      author: 'Blender',
+      lengthSeconds: '635',
+      thumbnail: {
+        thumbnails: [
+          { url: 'https://i.ytimg.com/vi/aqz-KE-bpKQ/default.jpg', width: 120 },
+          { url: 'https://i.ytimg.com/vi/aqz-KE-bpKQ/maxresdefault.jpg', width: 1920 },
+        ],
+      },
+    },
+    streamingData: {
+      formats: [
+        {
+          // No contentLength AND no `clen` in the URL — exactly what YouTube
+          // returns for the muxed format (copied from a live response).
+          itag: 18,
+          url: 'https://rr2---sn-x.googlevideo.com/videoplayback?itag=18&dur=634.624&sig=abc',
+          mimeType: 'video/mp4; codecs="avc1.42001E, mp4a.40.2"',
+          qualityLabel: '360p',
+          audioQuality: 'AUDIO_QUALITY_LOW',
+        },
+      ],
+      adaptiveFormats: [
+        {
+          itag: 298,
+          url: 'https://rr2---sn-x.googlevideo.com/videoplayback?itag=298&clen=150524867',
+          mimeType: 'video/mp4',
+          qualityLabel: '720p60',
+          height: 720,
+          contentLength: '150524867',
+        },
+        {
+          itag: 140,
+          url: 'https://rr2---sn-x.googlevideo.com/videoplayback?itag=140&clen=10271496',
+          mimeType: 'audio/mp4',
+          contentLength: '10271496',
+        },
+      ],
+    },
+  };
+
+  /** Fetcher that records the options each call was made with. */
+  function playerFetch(response: unknown, mode: 'json' | 'reject' = 'json') {
+    const calls: { url: string; options?: { method?: string; body?: string; headers?: Record<string, string> } }[] = [];
+    const fetchText = (url: string, options?: { method?: string; body?: string; headers?: Record<string, string> }) => {
+      calls.push({ url, options });
+      // Only the player endpoint fails when asked to; the watch page still
+      // loads, which is the real shape of "YouTube is not reachable from here".
+      if (mode === 'reject' && url.includes('/youtubei/')) return Promise.reject(new Error('HTTP 403'));
+      if (mode === 'reject') return Promise.resolve('<html><title>Big Buck Bunny</title></html>');
+      return Promise.resolve(JSON.stringify(response));
+    };
+    return { calls, fetchText };
+  }
+
+  it('resolves the pre-muxed complete file, asking as the ANDROID client', async () => {
+    const { calls, fetchText } = playerFetch(playerResponse);
+    const resolved = await resolvePageUrl(WATCH, fetchText);
+
+    expect(resolved.formats).toHaveLength(1);
+    const [only] = resolved.formats;
+    expect(only!.container).toBe('mp4');
+    expect(only!.quality).toBe('360p');
+    // Decided from the codec string (`mp4a` is in there), not assumed.
+    expect(only!.hasAudio).toBe(true);
+    // The muxed entry declares no size at all, so the row says "unknown"
+    // instead of guessing; the download fills the real number in.
+    expect(only!.size).toBe(0);
+    expect(resolved.title).toBe('Big Buck Bunny 60fps 4K');
+    expect(resolved.cover).toBe('https://i.ytimg.com/vi/aqz-KE-bpKQ/maxresdefault.jpg');
+    expect(resolved.notice).toBe('sd-only');
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0]!.url).toContain('/youtubei/v1/player');
+    expect(calls[0]!.options?.method).toBe('POST');
+    expect(calls[0]!.options?.headers?.['X-YouTube-Client-Name']).toBe('3');
+    const body = JSON.parse(calls[0]!.options!.body!) as {
+      videoId?: string;
+      context?: { client?: { clientName?: string; clientVersion?: string } };
+    };
+    expect(body.videoId).toBe('aqz-KE-bpKQ');
+    expect(body.context?.client?.clientName).toBe('ANDROID');
+    expect(body.context?.client?.clientVersion).toBe('20.10.38');
+  });
+
+  it('uses a declared size when the payload has one', async () => {
+    const { fetchText } = playerFetch({
+      playabilityStatus: { status: 'OK' },
+      videoDetails: { title: 'Sized' },
+      streamingData: {
+        formats: [
+          {
+            itag: 18,
+            url: 'https://rr2---sn-x.googlevideo.com/videoplayback?itag=18',
+            qualityLabel: '720p',
+            contentLength: '28523658',
+          },
+        ],
+      },
+    });
+    const resolved = await resolvePageUrl(WATCH, fetchText);
+    expect(resolved.formats[0]!.size).toBe(28523658);
+  });
+
+  it('reports a video-only progressive entry honestly instead of claiming sound', async () => {
+    const { fetchText } = playerFetch({
+      playabilityStatus: { status: 'OK' },
+      videoDetails: { title: 'Silent' },
+      streamingData: {
+        formats: [
+          { itag: 18, url: 'https://rr2---sn-x.googlevideo.com/videoplayback?itag=18', qualityLabel: '360p', mimeType: 'video/mp4' },
+        ],
+      },
+    });
+    const resolved = await resolvePageUrl(WATCH, fetchText);
+    expect(resolved.formats[0]!.hasAudio).toBe(false);
+  });
+
+  it('never lists an adaptive track, because the CDN serves only its first minute', async () => {
+    const { fetchText } = playerFetch(playerResponse);
+    const resolved = await resolvePageUrl(WATCH, fetchText);
+
+    // 720p60 + audio are right there in the payload and would look like a
+    // better download. They are capped at ~12 MiB / ~1 MiB of each track, so
+    // offering them would produce a one-minute file that appears complete.
+    expect(resolved.formats.some((format) => format.url.includes('itag=298'))).toBe(false);
+    expect(resolved.formats.some((format) => format.container === 'dash-mux')).toBe(false);
+    expect(resolved.formats.some((format) => format.container === 'dash-audio')).toBe(false);
+  });
+
+  it('accepts every watch-page URL shape', async () => {
+    for (const url of [
+      'https://youtu.be/aqz-KE-bpKQ',
+      'https://www.youtube.com/shorts/aqz-KE-bpKQ',
+      'https://m.youtube.com/watch?v=aqz-KE-bpKQ&feature=share',
+      'https://www.youtube.com/embed/aqz-KE-bpKQ',
+    ]) {
+      const { calls, fetchText } = playerFetch(playerResponse);
+      const resolved = await resolvePageUrl(url, fetchText);
+      expect(resolved.formats).toHaveLength(1);
+      expect(JSON.parse(calls[0]!.options!.body!).videoId).toBe('aqz-KE-bpKQ');
+    }
+  });
+
+  it('says WHY playback was refused instead of reporting an empty page', async () => {
+    const { fetchText } = playerFetch({
+      playabilityStatus: { status: 'LOGIN_REQUIRED', reason: "Sign in to confirm you're not a bot" },
+      videoDetails: { title: 'Members-only stream' },
+    });
+    const resolved = await resolvePageUrl(WATCH, fetchText);
+
+    expect(resolved.formats).toHaveLength(0);
+    // "No formats found" is not an answer the user can act on. The reason
+    // survives the fall-through to the generic scan, and YouTube's own words
+    // come with it — that is the line that makes a report checkable.
+    expect(resolved.failure).toEqual({
+      reason: 'login',
+      host: 'www.youtube.com',
+      detail: "Sign in to confirm you're not a bot",
+    });
+    // And the card still names the video the user asked for: the refusal page
+    // YouTube serves instead is titled `- YouTube`, which is no title at all.
+    expect(resolved.title).toBe('Members-only stream');
+  });
+
+  it('falls through to the generic scan, and still reports why', async () => {
+    const { fetchText } = playerFetch(null, 'reject');
+    const resolved = await resolvePageUrl(WATCH, fetchText);
+    // A blocked endpoint (a proxy-less server, a network wall) must not be
+    // reported as "this video has no downloadable formats" — the status is
+    // what separates a refusal from a transport failure.
+    expect(resolved.formats).toHaveLength(0);
+    expect(resolved.failure).toMatchObject({ reason: 'blocked', host: 'www.youtube.com', status: 403 });
+  });
+
+  it('does not claim a lookalike host', async () => {
+    const { calls, fetchText } = playerFetch(playerResponse);
+    await resolvePageUrl('https://youtube.com.evil.example/watch?v=aqz-KE-bpKQ', fetchText);
+    expect(calls.filter((call) => call.url.includes('youtubei'))).toHaveLength(0);
+  });
+});
+
 describe('SUPPORTED_PLATFORMS', () => {
   it('lists every adapter the resolver actually dispatches to', () => {
     expect(SUPPORTED_PLATFORMS.map((platform) => platform.id)).toEqual([
       'bilibili-pgc',
       'acfun',
+      'youtube',
       'bilibili',
       'douyin',
     ]);

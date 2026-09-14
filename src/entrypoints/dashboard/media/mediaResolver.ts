@@ -34,12 +34,16 @@ import {
   type DashEntry,
   type DashTracks,
 } from './pageHtml';
-import { BUILT_IN_ADAPTERS, type SiteAdapter } from './siteAdapters';
+import { BUILT_IN_ADAPTERS, isYouTubePageUrl, type SiteAdapter } from './siteAdapters';
+import { bestFailure, failureFromError, hostOf, type ResolveFailure } from './resolveFailure';
 
 // Pure HTML readers that used to live here. Re-exported because they are
 // part of this module's public surface (the tests read them) even though
 // the site adapters are now their main consumer.
 export { partsFromWatchPage, titleFromWatchPage } from './pageHtml';
+// The extension installs a network rule scoped to YouTube resolves; it asks
+// the adapter rather than repeating the host patterns.
+export { isYouTubePageUrl };
 
 /** One selectable download format for an asset row. */
 export interface MediaFormatOption {
@@ -108,14 +112,37 @@ export interface ResolvedPageAsset {
   partsLabel?: 'parts' | 'episodes';
   /** Set when resolution only found DASH (no muxed option). */
   dashOnly: boolean;
-  /** Site-specific explanation shown in the UI (i18n key suffix). */
-  notice: '' | 'dash-only' | 'empty';
+  /** Site-specific explanation shown in the UI (i18n key suffix).
+   *  `dash-only` — separate tracks, merged on download (still complete).
+   *  `sd-only`   — only the pre-muxed standard-quality file is offered; the
+   *                higher qualities exist but the site will not serve them.
+   *  `empty`     — nothing downloadable was found at all (see `failure` for
+   *                WHY, which is the part a user can act on). */
+  notice: '' | 'dash-only' | 'sd-only' | 'empty';
+  /** Why this resolve produced nothing usable. Absent ⇒ it worked. The reason
+   *  is decided where the knowledge exists (fetcher / adapter / client) rather
+   *  than reconstructed from a generic "could not resolve" string — see
+   *  `resolveFailure.ts` for what went wrong the last time it was not. */
+  failure?: ResolveFailure;
 }
 
-/** Options a fetcher may honor — Douyin only serves its share-page data
- *  (the embedded `_ROUTER_DATA` video item) to mobile user agents. */
+/** Options a fetcher may honor.
+ *
+ *  `mobile` — Douyin only serves its share-page data (the embedded
+ *  `_ROUTER_DATA` video item) to mobile user agents.
+ *
+ *  The rest exist because not every site hands its data out over a plain
+ *  GET: YouTube's player endpoint is POST-only and discriminated by request
+ *  headers, so a caller has to be able to say "POST this JSON with these
+ *  headers" rather than only "fetch this URL". A fetcher applies its own
+ *  defaults first and `headers` last, so a site can override a caller's
+ *  User-Agent when its API requires its own client identity. */
 export interface FetchTextOptions {
   mobile?: boolean;
+  method?: 'GET' | 'POST';
+  /** Request body. Only meaningful with `method: 'POST'`. */
+  body?: string;
+  headers?: Record<string, string>;
 }
 
 /** Minimal fetch signature so tests can stub network. Callers may ignore
@@ -174,14 +201,14 @@ const ADAPTERS: readonly SiteAdapter[] = [
     label: 'Bilibili 视频',
     example: 'https://www.bilibili.com/video/BV1RNYu6iEjB',
     match: (url) => BILIBILI_PAGE.test(url),
-    resolve: ({ pageUrl, fetchText }) => resolveBilibili(pageUrl, fetchText),
+    resolve: ({ pageUrl, fetchText, report }) => resolveBilibili(pageUrl, fetchText, report),
   },
   {
     id: 'douyin',
     label: 'Douyin 抖音',
     example: 'https://v.douyin.com/iAbCdEf/',
     match: (url) => isDouyinUrl(url),
-    resolve: ({ pageUrl, fetchText }) => resolveDouyin(pageUrl, fetchText),
+    resolve: ({ pageUrl, fetchText, report }) => resolveDouyin(pageUrl, fetchText, report),
   },
 ];
 
@@ -191,20 +218,60 @@ export const SUPPORTED_PLATFORMS: readonly { id: string; label: string; example:
   ({ id, label, example }) => ({ id, label, example }),
 );
 
+/**
+ * Resolve a watch page into downloadable formats.
+ *
+ * Never throws for anything the caller could act on. A resolve that produces
+ * nothing comes back as a `ResolvedPageAsset` carrying a `failure`, because a
+ * thrown string is where the reason used to get lost: the panel could only
+ * print one generic sentence, and it blamed the site for failures that were
+ * ours (a mis-routed proxy, a wall clock).
+ *
+ * Adapters stay isolated — one that fails hands the turn to the next, and the
+ * generic scan is the floor — but each one can `report()` WHY it failed, and
+ * the most actionable report wins. */
 export async function resolvePageUrl(
   pageUrl: string,
   fetchText: FetchText,
   fetchWithUrl?: FetchTextWithUrl,
 ): Promise<ResolvedPageAsset> {
-  const target = await canonicalizeShortLink(pageUrl, fetchWithUrl);
-  for (const adapter of ADAPTERS) {
-    if (!adapter.match(target)) continue;
-    // An adapter that fails must not take the whole resolve down with it:
-    // the next adapter (and finally the generic scan) still gets a turn.
-    const resolved = await adapter.resolve({ pageUrl: target, fetchText }).catch(() => null);
-    if (resolved) return resolved;
+  const reported: ResolveFailure[] = [];
+  const report = (failure: ResolveFailure): void => {
+    reported.push(failure);
+  };
+  try {
+    const target = await canonicalizeShortLink(pageUrl, fetchWithUrl);
+    for (const adapter of ADAPTERS) {
+      if (!adapter.match(target)) continue;
+      // An adapter that fails must not take the whole resolve down with it:
+      // the next adapter (and finally the generic scan) still gets a turn —
+      // but its reason is recorded first.
+      const resolved = await adapter.resolve({ pageUrl: target, fetchText, report }).catch((err: unknown) => {
+        report(failureFromError(err, target));
+        return null;
+      });
+      if (resolved) return resolved;
+    }
+    const generic = await resolveGeneric(target, fetchText);
+    if (generic.formats.length > 0) return generic;
+    return { ...generic, failure: bestFailure(reported) ?? { reason: 'no-format', host: hostOf(target) } };
+  } catch (err) {
+    // A fetch that never got an answer — the floor threw.
+    return failedResolveAsset(pageUrl, bestFailure(reported) ?? failureFromError(err, pageUrl));
   }
-  return resolveGeneric(target, fetchText);
+}
+
+/** An empty result that carries only a reason — the shape every "it did not
+ *  work" path returns, so the UI never has to reconstruct one from a string. */
+export function failedResolveAsset(pageUrl: string, failure: ResolveFailure): ResolvedPageAsset {
+  return {
+    title: failure.host ?? pageUrl,
+    pageUrl,
+    formats: [],
+    dashOnly: false,
+    notice: 'empty',
+    failure,
+  };
 }
 
 /** Follow a share shortener to its canonical watch page. Without a
@@ -220,7 +287,27 @@ async function canonicalizeShortLink(pageUrl: string, fetchWithUrl?: FetchTextWi
   }
 }
 
-async function resolveBilibili(pageUrl: string, fetchText: FetchText): Promise<ResolvedPageAsset | null> {
+/**
+ * Bilibili's API envelope code → why it refused.
+ *
+ * These codes are the difference between "this video has no downloadable
+ * formats" and "Bilibili's WAF banned this request": `-412 request was banned`
+ * was measured repeatedly while chasing a blocked UA string, and treating it as
+ * "found nothing" is exactly the silent degradation that cost every multi-part
+ * video its part list once already.
+ */
+function bilibiliFailure(code: number, message: string | undefined, host: string): ResolveFailure {
+  const detail = message?.trim() || `code ${code}`;
+  if (code === -101 || code === -400) return { reason: 'login', host, detail };
+  if (code === -404 || code === -10403) return { reason: 'unavailable', host, detail };
+  return { reason: 'blocked', host, detail };
+}
+
+async function resolveBilibili(
+  pageUrl: string,
+  fetchText: FetchText,
+  report: (failure: ResolveFailure) => void = () => undefined,
+): Promise<ResolvedPageAsset | null> {
   const bvid = pageUrl.match(BILIBILI_PAGE)?.[1];
   if (!bvid) return null;
 
@@ -237,7 +324,7 @@ async function resolveBilibili(pageUrl: string, fetchText: FetchText): Promise<R
   //    embeds the same array plus the real title in an <h1>. Never let a
   //    refused metadata call downgrade "download the video" into "download
   //    one twelfth of it, with no indication".
-  const meta = await fetchVideoMeta(bvid, fetchText);
+  const meta = await fetchVideoMeta(bvid, fetchText, report);
   const parts = meta.parts ?? partsFromWatchPage(html);
   const title =
     meta.title ??
@@ -255,12 +342,15 @@ async function resolveBilibili(pageUrl: string, fetchText: FetchText): Promise<R
     try {
       const api = `https://api.bilibili.com/x/player/playurl?bvid=${bvid}&cid=${cid}&platform=${UA_HINT}&high_quality=1`;
       const payload = JSON.parse(await fetchText(api)) as {
+        code?: number;
+        message?: string;
         data?: {
           quality?: number;
           durl?: { url?: string; backup_url?: string[]; size?: number }[];
           accept_quality?: number[];
         };
       };
+      if (payload.code) report(bilibiliFailure(payload.code, payload.message, 'api.bilibili.com'));
       const durl = payload.data?.durl ?? [];
       durl.forEach((part, index) => {
         if (!part.url) return;
@@ -299,8 +389,10 @@ async function resolveBilibili(pageUrl: string, fetchText: FetchText): Promise<R
           /* quality refused — skip it */
         }
       }
-    } catch {
-      /* API refused (region/login wall) — DASH fallback below still gives tracks */
+    } catch (err) {
+      // API refused (region/login wall) — the DASH fallback below still gives
+      // tracks, but remember WHY in case nothing else works either.
+      report(failureFromError(err, 'https://api.bilibili.com'));
     }
   }
 
@@ -313,7 +405,7 @@ async function resolveBilibili(pageUrl: string, fetchText: FetchText): Promise<R
   //    as complete muxed files are deliberately skipped — a 480p merged row
   //    under an existing 720p MP4 is clutter, not choice.
   const bestMuxed = Math.max(0, ...formats.map((format) => resolutionOf(format)));
-  if (cid) formats.push(...(await fetchDashFormats(bvid, cid, fetchText, bestMuxed)));
+  if (cid) formats.push(...(await fetchDashFormats(bvid, cid, fetchText, bestMuxed, report)));
 
   // 4. Page-embedded playinfo as a last resort — covers layouts where both
   //    APIs refused and the blob is all there is. Same height filter as the
@@ -378,17 +470,27 @@ interface VideoMeta {
 
 /** Video metadata + part list from `x/web-interface/view`. Optional: when it
  *  refuses, the watch page's own title/cid still resolve a single part. */
-async function fetchVideoMeta(bvid: string, fetchText: FetchText): Promise<VideoMeta> {
+async function fetchVideoMeta(
+  bvid: string,
+  fetchText: FetchText,
+  report: (failure: ResolveFailure) => void = () => undefined,
+): Promise<VideoMeta> {
   try {
     const payload = JSON.parse(
       await fetchText(`https://api.bilibili.com/x/web-interface/view?bvid=${bvid}`),
     ) as {
+      code?: number;
+      message?: string;
       data?: {
         title?: string;
         pic?: string;
         pages?: { page?: number; cid?: number; part?: string; duration?: number }[];
       };
     };
+    // The WAF's `-412` lands here. The page-HTML fallback below keeps the part
+    // list either way, but the user should still be told the site pushed back
+    // if the resolve ultimately produces nothing.
+    if (payload.code) report(bilibiliFailure(payload.code, payload.message, 'api.bilibili.com'));
     const data = payload.data;
     if (!data) return {};
     const pages = (data.pages ?? []).filter((page) => page.cid != null);
@@ -421,16 +523,21 @@ async function fetchDashFormats(
   cid: string,
   fetchText: FetchText,
   coveredHeight: number,
+  report: (failure: ResolveFailure) => void = () => undefined,
 ): Promise<MediaFormatOption[]> {
   const api =
     `https://api.bilibili.com/x/player/playurl?bvid=${bvid}&cid=${cid}` +
     '&platform=pc&fnval=4048&qn=127&fnver=0&fourk=1';
   try {
     const payload = JSON.parse(await fetchText(api)) as {
+      code?: number;
+      message?: string;
       data?: { dash?: { duration?: number; video?: DashEntry[]; audio?: DashEntry[] } };
     };
+    if (payload.code) report(bilibiliFailure(payload.code, payload.message, 'api.bilibili.com'));
     return dashEntriesToFormats(payload.data?.dash, { coveredHeight, audio: 'always' });
-  } catch {
+  } catch (err) {
+    report(failureFromError(err, 'https://api.bilibili.com'));
     return [];
   }
 }
@@ -517,7 +624,11 @@ interface DouyinVideoItem {
  *      Because the signature is minted per request, these URLs never
  *      expire — unlike Bilibili's pre-signed CDN links.
  */
-async function resolveDouyin(pageUrl: string, fetchText: FetchText): Promise<ResolvedPageAsset | null> {
+async function resolveDouyin(
+  pageUrl: string,
+  fetchText: FetchText,
+  report: (failure: ResolveFailure) => void = () => undefined,
+): Promise<ResolvedPageAsset | null> {
   // Canonicalize: the share page serves everything (desktop douyin.com
   // needs signed XHRs; v.douyin.com short codes redirect JS-side). Any
   // numeric id we can find gets us there.
@@ -820,8 +931,15 @@ function safeHost(url: string): string {
  *  sends no Access-Control-Allow-Origin, so a web page cannot read the
  *  stream). The web build fetches these through our same-origin
  *  `/api/resolve?proxyUrl=…` streaming proxy; the extension (host
- *  permissions ⇒ CORS-exempt) downloads directly. */
-const PROXIED_CDN = /(?:^|\.)(douyinvod\.com|zjcdn\.com|snssdk\.com|iesdouyin\.com|douyin\.com)$/i;
+ *  permissions ⇒ CORS-exempt) downloads directly.
+ *
+ *  googlevideo joined the list on measurement, not assumption: its response
+ *  carries `Vary: Origin` and `Cross-Origin-Resource-Policy: cross-origin` but
+ *  NO `Access-Control-Allow-Origin` (verified with a page Origin), so the
+ *  muxed MP4 downloads fine in the extension and would fail outright from a
+ *  web page. `ytimg` is here for the same reason on the .webp artwork (the
+ *  .jpg variant does send `*`, the webp does not). */
+const PROXIED_CDN = /(?:^|\.)(douyinvod\.com|zjcdn\.com|snssdk\.com|iesdouyin\.com|douyin\.com|googlevideo\.com|ytimg\.com)$/i;
 
 /** Bilibili's media CDNs. Only the DASH *video* track is Referer-gated, so
  *  these host through the proxy on demand (`requiresReferer`) rather than

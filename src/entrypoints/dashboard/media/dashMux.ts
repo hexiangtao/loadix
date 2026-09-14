@@ -6,6 +6,13 @@
  *   - both files claim `track_ID=1` → real renumbering is required
  *   - fragments set `default-base-is-moof` (tfhd flags 0x020000) → data offsets
  *     are relative to their own moof, so moof+mdat pairs can be copied
+ *
+ * YouTube's DASH layout is the same fMP4 shape (one trak per file, trex
+ * track_ID 1, moof+mdat fragments) with ONE difference that matters: its
+ * fragments carry `base-data-offset-present` (tfhd flags 0x000001) instead of
+ * `default-base-is-moof`. `patchFragment` normalizes that (see `baseIsMoof`),
+ * so the same merger serves both sites. Verified against real YouTube 720p
+ * video + m4a audio tracks (2026-09).
  *     verbatim into the output at any position
  *
  * The surgery, all box-level (no sample re-timing, no re-encoding):
@@ -177,16 +184,56 @@ export function moovTimescale(moov: Mp4Box): number {
 
 /** moof → its traf's tfd-t baseMediaDecodeTime (v0 32-bit, v1 64-bit). */
 
-/** Patch a merged fragment in one pass: mfhd sequence_number and tfhd
- *  track_ID (both at payload offset 12 of their box; sizes unchanged so
- *  the enclosing moof rebuild is byte-length neutral). */
+/** tfhd flags — the low 24 bits of its version/flags word. */
+function tfhdFlags(tfhd: Mp4Box): number {
+  return new DataView(tfhd.data.buffer, tfhd.data.byteOffset, tfhd.data.byteLength).getUint32(8) & 0xffffff;
+}
+
+/**
+ * Address a fragment's samples against its own moof instead of an absolute
+ * file offset.
+ *
+ * Bilibili already ships `default-base-is-moof` (0x020000), which is why
+ * copying moof+mdat pairs verbatim works for it: the base is the start of
+ * the moof we are copying, so the relative offsets survive the move.
+ *
+ * YouTube instead sets `base-data-offset-present` (0x000001) and points at
+ * the fragment's position in ITS file. Those offsets become wrong the moment
+ * the fragment lands in a merged file — the merged file has a different
+ * header length and interleaves a second track, so every fragment after the
+ * first would read from the wrong place. The pair stays internally
+ * consistent (its sample offsets are relative to that base), so dropping the
+ * field and declaring the moof as the base reproduces exactly the intended
+ * layout. The box shrinks by 8 bytes; `rebuildBox` recomputes the sizes. */
+function baseIsMoof(tfhd: Mp4Box): Mp4Box {
+  const flags = tfhdFlags(tfhd);
+  const withFlag = (value: number, data: Uint8Array): Mp4Box => {
+    new DataView(data.buffer, data.byteOffset, data.byteLength).setUint32(8, value >>> 0);
+    return { type: 'tfhd', data };
+  };
+  if ((flags & 0x000001) === 0) {
+    return (flags & 0x020000) !== 0 ? tfhd : withFlag(flags | 0x020000, tfhd.data.slice());
+  }
+  if (tfhd.data.length < 24) return tfhd; // truncated — leave it to fail loudly
+  const out = new Uint8Array(tfhd.data.length - 8);
+  out.set(tfhd.data.subarray(0, 16), 0); // size/type + version/flags + track_ID
+  out.set(tfhd.data.subarray(24), 16); // skip the 8-byte base_data_offset
+  return withFlag(((flags & ~0x000001) | 0x020000) >>> 0, out);
+}
+
+/** Patch a merged fragment in one pass: mfhd sequence_number, tfhd
+ *  track_ID, and the tfhd base-offset mode. mfhd/tfhd field edits are
+ *  length-preserving; the base-offset drop is the one rebuild that can
+ *  shrink a box, which is why the sizes are rebuilt rather than assumed. */
 export function patchFragment(moof: Mp4Box, trackId: number, sequence: number): Mp4Box {
   const children = childBoxes(moof).map((child) => {
     if (child.type === 'mfhd') return { type: 'mfhd', data: patchU32(child, 12, sequence) };
     if (child.type === 'traf') {
       return rebuildBox(
         'traf',
-        childBoxes(child).map((tc) => (tc.type === 'tfhd' ? { type: 'tfhd', data: patchU32(tc, 12, trackId) } : tc)),
+        childBoxes(child).map((tc) =>
+          tc.type === 'tfhd' ? { type: 'tfhd', data: patchU32(baseIsMoof(tc), 12, trackId) } : tc,
+        ),
       );
     }
     return child;

@@ -22,7 +22,29 @@ import { executeRawRequest, type RawRequest } from '@/engine/runner';
 import type { EngineCommand, EngineEvent, EngineState, MetricsSnapshot } from '@/shared/types';
 import type { CaptureRequest, CaptureResult, PickedElement, PickedRegion, PickerResult } from '@/shared/capture';
 import { handleMediaMessage, startMediaSniffer } from '@/entrypoints/dashboard/media/mediaSniffer';
-import { isDouyinPageUrl, resolvePageUrl } from '@/entrypoints/dashboard/media/mediaResolver';
+import { isDouyinPageUrl, isYouTubePageUrl, resolvePageUrl, type FetchTextOptions } from '@/entrypoints/dashboard/media/mediaResolver';
+import { failureFromError, type FetcherErrorFields } from '@/entrypoints/dashboard/media/resolveFailure';
+
+/**
+ * Attach the network-level truth to a failed fetch.
+ *
+ * The panel only ever sees `err.message` — the structured fields cannot cross
+ * `sendResponse` — so this frame, which holds the real error object, has to be
+ * the one that decides WHY. Without it a proxy misconfiguration and a site's
+ * 403 arrive as the same sentence, and the user is told to try again later
+ * about a network they could have fixed.
+ *
+ * A rejection carries undici's real cause on `cause.code`; the message is
+ * "fetch failed" for all of them (DNS, reset, TLS, timeout).
+ */
+function enrichFetchError(url: string, error: unknown): Error & FetcherErrorFields {
+  const base = error instanceof Error ? error : new Error(String(error));
+  const fields = base as Error & FetcherErrorFields;
+  if (fields.kind) return fields; // already an HTTP status we raised
+  const cause = (base as { cause?: { code?: string } }).cause;
+  const code = cause?.code ?? (base.name === 'AbortError' ? 'ETIMEDOUT' : undefined);
+  return Object.assign(base, { kind: 'network' as const, url, ...(code ? { code } : {}) });
+}
 
 /** Bilibili's CDN refuses any request whose Referer is not a bilibili origin
  *  (verified live: 403 with a foreign or absent Referer, 206 with the site's
@@ -63,6 +85,54 @@ function ensureBilibiliRefererRule(): void {
           },
         },
       ],
+    })
+    .catch(() => undefined);
+}
+
+/**
+ * YouTube's player endpoint refuses anything that announces an extension
+ * origin: `Origin: chrome-extension://…` answers `403` while the same request
+ * with YouTube's own origin — or with no Origin at all — answers `200` with
+ * every format (verified across the header matrix). The endpoint is POST-only
+ * (a GET is `405`), and a browser stamps Origin on its own POSTs, so the rule
+ * below is what lets the extension read YouTube at all.
+ *
+ * Scoped twice over: to the `youtubei` path only, and installed for the
+ * duration of a YouTube resolve rather than for the whole session — the user's
+ * own YouTube tabs POST to that host too.
+ */
+const YOUTUBE_ORIGIN_RULE_ID = 51003; // media module's reserved session-rule slot
+function setYouTubeOriginRule(install: boolean): Promise<unknown> {
+  const dnr = chrome.declarativeNetRequest;
+  if (!dnr?.updateSessionRules) return Promise.resolve();
+  return dnr
+    .updateSessionRules({
+      removeRuleIds: [YOUTUBE_ORIGIN_RULE_ID],
+      addRules: install
+        ? [
+            {
+              id: YOUTUBE_ORIGIN_RULE_ID,
+              priority: 1,
+              condition: {
+                requestDomains: ['youtube.com'],
+                urlFilter: '/youtubei/',
+                resourceTypes: [
+                  chrome.declarativeNetRequest.ResourceType.XMLHTTPREQUEST,
+                  chrome.declarativeNetRequest.ResourceType.OTHER,
+                ],
+              },
+              action: {
+                type: chrome.declarativeNetRequest.RuleActionType.MODIFY_HEADERS,
+                requestHeaders: [
+                  {
+                    header: 'Origin',
+                    operation: chrome.declarativeNetRequest.HeaderOperation.REMOVE,
+                  },
+                ],
+              },
+            },
+          ]
+        : [],
     })
     .catch(() => undefined);
 }
@@ -674,7 +744,7 @@ export default defineBackground(() => {
     if ((msg as { type?: string }).type !== 'media:scrape') return false;
     const pageUrl = (msg as { pageUrl?: string }).pageUrl ?? '';
     if (!/^https?:\/\//i.test(pageUrl)) {
-      sendResponse({ type: 'media:scrape', error: 'not-http' });
+      sendResponse({ type: 'media:scrape', error: 'not-http', failure: { reason: 'bad-url' } });
       return false;
     }
     // 'include' so Douyin's first pass can persist its ttwid Set-Cookie and
@@ -682,53 +752,86 @@ export default defineBackground(() => {
     // `credentials: 'include'` sends the user's bilibili.com session, which
     // is what upgrades a resolve from 720p to 1080p DASH. The post-redirect
     // URL is reported separately so b23.tv share codes canonicalize.
-    const fetchWithUrl = (url: string) =>
-      fetch(url, { credentials: 'include' }).then(async (res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return { text: await res.text(), finalUrl: res.url || url };
-      });
-    const fetchText = (url: string) => fetchWithUrl(url).then((result) => result.text);
+    const fetchWithUrl = (url: string, options?: FetchTextOptions) =>
+      fetch(url, {
+        credentials: 'include',
+        // Site adapters may need a POST with their own client headers —
+        // YouTube's player endpoint is POST-only. A service worker cannot set
+        // User-Agent, which is fine: that client works with any UA.
+        method: options?.method ?? 'GET',
+        ...(options?.headers ? { headers: options.headers } : {}),
+        ...(options?.body != null ? { body: options.body } : {}),
+      })
+        .then(async (res) => {
+          if (!res.ok) {
+            throw Object.assign(new Error(`HTTP ${res.status}`), {
+              kind: 'http' as const,
+              url,
+              status: res.status,
+            });
+          }
+          return { text: await res.text(), finalUrl: res.url || url };
+        })
+        .catch((err: unknown) => {
+          throw enrichFetchError(url, err);
+        });
+    const fetchText = (url: string, options?: FetchTextOptions) => fetchWithUrl(url, options).then((result) => result.text);
     const needsMobileUa = isDouyinPageUrl(pageUrl) && !!chrome.declarativeNetRequest?.updateSessionRules;
-    const restoreUa = () => {
+    const needsNoOrigin = isYouTubePageUrl(pageUrl) && !!chrome.declarativeNetRequest?.updateSessionRules;
+    const restoreRules = () => {
       if (needsMobileUa) {
         void chrome.declarativeNetRequest.updateSessionRules({ removeRuleIds: [DOUYIN_UA_RULE_ID], addRules: [] });
       }
+      if (needsNoOrigin) void setYouTubeOriginRule(false);
     };
     const run = () =>
       resolvePageUrl(pageUrl, fetchText, fetchWithUrl)
         .then((resolved) => sendResponse({ type: 'media:scrape', resolved }))
         .catch((err: unknown) => {
-          sendResponse({ type: 'media:scrape', error: err instanceof Error ? err.message : 'resolve-failed' });
+          sendResponse({
+            type: 'media:scrape',
+            error: err instanceof Error ? err.message : 'resolve-failed',
+            // Classified HERE, where the error object still exists: across the
+            // message boundary only its message survives.
+            failure: failureFromError(err, pageUrl),
+          });
         })
-        .finally(restoreUa);
-    if (needsMobileUa) {
-      chrome.declarativeNetRequest
-        .updateSessionRules({
-          removeRuleIds: [DOUYIN_UA_RULE_ID],
-          addRules: [
-            {
-              id: DOUYIN_UA_RULE_ID,
-              priority: 1,
-              condition: {
-                requestDomains: ['iesdouyin.com'],
-                resourceTypes: [
-                  chrome.declarativeNetRequest.ResourceType.XMLHTTPREQUEST,
-                  chrome.declarativeNetRequest.ResourceType.OTHER,
-                ],
+        .finally(restoreRules);
+    // Every rule this resolve needs must be INSTALLED before its first request
+    // goes out — a fire-and-forget install races the fetch. Both are session
+    // rules removed again in `restoreRules`, so nothing outlives the resolve.
+    const installRules = (): Promise<unknown> => {
+      const jobs: Promise<unknown>[] = [];
+      if (needsMobileUa) {
+        jobs.push(
+          chrome.declarativeNetRequest.updateSessionRules({
+            removeRuleIds: [DOUYIN_UA_RULE_ID],
+            addRules: [
+              {
+                id: DOUYIN_UA_RULE_ID,
+                priority: 1,
+                condition: {
+                  requestDomains: ['iesdouyin.com'],
+                  resourceTypes: [
+                    chrome.declarativeNetRequest.ResourceType.XMLHTTPREQUEST,
+                    chrome.declarativeNetRequest.ResourceType.OTHER,
+                  ],
+                },
+                action: {
+                  type: chrome.declarativeNetRequest.RuleActionType.MODIFY_HEADERS,
+                  requestHeaders: [
+                    { header: 'User-Agent', operation: chrome.declarativeNetRequest.HeaderOperation.SET, value: MOBILE_UA },
+                  ],
+                },
               },
-              action: {
-                type: chrome.declarativeNetRequest.RuleActionType.MODIFY_HEADERS,
-                requestHeaders: [
-                  { header: 'User-Agent', operation: chrome.declarativeNetRequest.HeaderOperation.SET, value: MOBILE_UA },
-                ],
-              },
-            },
-          ],
-        })
-        .then(run, () => run());
-    } else {
-      run();
-    }
+            ],
+          }),
+        );
+      }
+      if (needsNoOrigin) jobs.push(setYouTubeOriginRule(true));
+      return jobs.length ? Promise.allSettled(jobs) : Promise.resolve();
+    };
+    void installRules().then(run, run);
     return true; // async response
   });
 
