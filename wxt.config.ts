@@ -22,7 +22,10 @@ export default defineConfig({
       48: 'icon-48.png',
       128: 'icon-128.png',
     },
-    permissions: ['storage', 'tabs', 'scripting', 'activeTab', 'downloads', 'webRequest'],
+    // declarativeNetRequest: the media module stamps a Referer on Bilibili
+    // CDN requests and a mobile UA on Douyin's share host — neither header
+    // can be set from a page or a service-worker fetch.
+    permissions: ['storage', 'tabs', 'scripting', 'activeTab', 'downloads', 'webRequest', 'declarativeNetRequest'],
     host_permissions: ['<all_urls>'],
     action: {
       default_title: 'Loadix',

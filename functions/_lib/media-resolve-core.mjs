@@ -40,31 +40,95 @@ function rateLimited(key) {
   return bucket.count > MAX_PER_WINDOW;
 }
 
-/** Same header posture that curl-verified works: real UA, bilibili
- *  Referer, and crucially NO Origin (a foreign Origin is the 403 trigger). */
-const browserFetchText = async (url) => {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 20_000);
+// NOTE: the Chrome version is not arbitrary. Bilibili's WAF blocks
+// `Chrome/126.0.0.0` specifically — `x/web-interface/view` answers
+// `412 {"code":-412,"message":"request was banned"}` for that exact string
+// while 120/124/127/128/131/133/136 all pass (verified against the live API),
+// no doubt because a scraper library defaults to it. The resolve degrades
+// quietly when that API refuses (no part list, part name instead of the
+// video's title), so a blocked UA is a silent content-loss bug, not a
+// visible failure. Prefer a version verified to pass before bumping.
+const DESKTOP_UA =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
+const MOBILE_UA =
+  'Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1';
+
+/** Sites whose pages Set-Cookie on first contact and expect it back
+ *  (Douyin's share page issues `ttwid` and only embeds the video item
+ *  when the retry presents it). Keyed per page request — never cached
+ *  across users. */
+function cookieJarFor(pageUrl) {
+  const jar = new Map();
+  return {
+    store(res) {
+      const cookies = typeof res.headers.getSetCookie === 'function' ? res.headers.getSetCookie() : [];
+      for (const line of cookies) {
+        const pair = line.split(';', 1)[0];
+        const eq = pair.indexOf('=');
+        if (eq > 0) jar.set(pair.slice(0, eq).trim(), pair.slice(eq + 1).trim());
+      }
+    },
+    header() {
+      return [...jar.entries()].map(([k, v]) => `${k}=${v}`).join('; ');
+    },
+    host: new URL(pageUrl).hostname,
+  };
+}
+
+/** Header posture that curl-verified works per site: real UA (mobile for
+ *  Douyin — its share data is mobile-gated), site-matching Referer, and
+ *  crucially NO Origin header (a foreign Origin is Bilibili's 403
+ *  trigger). Response Set-Cookies are stored and replayed within this
+ *  single page resolution. */
+/** Referer for a request, keyed off the TARGET host — the same-origin
+ *  Referer a browser would send for a site's own API. Without this, a
+ *  short-link resolve sends `https://b23.tv/` to Bilibili's playurl API,
+ *  which answers an HTML error page instead of JSON (verified), silently
+ *  costing the resolve every muxed MP4. */
+const refererFor = (url, fallbackHost) => {
   try {
-    const res = await fetch(url, {
-      redirect: 'follow',
-      signal: controller.signal,
-      headers: {
-        'User-Agent':
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
-        Referer: 'https://www.bilibili.com/',
+    if (/(?:^|\.)bilibili\.com$/i.test(new URL(url).hostname)) return 'https://www.bilibili.com/';
+  } catch {
+    /* unparseable — fall back to the page's own origin */
+  }
+  return `https://${fallbackHost}/`;
+};
+
+const makeBrowserFetchText = (pageUrl) => {
+  const jar = cookieJarFor(pageUrl);
+  const fetchOnce = async (url, mobile) => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 20_000);
+    try {
+      const cookie = jar.header();
+      const headers = {
+        'User-Agent': mobile ? MOBILE_UA : DESKTOP_UA,
+        Referer: refererFor(url, jar.host),
         Accept: 'text/html,application/json;q=0.9,*/*;q=0.8',
         'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.6',
-      },
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const text = await res.text();
-    // Guard against someone pointing us at a huge non-page resource.
-    return text.length > 3_000_000 ? text.slice(0, 3_000_000) : text;
-  } finally {
-    clearTimeout(timer);
-  }
+      };
+      if (cookie) headers.Cookie = cookie;
+      const res = await fetch(url, { redirect: 'follow', signal: controller.signal, headers });
+      jar.store(res);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const text = await res.text();
+      // Guard against someone pointing us at a huge non-page resource.
+      return {
+        text: text.length > 3_000_000 ? text.slice(0, 3_000_000) : text,
+        finalUrl: res.url || url,
+      };
+    } finally {
+      clearTimeout(timer);
+    }
+  };
+  const fetchText = (url, options) => fetchOnce(url, options?.mobile === true).then((result) => result.text);
+  // The post-redirect URL is the only place a b23.tv share code's canonical
+  // watch page exists — hand it to the resolver's short-link path.
+  fetchText.withUrl = (url, options) => fetchOnce(url, options?.mobile === true);
+  return fetchText;
 };
+
+const browserFetchText = (url, options) => makeBrowserFetchText(url)(url, options);
 
 /** Rate-limit key: the caller's IP as seen by the host platform. */
 function clientIp(req) {
@@ -75,8 +139,86 @@ function clientIp(req) {
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET,OPTIONS',
+  'Access-Control-Allow-Headers': 'Range',
+  'Access-Control-Expose-Headers': 'Content-Length, Content-Range, Accept-Ranges',
   'Access-Control-Max-Age': '86400',
 };
+
+/** GET `?proxyUrl=…` — stream a media CDN response through this origin.
+ *  Needed only where the CDN sends no CORS headers (verified: Douyin's
+ *  douyinvod.com); Bilibili's CDN is open and never routes through here.
+ *  Range requests pass through so the dashboard's resume logic keeps
+ *  working; the response is streamed, never buffered whole. A 30s IDLE
+ *  timeout (reset per chunk) guards against hung upstreams without
+ *  capping long healthy downloads. */
+async function handleProxy(req, target) {
+  if (target.length > 2048) return jsonResponse({ error: 'bad-url' }, 400);
+  let parsed;
+  try {
+    parsed = new URL(target);
+  } catch {
+    return jsonResponse({ error: 'bad-url' }, 400);
+  }
+  if (!/^https?:$/.test(parsed.protocol) || isInternalHost(parsed.hostname) || !MEDIA_CDN_HOST.test(parsed.hostname)) {
+    return jsonResponse({ error: 'bad-url' }, 400);
+  }
+  // A page cannot set its own Referer, and Bilibili's CDN refuses any request
+  // whose Referer is not a bilibili origin (verified live: 403 with a foreign
+  // or absent Referer, 206 with the site's own) — which is exactly why those
+  // downloads need this origin. Douyin's CDN instead keys off the mobile UA.
+  const headers = BILI_CDN_HOST.test(parsed.hostname)
+    ? { 'User-Agent': DESKTOP_UA, Referer: 'https://www.bilibili.com/', Accept: '*/*' }
+    : { 'User-Agent': MOBILE_UA, Referer: 'https://www.douyin.com/', Accept: '*/*' };
+  const range = req.headers?.get('range');
+  if (range) headers.Range = range;
+  const controller = new AbortController();
+  let timer;
+  const bumpIdle = () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => controller.abort(), 30_000);
+  };
+  let upstream;
+  try {
+    bumpIdle();
+    upstream = await fetch(target, { redirect: 'follow', signal: controller.signal, headers });
+    bumpIdle();
+  } catch {
+    clearTimeout(timer);
+    return jsonResponse({ error: 'proxy-fetch-failed' }, 502);
+  }
+  if (!upstream.ok && upstream.status !== 206) {
+    clearTimeout(timer);
+    return jsonResponse({ error: `upstream-${upstream.status}` }, 502);
+  }
+  const outHeaders = { ...CORS_HEADERS, 'Content-Type': upstream.headers.get('content-type') ?? 'application/octet-stream' };
+  for (const name of ['content-length', 'content-range', 'accept-ranges']) {
+    const value = upstream.headers.get(name);
+    if (value) outHeaders[name] = value;
+  }
+  const reader = upstream.body.getReader();
+  const stream = new ReadableStream({
+    async pull(controller) {
+      try {
+        bumpIdle();
+        const { done, value } = await reader.read();
+        if (done) {
+          clearTimeout(timer);
+          controller.close();
+          return;
+        }
+        controller.enqueue(value);
+      } catch (err) {
+        clearTimeout(timer);
+        controller.error(err);
+      }
+    },
+    cancel() {
+      clearTimeout(timer);
+      void reader.cancel();
+    },
+  });
+  return new Response(stream, { status: upstream.status, headers: outHeaders });
+}
 
 function jsonResponse(body, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -88,6 +230,16 @@ function jsonResponse(body, status = 200) {
 function isInternalHost(hostname) {
   return /^(localhost|127\.|0\.|10\.|192\.168\.|169\.254\.|\[::)/i.test(hostname);
 }
+
+/** Hosts the proxy will fetch from — the video CDNs this app downloads
+ *  from, and nothing else. This is NOT a general open proxy: anything else
+ *  is refused at the door. */
+const MEDIA_CDN_HOST = /(?:^|\.)(douyinvod\.com|zjcdn\.com|snssdk\.com|iesdouyin\.com|douyin\.com|bilivideo\.com|bilivideo\.cn|akamaized\.net)$/i;
+
+/** The subset that is hotlink-gated: Bilibili serves the DASH video track
+ *  only when the Referer is a bilibili origin. The muxed html5 MP4 and the
+ *  audio track are open (verified), so they never route through here. */
+const BILI_CDN_HOST = /(?:^|\.)(bilivideo\.com|bilivideo\.cn|akamaized\.net)$/i;
 
 /**
  * Handle `GET|POST /api/resolve?pageUrl=…` (POST body JSON {pageUrl} also
@@ -109,6 +261,13 @@ export async function handleResolve(req) {
       /* fallthrough — pageUrl stays empty */
     }
   }
+  if (rateLimited(clientIp(req))) return jsonResponse({ error: 'rate-limited' }, 429);
+
+  // Streaming proxy lane (?proxyUrl=…) — validated on its own terms BEFORE
+  // the pageUrl checks (a proxy call carries no pageUrl).
+  const proxyUrl = url.searchParams.get('proxyUrl') ?? '';
+  if (proxyUrl) return handleProxy(req, proxyUrl);
+
   if (!/^https?:\/\//i.test(pageUrl)) return jsonResponse({ error: 'bad-url' }, 400);
   // SSRF guard: only public http(s) pages.
   let parsed;
@@ -120,10 +279,11 @@ export async function handleResolve(req) {
   if (!/^https?:$/.test(parsed.protocol) || isInternalHost(parsed.hostname)) {
     return jsonResponse({ error: 'bad-url' }, 400);
   }
-  if (rateLimited(clientIp(req))) return jsonResponse({ error: 'rate-limited' }, 429);
+  // (Rate limit already charged above — the proxy lane shares this request.)
 
   try {
-    const resolved = await resolvePageUrl(pageUrl, browserFetchText);
+    const fetcher = makeBrowserFetchText(pageUrl);
+    const resolved = await resolvePageUrl(pageUrl, fetcher, fetcher.withUrl);
     return jsonResponse({ resolved });
   } catch (err) {
     return jsonResponse({ error: err instanceof Error ? err.message : 'resolve-failed' }, 502);

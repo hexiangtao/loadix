@@ -22,7 +22,50 @@ import { executeRawRequest, type RawRequest } from '@/engine/runner';
 import type { EngineCommand, EngineEvent, EngineState, MetricsSnapshot } from '@/shared/types';
 import type { CaptureRequest, CaptureResult, PickedElement, PickedRegion, PickerResult } from '@/shared/capture';
 import { handleMediaMessage, startMediaSniffer } from '@/entrypoints/dashboard/media/mediaSniffer';
-import { resolvePageUrl } from '@/entrypoints/dashboard/media/mediaResolver';
+import { isDouyinPageUrl, resolvePageUrl } from '@/entrypoints/dashboard/media/mediaResolver';
+
+/** Bilibili's CDN refuses any request whose Referer is not a bilibili origin
+ *  (verified live: 403 with a foreign or absent Referer, 206 with the site's
+ *  own), and no page can set its own Referer — so the extension stamps it on
+ *  bilibili CDN requests. This matters for the DASH video track (1080p for a
+ *  logged-in session); the muxed html5 MP4 and the audio track are open.
+ *
+ *  A SESSION rule installed at startup, not a resolve-scoped one like
+ *  Douyin's: the download happens later, from the dashboard page, possibly
+ *  after the worker has been suspended and restarted. */
+const BILI_REFERER_RULE_ID = 51002; // media module's reserved session-rule slot
+function ensureBilibiliRefererRule(): void {
+  const dnr = chrome.declarativeNetRequest;
+  if (!dnr?.updateSessionRules) return;
+  void dnr
+    .updateSessionRules({
+      removeRuleIds: [BILI_REFERER_RULE_ID],
+      addRules: [
+        {
+          id: BILI_REFERER_RULE_ID,
+          priority: 1,
+          condition: {
+            requestDomains: ['bilivideo.com', 'bilivideo.cn', 'akamaized.net'],
+            resourceTypes: [
+              chrome.declarativeNetRequest.ResourceType.XMLHTTPREQUEST,
+              chrome.declarativeNetRequest.ResourceType.OTHER,
+            ],
+          },
+          action: {
+            type: chrome.declarativeNetRequest.RuleActionType.MODIFY_HEADERS,
+            requestHeaders: [
+              {
+                header: 'Referer',
+                operation: chrome.declarativeNetRequest.HeaderOperation.SET,
+                value: 'https://www.bilibili.com/',
+              },
+            ],
+          },
+        },
+      ],
+    })
+    .catch(() => undefined);
+}
 
 class EngineHost {
   private ports = new Set<chrome.runtime.Port>();
@@ -618,6 +661,14 @@ export default defineBackground(() => {
   // watch page AND Bilibili's html5 playurl API are readable. resolvePageUrl
   // (unit-tested, network injected) returns the selectable format list:
   // muxed MP4s with sound first, DASH tracks labeled video-only as fallback.
+  // Douyin serves its share-page video data only to MOBILE user agents, and a
+  // service worker cannot set User-Agent on a plain fetch — so for Douyin
+  // resolves we install a scoped declarativeNetRequest session rule that
+  // rewrites the UA on iesdouyin.com requests, then remove it afterwards.
+  const MOBILE_UA =
+    'Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/537.36 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1';
+  const DOUYIN_UA_RULE_ID = 51001; // media module's reserved session-rule slot
+  ensureBilibiliRefererRule();
   chrome.runtime.onMessage.addListener((msg: unknown, _sender, sendResponse) => {
     if (!msg || typeof msg !== 'object') return false;
     if ((msg as { type?: string }).type !== 'media:scrape') return false;
@@ -626,16 +677,58 @@ export default defineBackground(() => {
       sendResponse({ type: 'media:scrape', error: 'not-http' });
       return false;
     }
-    const fetchText = (url: string) =>
-      fetch(url, { credentials: 'omit' }).then((res) => {
+    // 'include' so Douyin's first pass can persist its ttwid Set-Cookie and
+    // the retry presents it (the same two-pass the server core performs).
+    // `credentials: 'include'` sends the user's bilibili.com session, which
+    // is what upgrades a resolve from 720p to 1080p DASH. The post-redirect
+    // URL is reported separately so b23.tv share codes canonicalize.
+    const fetchWithUrl = (url: string) =>
+      fetch(url, { credentials: 'include' }).then(async (res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.text();
+        return { text: await res.text(), finalUrl: res.url || url };
       });
-    resolvePageUrl(pageUrl, fetchText)
-      .then((resolved) => sendResponse({ type: 'media:scrape', resolved }))
-      .catch((err: unknown) => {
-        sendResponse({ type: 'media:scrape', error: err instanceof Error ? err.message : 'resolve-failed' });
-      });
+    const fetchText = (url: string) => fetchWithUrl(url).then((result) => result.text);
+    const needsMobileUa = isDouyinPageUrl(pageUrl) && !!chrome.declarativeNetRequest?.updateSessionRules;
+    const restoreUa = () => {
+      if (needsMobileUa) {
+        void chrome.declarativeNetRequest.updateSessionRules({ removeRuleIds: [DOUYIN_UA_RULE_ID], addRules: [] });
+      }
+    };
+    const run = () =>
+      resolvePageUrl(pageUrl, fetchText, fetchWithUrl)
+        .then((resolved) => sendResponse({ type: 'media:scrape', resolved }))
+        .catch((err: unknown) => {
+          sendResponse({ type: 'media:scrape', error: err instanceof Error ? err.message : 'resolve-failed' });
+        })
+        .finally(restoreUa);
+    if (needsMobileUa) {
+      chrome.declarativeNetRequest
+        .updateSessionRules({
+          removeRuleIds: [DOUYIN_UA_RULE_ID],
+          addRules: [
+            {
+              id: DOUYIN_UA_RULE_ID,
+              priority: 1,
+              condition: {
+                requestDomains: ['iesdouyin.com'],
+                resourceTypes: [
+                  chrome.declarativeNetRequest.ResourceType.XMLHTTPREQUEST,
+                  chrome.declarativeNetRequest.ResourceType.OTHER,
+                ],
+              },
+              action: {
+                type: chrome.declarativeNetRequest.RuleActionType.MODIFY_HEADERS,
+                requestHeaders: [
+                  { header: 'User-Agent', operation: chrome.declarativeNetRequest.HeaderOperation.SET, value: MOBILE_UA },
+                ],
+              },
+            },
+          ],
+        })
+        .then(run, () => run());
+    } else {
+      run();
+    }
     return true; // async response
   });
 

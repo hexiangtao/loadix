@@ -94,7 +94,7 @@ export function ToolsMenu({ activeTool, view, onSelect }: ToolsMenuProps) {
           if (!open) placeMenu();
           setOpen((v) => !v);
         }}
-        className={`relative flex items-center gap-1 rounded-lg px-2.5 py-2 text-sm transition-colors duration-150 ${
+        className={`relative flex items-center gap-1 whitespace-nowrap rounded-lg px-2.5 py-2 text-sm transition-colors duration-150 ${
           open || inTools ? 'font-bold text-primary' : 'text-muted hover:bg-hover hover:text-ink'
         }`}
       >

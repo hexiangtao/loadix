@@ -73,7 +73,7 @@ html::-webkit-scrollbar-thumb:hover {
 
 /* Reusable component classes (via @apply) for elements used many times. */
 .nav-btn {
-  @apply cursor-pointer rounded-md px-3 py-1.5 text-[13px] text-muted transition-colors duration-150 hover:bg-hover hover:text-ink;
+  @apply cursor-pointer whitespace-nowrap rounded-md px-3 py-1.5 text-[13px] text-muted transition-colors duration-150 hover:bg-hover hover:text-ink;
 }
 .ghost-btn {
   @apply cursor-pointer rounded-lg border border-line bg-panel px-3 py-1.5 text-[13px] transition-colors duration-150 hover:border-primary hover:text-primary;

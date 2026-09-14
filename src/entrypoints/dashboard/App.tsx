@@ -425,10 +425,10 @@ export default function App({ host }: { host: EngineHost }) {
             identical across views. */}
         <div className="flex-1" />
 
-        <nav className="mr-2 flex items-center gap-1">
+        <nav className="mr-2 flex shrink-0 items-center gap-1">
             <button
               onClick={() => switchView('markdown')}
-              className={`relative rounded-lg px-3 py-2 text-sm transition-colors duration-150 ${
+              className={`relative whitespace-nowrap rounded-lg px-3 py-2 text-sm transition-colors duration-150 ${
                 view === 'markdown' ? 'font-bold text-primary' : 'text-muted hover:bg-hover hover:text-ink'
               }`}
             >
@@ -440,7 +440,7 @@ export default function App({ host }: { host: EngineHost }) {
 
             <button
               onClick={() => switchView('api')}
-              className={`relative rounded-lg px-3 py-2 text-sm transition-colors duration-150 ${
+              className={`relative whitespace-nowrap rounded-lg px-3 py-2 text-sm transition-colors duration-150 ${
                 view === 'api' ? 'font-bold text-primary' : 'text-muted hover:bg-hover hover:text-ink'
               }`}
             >
@@ -452,7 +452,7 @@ export default function App({ host }: { host: EngineHost }) {
 
             <button
               onClick={() => switchView('media')}
-              className={`relative rounded-lg px-3 py-2 text-sm transition-colors duration-150 ${
+              className={`relative whitespace-nowrap rounded-lg px-3 py-2 text-sm transition-colors duration-150 ${
                 view === 'media' ? 'font-bold text-primary' : 'text-muted hover:bg-hover hover:text-ink'
               }`}
             >
@@ -464,7 +464,7 @@ export default function App({ host }: { host: EngineHost }) {
 
             <button
               onClick={() => switchView('loadtest')}
-              className={`relative rounded-lg px-3 py-2 text-sm transition-colors duration-150 ${
+              className={`relative whitespace-nowrap rounded-lg px-3 py-2 text-sm transition-colors duration-150 ${
                 view === 'loadtest' ? 'font-bold text-primary' : 'text-muted hover:bg-hover hover:text-ink'
               }`}
             >
@@ -706,17 +706,21 @@ export default function App({ host }: { host: EngineHost }) {
             onOpenInMarkdown={openInMarkdown}
           />
         </main>
-      ) : view === 'media' ? (
-        <main className="h-[calc(100vh-3.5rem)] w-full overflow-hidden">
-          <MediaPanel extensionMode={extensionMode} />
-        </main>
-      ) : (
+      ) : view === 'media' ? null : (
         <main className="mx-auto w-full px-7 py-7">
           <ToolsWorkspace activeTool={activeTool ?? 'base64'} onSelect={openTool}>
             <ToolView id={activeTool ?? 'base64'} payload={toolPayload} />
           </ToolsWorkspace>
         </main>
       )}
+
+      {/* Media is keep-alive: mounted once, merely hidden when inactive —
+          switching views must never cancel a running download. */}
+      <div className={view === 'media' ? 'contents' : 'hidden'} aria-hidden={view !== 'media'}>
+        <main className="h-[calc(100vh-3.5rem)] w-full overflow-hidden">
+          <MediaPanel extensionMode={extensionMode} />
+        </main>
+      </div>
 
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} onSelect={openTool} />
       <RequestDetails

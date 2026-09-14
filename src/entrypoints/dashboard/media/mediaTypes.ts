@@ -109,6 +109,10 @@ export interface MediaTask {
   segmentsDone: number;
   segmentsTotal: number;
   error?: string;
+  /** Set when this attempt picked up a retained partial instead of starting
+   *  from zero — the byte offset it resumed from. Cleared if the partial turns
+   *  out to belong to a different source and the sink is rewound. */
+  resumedFromBytes?: number;
   startedAt: number;
   finishedAt?: number;
 }
