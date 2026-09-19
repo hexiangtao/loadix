@@ -21,28 +21,6 @@ import {
   Camera,
   type LucideIcon,
 } from 'lucide-react';
-import { Base64Tool } from './tools/Base64Tool';
-import { JsonTool } from './tools/JsonTool';
-import { JwtTool } from './tools/JwtTool';
-import { RegexTool } from './tools/RegexTool';
-import { UrlTool } from './tools/UrlTool';
-import { HtmlEntityTool } from './tools/HtmlEntityTool';
-import { UuidTool } from './tools/UuidTool';
-import { TimestampTool } from './tools/TimestampTool';
-import { CronTool } from './tools/CronTool';
-import { SqlTool } from './tools/SqlTool';
-import { HashTool } from './tools/HashTool';
-import { ColorTool } from './tools/ColorTool';
-import { MarkdownTool } from '../markdown/MarkdownTool';
-import { ApiClientTool } from '../api/ApiClientTool';
-import { JsonPathTool } from './tools/JsonPathTool';
-import { UrlParserTool } from './tools/UrlParserTool';
-import { DiffTool } from './tools/DiffTool';
-import { BaseConverterTool } from './tools/BaseConverterTool';
-import { GradientTool } from './tools/GradientTool';
-import { UnicodeTool } from './tools/UnicodeTool';
-import { ScreenshotTool } from './tools/ScreenshotTool';
-
 export type ToolGroup = 'encode' | 'format' | 'auth' | 'text' | 'generate' | 'query';
 
 export interface ToolProps {
@@ -58,7 +36,8 @@ export interface Tool {
   keywords: string[];
   group: ToolGroup;
   icon: LucideIcon;
-  component: ComponentType<ToolProps>;
+  /** Loads the tool component only when the user opens it. */
+  load: () => Promise<{ default: ComponentType<ToolProps> }>;
 }
 
 export const GROUPS: { id: ToolGroup; labelKey: string }[] = [
@@ -81,7 +60,7 @@ export const TOOLS: Tool[] = [
     keywords: ['markdown', 'md', 'preview', 'readme', '预览', '文档'],
     group: 'format',
     icon: TextQuote,
-    component: MarkdownTool,
+    load: () => import('../markdown/MarkdownTool').then(({ MarkdownTool }) => ({ default: MarkdownTool })),
   },
   {
     // The Requests API client is a first-class top-level view too — same
@@ -93,7 +72,7 @@ export const TOOLS: Tool[] = [
     keywords: ['api', 'request', 'http', 'rest', 'postman', 'curl', '接口', '请求', '调试'],
     group: 'format',
     icon: Globe,
-    component: ApiClientTool,
+    load: () => import('../api/ApiClientTool').then(({ ApiClientTool }) => ({ default: ApiClientTool })),
   },
   {
     id: 'base64',
@@ -102,7 +81,7 @@ export const TOOLS: Tool[] = [
     keywords: ['base64', 'encode', 'decode', '编码', '解码'],
     group: 'encode',
     icon: Binary,
-    component: Base64Tool,
+    load: () => import('./tools/Base64Tool').then(({ Base64Tool }) => ({ default: Base64Tool })),
   },
   {
     id: 'url',
@@ -111,7 +90,7 @@ export const TOOLS: Tool[] = [
     keywords: ['url', 'encode', 'decode', 'percent', 'uri', '编码', '解码'],
     group: 'encode',
     icon: LinkIcon,
-    component: UrlTool,
+    load: () => import('./tools/UrlTool').then(({ UrlTool }) => ({ default: UrlTool })),
   },
   {
     id: 'urlparser',
@@ -120,7 +99,7 @@ export const TOOLS: Tool[] = [
     keywords: ['url', 'parser', 'parse', 'query', 'params', 'host', 'port', 'path', 'fragment', '拆解', '解析', '参数'],
     group: 'encode',
     icon: Globe,
-    component: UrlParserTool,
+    load: () => import('./tools/UrlParserTool').then(({ UrlParserTool }) => ({ default: UrlParserTool })),
   },
   {
     id: 'diff',
@@ -129,7 +108,7 @@ export const TOOLS: Tool[] = [
     keywords: ['diff', 'compare', 'text', '对比', '差异', '差别', 'compare text'],
     group: 'format',
     icon: GitCompareArrows,
-    component: DiffTool,
+    load: () => import('./tools/DiffTool').then(({ DiffTool }) => ({ default: DiffTool })),
   },
   {
     id: 'baseconv',
@@ -138,7 +117,7 @@ export const TOOLS: Tool[] = [
     keywords: ['base', 'radix', 'binary', 'octal', 'decimal', 'hex', 'hexadecimal', '转换', '进制'],
     group: 'encode',
     icon: Sigma,
-    component: BaseConverterTool,
+    load: () => import('./tools/BaseConverterTool').then(({ BaseConverterTool }) => ({ default: BaseConverterTool })),
   },
   {
     id: 'gradient',
@@ -147,7 +126,7 @@ export const TOOLS: Tool[] = [
     keywords: ['gradient', 'css', 'background', 'linear', 'radial', 'color', '渐变', '色彩', '配色'],
     group: 'generate',
     icon: Paintbrush,
-    component: GradientTool,
+    load: () => import('./tools/GradientTool').then(({ GradientTool }) => ({ default: GradientTool })),
   },
   {
     id: 'htmlentity',
@@ -156,7 +135,7 @@ export const TOOLS: Tool[] = [
     keywords: ['html', 'entity', 'escape', 'unescape', '转义', '实体'],
     group: 'encode',
     icon: Code,
-    component: HtmlEntityTool,
+    load: () => import('./tools/HtmlEntityTool').then(({ HtmlEntityTool }) => ({ default: HtmlEntityTool })),
   },
   {
     id: 'unicode',
@@ -165,7 +144,7 @@ export const TOOLS: Tool[] = [
     keywords: ['unicode', 'escape', 'unescape', 'codepoint', 'utf', 'surrogate', 'utf-16', 'u转义', '码点', '字符编码'],
     group: 'encode',
     icon: Type,
-    component: UnicodeTool,
+    load: () => import('./tools/UnicodeTool').then(({ UnicodeTool }) => ({ default: UnicodeTool })),
   },
   {
     id: 'json',
@@ -174,7 +153,7 @@ export const TOOLS: Tool[] = [
     keywords: ['json', 'format', 'formatter', 'minify', 'beautify', '格式化', '压缩'],
     group: 'format',
     icon: Braces,
-    component: JsonTool,
+    load: () => import('./tools/JsonTool').then(({ JsonTool }) => ({ default: JsonTool })),
   },
   {
     id: 'sql',
@@ -183,7 +162,7 @@ export const TOOLS: Tool[] = [
     keywords: ['sql', 'format', 'formatter', 'beautify', '格式化'],
     group: 'format',
     icon: Database,
-    component: SqlTool,
+    load: () => import('./tools/SqlTool').then(({ SqlTool }) => ({ default: SqlTool })),
   },
   {
     id: 'jwt',
@@ -192,7 +171,7 @@ export const TOOLS: Tool[] = [
     keywords: ['jwt', 'token', 'decode', 'encode', 'sign', 'hs256', 'claims', 'bearer', '签名', '解码'],
     group: 'auth',
     icon: KeyRound,
-    component: JwtTool,
+    load: () => import('./tools/JwtTool').then(({ JwtTool }) => ({ default: JwtTool })),
   },
   {
     id: 'regex',
@@ -201,7 +180,7 @@ export const TOOLS: Tool[] = [
     keywords: ['regex', 'regexp', 'regular expression', 'pattern', '正则', '匹配'],
     group: 'text',
     icon: Regex,
-    component: RegexTool,
+    load: () => import('./tools/RegexTool').then(({ RegexTool }) => ({ default: RegexTool })),
   },
   {
     id: 'uuid',
@@ -210,7 +189,7 @@ export const TOOLS: Tool[] = [
     keywords: ['uuid', 'guid', 'uuidv1', 'uuidv3', 'uuidv4', 'uuidv5', 'uuidv7', 'id', '生成', 'namespace'],
     group: 'generate',
     icon: Fingerprint,
-    component: UuidTool,
+    load: () => import('./tools/UuidTool').then(({ UuidTool }) => ({ default: UuidTool })),
   },
   {
     id: 'timestamp',
@@ -219,7 +198,7 @@ export const TOOLS: Tool[] = [
     keywords: ['timestamp', 'epoch', 'unix', 'date', '时间戳', '日期'],
     group: 'generate',
     icon: Clock,
-    component: TimestampTool,
+    load: () => import('./tools/TimestampTool').then(({ TimestampTool }) => ({ default: TimestampTool })),
   },
   {
     id: 'cron',
@@ -228,7 +207,7 @@ export const TOOLS: Tool[] = [
     keywords: ['cron', 'crontab', 'schedule', '定时', '表达式'],
     group: 'generate',
     icon: CalendarClock,
-    component: CronTool,
+    load: () => import('./tools/CronTool').then(({ CronTool }) => ({ default: CronTool })),
   },
   {
     id: 'hash',
@@ -237,7 +216,7 @@ export const TOOLS: Tool[] = [
     keywords: ['hash', 'md5', 'sha', 'sha1', 'sha256', 'sha512', 'digest', 'checksum', '哈希', '校验'],
     group: 'encode',
     icon: Binary,
-    component: HashTool,
+    load: () => import('./tools/HashTool').then(({ HashTool }) => ({ default: HashTool })),
   },
   {
     id: 'color',
@@ -246,7 +225,7 @@ export const TOOLS: Tool[] = [
     keywords: ['color', 'hex', 'rgb', 'hsl', 'picker', '颜色', '色值'],
     group: 'generate',
     icon: Palette,
-    component: ColorTool,
+    load: () => import('./tools/ColorTool').then(({ ColorTool }) => ({ default: ColorTool })),
   },
   {
     id: 'jsonpath',
@@ -255,7 +234,7 @@ export const TOOLS: Tool[] = [
     keywords: ['jsonpath', 'path', 'query', 'extract', 'json path', '查询', '提取'],
     group: 'query',
     icon: Search,
-    component: JsonPathTool,
+    load: () => import('./tools/JsonPathTool').then(({ JsonPathTool }) => ({ default: JsonPathTool })),
   },
   {
     id: 'screenshot',
@@ -264,7 +243,7 @@ export const TOOLS: Tool[] = [
     keywords: ['screenshot', 'capture', 'snapshot', 'image', 'png', 'jpeg', 'html2image', 'export', '截图', '截屏', '抓图', '导出图片'],
     group: 'generate',
     icon: Camera,
-    component: ScreenshotTool,
+    load: () => import('./tools/ScreenshotTool').then(({ ScreenshotTool }) => ({ default: ScreenshotTool })),
   },
 ];
 
