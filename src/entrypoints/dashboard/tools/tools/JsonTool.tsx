@@ -5,6 +5,9 @@ import { load as yamlLoadFn, dump as yamlDumpFn } from 'js-yaml';
 import { ToolShell } from '../ToolShell';
 import { CopyButton } from '../CopyButton';
 import { usePersistedState } from '../usePersistedState';
+import { jsonToTs } from './jsonToTs';
+import { JsonTreeView } from './JsonTreeView';
+import { JsonPathInput } from './JsonPathInput';
 
 function locateJsonError(raw: string, e: unknown): string {
   if (!(e instanceof SyntaxError)) return '';
@@ -16,12 +19,12 @@ function locateJsonError(raw: string, e: unknown): string {
   return `line ${line}, col ${pos}`;
 }
 
-type OutputTab = 'json' | 'yaml';
+type OutputTab = 'json' | 'yaml' | 'tree' | 'ts' | 'query';
 
 // Module-level constants keep the tab ids out of className literals, which the
 // design-system test otherwise reads as styling classes.
-const OUTPUT_TABS: readonly OutputTab[] = ['json', 'yaml'];
-const YAML_INPUT_TABS: readonly OutputTab[] = ['json'];
+const OUTPUT_TABS: readonly OutputTab[] = ['json', 'yaml', 'tree', 'ts', 'query'];
+const YAML_INPUT_TABS: readonly OutputTab[] = ['json', 'tree', 'query'];
 
 interface JsonToolProps {
   /** Content routed from the smart-paste box (pre-fills the input). */
@@ -46,7 +49,7 @@ export function JsonTool({ initialPayload }: JsonToolProps) {
   const formatted = useMemo(() => {
     if (!parsedJson.ok) return '';
     return JSON.stringify(parsedJson.value, null, indent);
-  }, [parsedJson]);
+  }, [parsedJson, indent]);
 
   const minified = useMemo(() => {
     if (!parsedJson.ok || !input.trim()) return '';
@@ -76,13 +79,24 @@ export function JsonTool({ initialPayload }: JsonToolProps) {
   // hand-written YAML shape like `key:\n  - a`. JSON output then regenerates.
   const isYamlInput = !parsedJson.ok && parsedYaml.ok && typeof parsedYaml.value === 'object' && parsedYaml.value !== null;
 
+  const effectiveValue = isYamlInput ? parsedYaml.value : parsedJson.ok ? parsedJson.value : null;
+
+  const tsOut = useMemo(() => {
+    if (effectiveValue == null || typeof effectiveValue !== 'object') return '';
+    try {
+      return jsonToTs(effectiveValue, { rootName: 'Api' });
+    } catch {
+      return '';
+    }
+  }, [effectiveValue]);
+
   const stats = useMemo(() => {
-    if (!parsedJson.ok || parsedJson.value == null) return null;
-    const keys = countKeys(parsedJson.value);
-    const depth = maxDepth(parsedJson.value);
-    const bytes = new Blob([formatted]).size;
+    if (effectiveValue == null) return null;
+    const keys = countKeys(effectiveValue);
+    const depth = maxDepth(effectiveValue);
+    const bytes = new Blob([formatted || minified]).size;
     return { keys, depth, bytes };
-  }, [parsedJson, formatted]);
+  }, [effectiveValue, formatted, minified]);
 
   const outputText = isYamlInput
     ? JSON.stringify(parsedYaml.value, null, indent)
@@ -91,6 +105,8 @@ export function JsonTool({ initialPayload }: JsonToolProps) {
       : formatted;
 
   const outputIsOk = isYamlInput || parsedJson.ok;
+  const tabs = isYamlInput ? YAML_INPUT_TABS : OUTPUT_TABS;
+  const activeTab: OutputTab = tabs.includes(outputTab) ? outputTab : tabs[0]!;
 
   return (
     <ToolShell icon={Braces} title={t('tools.json.name')}>
@@ -133,15 +149,15 @@ export function JsonTool({ initialPayload }: JsonToolProps) {
         </p>
       )}
 
-      {outputIsOk && (
+      {outputIsOk && effectiveValue != null && (
         <div className="mt-4 flex items-center justify-between">
-          <div className="flex gap-1.5">
-            {(isYamlInput ? YAML_INPUT_TABS : OUTPUT_TABS).map((tab) => (
+          <div className="flex flex-wrap gap-1.5">
+            {tabs.map((tab) => (
               <button
                 key={tab}
                 onClick={() => setOutputTab(tab)}
                 className={`rounded-lg px-3 py-1.5 text-xs uppercase transition-colors duration-150 ${
-                  (isYamlInput ? YAML_INPUT_TABS[0] : outputTab) === tab
+                  activeTab === tab
                     ? 'bg-primary/10 font-semibold text-primary'
                     : 'text-muted hover:bg-hover hover:text-ink'
                 }`}
@@ -156,9 +172,22 @@ export function JsonTool({ initialPayload }: JsonToolProps) {
           {outputText && <CopyButton text={outputText} />}
         </div>
       )}
-      <pre className="field mt-1.5 min-h-[140px] w-full flex-1 overflow-auto font-mono text-sm">
-        {outputText}
-      </pre>
+
+      {outputIsOk && activeTab === 'tree' && effectiveValue != null && <JsonTreeView value={effectiveValue} />}
+
+      {outputIsOk && activeTab === 'ts' && (
+        <pre className="field mt-1.5 min-h-[140px] w-full flex-1 overflow-auto font-mono text-sm">
+          {tsOut || '—'}
+        </pre>
+      )}
+
+      {outputIsOk && activeTab === 'query' && <JsonPathInput value={effectiveValue} />}
+
+      {outputIsOk && (activeTab === 'json' || activeTab === 'yaml') && (
+        <pre className="field mt-1.5 min-h-[140px] w-full flex-1 overflow-auto font-mono text-sm">
+          {outputText}
+        </pre>
+      )}
     </ToolShell>
   );
 }
