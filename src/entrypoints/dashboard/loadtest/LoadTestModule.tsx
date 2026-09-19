@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateA
 import { AnimatePresence, motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { FileCode, FileJson, Plus, Save } from 'lucide-react';
-import type { ApiRequest } from '../api/apiTypes';
+import type { ModuleIntent } from '../module-protocol';
 import type { Assertion, ContentType, HttpMethod, TestConfig } from '@/shared/types';
 import type { EngineHost } from '@/engine/engine-host';
 import { generateReport } from '@/shared/report';
@@ -33,7 +33,7 @@ export type LoadTestSection = 'request' | 'load' | 'assertions' | 'variables' | 
 
 interface LoadTestModuleProps {
   host: EngineHost;
-  initialRequest?: ApiRequest;
+  initialRequest?: Extract<ModuleIntent, { type: 'open-loadtest' }>['request'];
   onInitialRequestConsumed?: () => void;
 }
 

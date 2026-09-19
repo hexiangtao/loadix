@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import type { ApiRequest } from './api/apiTypes';
+import type { ModuleIntent } from './module-protocol';
 import { ModuleBoundary } from './ModuleBoundary';
 
 /** Top-level feature ids used by the dashboard shell. */
@@ -34,8 +34,7 @@ interface MarkdownModuleProps {
 }
 
 interface ApiModuleProps {
-  onOpenInLoadTest: (request: ApiRequest) => void;
-  onOpenInMarkdown: (markdown: string) => void;
+  onIntent: (intent: ModuleIntent) => void;
 }
 
 interface MediaModuleProps {
@@ -54,12 +53,15 @@ export function MarkdownModule(props: MarkdownModuleProps) {
   );
 }
 
-export function ApiModule({ onOpenInLoadTest, onOpenInMarkdown }: ApiModuleProps) {
+export function ApiModule({ onIntent }: ApiModuleProps) {
   return (
     <ModuleBoundary label="API client">
       <Suspense fallback={<ModuleLoading label="Loading API client…" />}>
         <main className="h-[calc(100vh-3.5rem)] w-full overflow-hidden">
-          <ApiClientTool onOpenInLoadTest={onOpenInLoadTest} onOpenInMarkdown={onOpenInMarkdown} />
+          <ApiClientTool
+            onOpenInLoadTest={(request) => onIntent({ type: 'open-loadtest', request })}
+            onOpenInMarkdown={(markdown) => onIntent({ type: 'open-markdown', markdown })}
+          />
         </main>
       </Suspense>
     </ModuleBoundary>
