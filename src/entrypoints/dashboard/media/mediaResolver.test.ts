@@ -16,6 +16,7 @@ import {
   titleFromWatchPage,
   withPartParam,
 } from './mediaResolver';
+import { MEDIA_PROVIDER_PROTOCOL_VERSION, MediaProviderRegistry } from './mediaProvider';
 
 /** Stub fetch: maps URL → body text, records calls. */
 function stubFetch(routes: Record<string, string>) {
@@ -34,6 +35,48 @@ ${playinfo ? `<script>window.__playinfo__=${JSON.stringify(playinfo)}</script>` 
 
 const playurl = (quality: number, url: string, size = 0): string =>
   JSON.stringify({ code: 0, data: { quality, accept_quality: [64, 32, 16], durl: [{ url, size, backup_url: [url + '.bak'] }] } });
+
+describe('media provider protocol', () => {
+  it('exposes a stable protocol version and identifies local providers', async () => {
+    expect(MEDIA_PROVIDER_PROTOCOL_VERSION).toBe(1);
+    const reported: unknown[] = [];
+    const registry = new MediaProviderRegistry([
+      {
+        id: 'failing-provider',
+        label: 'Failing provider',
+        example: 'https://example.com',
+        match: () => true,
+        resolve: async () => { throw new Error('provider unavailable'); },
+      },
+      {
+        id: 'working-provider',
+        label: 'Working provider',
+        example: 'https://example.com',
+        match: () => true,
+        resolve: async ({ pageUrl }) => ({
+          title: 'ok', pageUrl, formats: [], dashOnly: false, notice: 'empty',
+        }),
+      },
+    ]);
+    const selected = await registry.resolve('https://example.com/watch', {
+      fetchText: stubFetch({}),
+      report: (failure) => reported.push(failure),
+    });
+    expect(selected?.provider.id).toBe('working-provider');
+    expect(selected?.asset.provider).toBe('working-provider');
+    expect(reported).toHaveLength(1);
+    const pageUrl = 'https://example.com/watch';
+    const fetchText = stubFetch({
+      [pageUrl]: '<video><source src="https://cdn.example.com/movie.mp4" /></video>',
+    });
+    const result = await resolvePageUrl(pageUrl, fetchText);
+    expect(result.provider).toBeUndefined();
+
+    // Generic extraction is intentionally not a provider: it is the final
+    // compatibility floor and will be replaced by a worker-backed provider
+    // when one becomes available.
+  });
+});
 
 describe('Bilibili WBI signing', () => {
   it('uses the RFC MD5 digest required by WBI', () => {
@@ -64,6 +107,7 @@ describe('resolvePageUrl — bilibili', () => {
     const result = await resolvePageUrl(pageUrl, fetchText);
     expect(result.dashOnly).toBe(false);
     expect(result.notice).toBe('');
+    expect(result.provider).toBe('bilibili');
     expect(result.title).toContain('Sample video');
     const mp4s = result.formats.filter((f) => f.container === 'mp4');
     expect(mp4s.map((f) => f.quality)).toEqual(['720p', '480p', '360p']);

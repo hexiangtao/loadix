@@ -28,6 +28,6 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
-    include: ['src/**/*.test.ts', 'functions/**/*.test.mjs'],
+    include: ['src/**/*.test.ts', 'functions/**/*.test.mjs', 'media-worker/**/*.test.mjs'],
   },
 });

@@ -28,7 +28,8 @@ import {
   pageTitle,
   posterFromMeta,
 } from './pageHtml';
-import type { FetchText, MediaFormatOption, ResolvedPageAsset, VideoPart } from './mediaResolver';
+import type { MediaFormatOption, ResolvedPageAsset, VideoPart } from './mediaResolver';
+import type { FetchText, MediaProvider, MediaProviderContext } from './mediaProvider';
 import { failureFromError, hostOf, type ResolveFailure } from './resolveFailure';
 
 // The local `hostName` below is the site-matching helper (returns '' so
@@ -43,24 +44,10 @@ import { failureFromError, hostOf, type ResolveFailure } from './resolveFailure'
  *  only say "could not resolve this page" — so a login wall, a region lock and
  *  our own broken network all looked identical. Reporting costs one call and
  *  turns each of those into different advice. */
-export interface ResolveContext {
-  pageUrl: string;
-  fetchText: FetchText;
-  report: (failure: ResolveFailure) => void;
-}
-
-export interface SiteAdapter {
-  /** Stable id — also what the UI keys the supported-platform list by. */
-  id: string;
-  /** Human name for the UI. */
-  label: string;
-  /** Example URL shape, shown as a hint so users know what to paste. */
-  example: string;
-  /** Cheap URL test. Must not fetch. */
-  match: (pageUrl: string) => boolean;
-  /** The site's resolution chain. `null` ⇒ not this adapter's business. */
-  resolve: (context: ResolveContext) => Promise<ResolvedPageAsset | null>;
-}
+/** Backward-compatible names for callers that used the original adapter API. */
+export type ResolveContext = MediaProviderContext;
+export type SiteAdapter = MediaProvider;
+export type { FetchText };
 
 function hostName(pageUrl: string): string {
   try {

@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { Search } from 'lucide-react';
 import { changeLanguage, SUPPORTED_LANGUAGES, type SupportedLanguage } from '../i18n';
+import { preloadDashboardModule } from '../module-registry';
 import { ToolsMenu } from '../tools/ToolsMenu';
 
 type View = 'loadtest' | 'tools' | 'markdown' | 'api' | 'media';
@@ -30,7 +31,10 @@ export function DashboardHeader({ view, activeTool, theme, chromeGone, onView, o
       <a href="https://loadix.dev" target="_blank" rel="noreferrer" title={t('app.name')} className="rounded-lg text-[15px] font-bold hover:text-primary">{t('app.name')}</a>
       <div className="flex-1" />
       <nav className="mr-2 flex shrink-0 items-center gap-1">
-        {destinations.map((id) => <button key={id} onClick={() => onView(id)} className={`relative whitespace-nowrap rounded-lg px-3 py-2 text-sm ${view === id ? 'font-bold text-primary' : 'text-muted hover:bg-hover hover:text-ink'}`}>
+        {destinations.map((id) => <button key={id} onClick={() => onView(id)}
+          onMouseEnter={() => (id === 'markdown' || id === 'api' || id === 'media') && preloadDashboardModule(id)}
+          onFocus={() => (id === 'markdown' || id === 'api' || id === 'media') && preloadDashboardModule(id)}
+          className={`relative whitespace-nowrap rounded-lg px-3 py-2 text-sm ${view === id ? 'font-bold text-primary' : 'text-muted hover:bg-hover hover:text-ink'}`}>
           {view === id && <motion.span layoutId="view-active" className="absolute inset-0 rounded-lg bg-primary/10" />}
           <span className="relative">{id === 'markdown' ? t('tools.markdown.name') : id === 'api' ? t('tools.requests.name') : id === 'media' ? t('media.nav') : t('views.loadtest')}</span>
         </button>)}

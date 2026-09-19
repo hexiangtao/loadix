@@ -34,7 +34,8 @@ import {
   type DashEntry,
   type DashTracks,
 } from './pageHtml';
-import { BUILT_IN_ADAPTERS, isYouTubePageUrl, type SiteAdapter } from './siteAdapters';
+import { BUILT_IN_ADAPTERS, isYouTubePageUrl } from './siteAdapters';
+import { MediaProviderRegistry, type MediaProvider } from './mediaProvider';
 import { bestFailure, failureFromError, hostOf, type ResolveFailure } from './resolveFailure';
 import { md5Hex } from '../tools/md5';
 
@@ -95,6 +96,8 @@ export interface VideoPart {
 export interface ResolvedPageAsset {
   title: string;
   pageUrl: string;
+  /** Provider that produced the result, useful for diagnostics and worker routing. */
+  provider?: string;
   /** Poster image for the UI's hero card (best effort — absent = initials). */
   cover?: string;
   formats: MediaFormatOption[];
@@ -195,7 +198,7 @@ const BILI_MP4_QUALITY: Record<number, string> = {
  * DASH helpers; adding a platform does NOT require editing this list, only
  * adding an adapter to the registry.
  */
-const ADAPTERS: readonly SiteAdapter[] = [
+const ADAPTERS: readonly MediaProvider[] = [
   ...BUILT_IN_ADAPTERS,
   {
     id: 'bilibili',
@@ -212,6 +215,12 @@ const ADAPTERS: readonly SiteAdapter[] = [
     resolve: ({ pageUrl, fetchText, report }) => resolveDouyin(pageUrl, fetchText, report),
   },
 ];
+
+export function createMediaProviderRegistry(additionalProviders: readonly MediaProvider[] = []): MediaProviderRegistry {
+  return new MediaProviderRegistry([...ADAPTERS, ...additionalProviders]);
+}
+
+const PROVIDER_REGISTRY = createMediaProviderRegistry();
 
 /** What the UI advertises as supported — derived from the dispatch order
  *  above, so the copy cannot drift from what actually resolves. */
@@ -235,6 +244,8 @@ export async function resolvePageUrl(
   pageUrl: string,
   fetchText: FetchText,
   fetchWithUrl?: FetchTextWithUrl,
+  signal?: AbortSignal,
+  additionalProviders: readonly MediaProvider[] = [],
 ): Promise<ResolvedPageAsset> {
   const reported: ResolveFailure[] = [];
   const report = (failure: ResolveFailure): void => {
@@ -242,17 +253,10 @@ export async function resolvePageUrl(
   };
   try {
     const target = await canonicalizeShortLink(pageUrl, fetchWithUrl);
-    for (const adapter of ADAPTERS) {
-      if (!adapter.match(target)) continue;
-      // An adapter that fails must not take the whole resolve down with it:
-      // the next adapter (and finally the generic scan) still gets a turn —
-      // but its reason is recorded first.
-      const resolved = await adapter.resolve({ pageUrl: target, fetchText, report }).catch((err: unknown) => {
-        report(failureFromError(err, target));
-        return null;
-      });
-      if (resolved) return resolved;
-    }
+    const registry = additionalProviders.length ? createMediaProviderRegistry(additionalProviders) : PROVIDER_REGISTRY;
+    const provided = await registry.resolve(target, { fetchText, report }, signal);
+    if (provided) return provided.asset;
+
     const generic = await resolveGeneric(target, fetchText);
     if (generic.formats.length > 0) return generic;
     return { ...generic, failure: bestFailure(reported) ?? { reason: 'no-format', host: hostOf(target) } };
