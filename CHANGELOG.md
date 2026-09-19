@@ -1,3 +1,10 @@
+# [1.65.0](https://github.com/hexiangtao/loadix/compare/v1.64.0...v1.65.0) (2026-09-19)
+
+
+### Features
+
+* upgrade tools with mature open-source libraries ([6530a78](https://github.com/hexiangtao/loadix/commit/6530a785d48e13bc17a3bd05079a08ee6c2e321d))
+
 # [1.64.0](https://github.com/hexiangtao/loadix/compare/v1.63.0...v1.64.0) (2026-09-19)
 
 
