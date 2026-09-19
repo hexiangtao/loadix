@@ -1,3 +1,10 @@
+# [1.63.0](https://github.com/hexiangtao/loadix/compare/v1.62.0...v1.63.0) (2026-09-19)
+
+
+### Features
+
+* auto-fallback blocked media resolves to a configurable worker ([7adeabc](https://github.com/hexiangtao/loadix/commit/7adeabcaa4d6d090e20785940b536e939dc8d727))
+
 # [1.62.0](https://github.com/hexiangtao/loadix/compare/v1.61.0...v1.62.0) (2026-09-19)
 
 
