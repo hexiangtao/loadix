@@ -226,17 +226,77 @@ const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, 
 /** Bakes the document's own title into the viewer HTML (title tag + Open
     Graph / Twitter meta), so links shared into chat and office apps preview
     with real context instead of the generic brand line. */
-export function renderSharePage(html, source) {
+export function shareDescription(source, heading = firstHeading(source)) {
+  const lines = source
+    .replace(/```[\s\S]*?```/g, ' ')
+    .split(/\r?\n/)
+    .map((line) => line.replace(/^\s{0,3}#{1,6}\s+/, '').replace(/^\s*[-*+]\s+/, '').replace(/[*!_`~]/g, '').trim())
+    .filter((line) => line && line !== heading);
+  const text = (lines[0] ?? 'A Markdown document shared via Loadix')
+    .replace(/[*!_`~]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return text.length > 140 ? `${text.slice(0, 137).trimEnd()}…` : text;
+}
+
+function wrapText(text, maxChars, maxLines) {
+  const words = text.split(/\s+/).filter(Boolean);
+  const lines = [];
+  let line = '';
+  for (const word of words) {
+    const next = line ? `${line} ${word}` : word;
+    if (line && next.length > maxChars) {
+      lines.push(line);
+      line = word;
+      if (lines.length === maxLines) break;
+    } else line = next;
+  }
+  if (lines.length < maxLines && line) lines.push(line);
+  if (lines.length === maxLines && words.join(' ').length > lines.join(' ').length) {
+    lines[maxLines - 1] = `${lines[maxLines - 1].slice(0, Math.max(1, maxChars - 1)).trimEnd()}…`;
+  }
+  return lines;
+}
+
+export function renderOgCard(source) {
+  const heading = firstHeading(source) || 'Shared Markdown';
+  const titleLines = wrapText(heading, 30, 2);
+  const description = shareDescription(source, heading);
+  const descriptionLines = wrapText(description, 60, 2);
+  const titleSvg = titleLines.map((line, index) => `<tspan x="92" dy="${index === 0 ? 0 : 62}">${esc(line)}</tspan>`).join('');
+  const descriptionSvg = descriptionLines.map((line, index) => `<tspan x="96" dy="${index === 0 ? 0 : 30}">${esc(line)}</tspan>`).join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">${esc(heading)} · Loadix</title>
+  <desc id="desc">${esc(description)}</desc>
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0f172a"/><stop offset="1" stop-color="#123b67"/></linearGradient></defs>
+  <rect width="1200" height="630" rx="28" fill="url(#bg)"/>
+  <circle cx="1080" cy="-40" r="260" fill="#0a84ff" opacity=".22"/>
+  <circle cx="1130" cy="610" r="180" fill="#30d158" opacity=".10"/>
+  <rect x="92" y="84" width="36" height="36" rx="10" fill="#0a84ff"/>
+  <path d="M102 102h16M110 94v16" stroke="white" stroke-width="3" stroke-linecap="round"/>
+  <text x="146" y="112" fill="#dbeafe" font-family="Arial, sans-serif" font-size="26" font-weight="700">Loadix</text>
+  <text x="92" y="256" fill="white" font-family="Arial, sans-serif" font-size="52" font-weight="700">${titleSvg}</text>
+  <text x="96" y="410" fill="#bfdbfe" font-family="Arial, sans-serif" font-size="24">${descriptionSvg}</text>
+  <text x="96" y="552" fill="#93c5fd" font-family="Arial, sans-serif" font-size="20">Markdown · Shared via Loadix</text>
+</svg>`;
+}
+
+export function renderSharePage(html, source, options = {}) {
   const heading = firstHeading(source);
   const title = heading ? `${heading} · Loadix` : FALLBACK_PAGE_TITLE;
-  const description = heading ? `${heading} — shared via Loadix` : 'Shared via Loadix';
+  const description = shareDescription(source, heading);
+  const imageUrl = options.origin && options.id
+    ? `${options.origin}/api/share/${encodeURIComponent(options.id)}/og-image${options.updatedAt ? `?v=${options.updatedAt}` : ''}`
+    : null;
   const meta = [
     `<meta property="og:title" content="${esc(title)}" />`,
     `<meta property="og:description" content="${esc(description)}" />`,
     '<meta property="og:type" content="article" />',
-    '<meta name="twitter:card" content="summary" />',
+    ...(imageUrl ? [`<meta property="og:image" content="${esc(imageUrl)}" />`] : []),
+    '<meta name="twitter:card" content="summary_large_image" />',
     `<meta name="twitter:title" content="${esc(title)}" />`,
     `<meta name="twitter:description" content="${esc(description)}" />`,
+    ...(imageUrl ? [`<meta name="twitter:image" content="${esc(imageUrl)}" />`] : []),
   ].join('\n    ');
   return html
     .replace(/<title>[^<]*<\/title>/, `<title>${esc(title)}</title>`)

@@ -14,7 +14,9 @@ import {
   parseShareBody,
   postShare,
   readShare,
+  renderOgCard,
   renderSharePage,
+  shareDescription,
   setShareExpiry,
   tokensEqual,
   updateShare,
@@ -371,11 +373,37 @@ describe('renderSharePage', () => {
     expect(out).toContain('property="og:type" content="article"');
   });
 
+  it('adds a versioned absolute OG image URL when share context is provided', () => {
+    const out = renderSharePage(html, '# My Doc\n\nA short summary.', {
+      origin: 'https://lab.loadix.dev',
+      id: 'Ab3xY9zQ',
+      updatedAt: 123,
+    });
+    expect(out).toContain('property="og:image" content="https://lab.loadix.dev/api/share/Ab3xY9zQ/og-image?v=123"');
+    expect(out).toContain('name="twitter:card" content="summary_large_image"');
+    expect(out).toContain('name="twitter:image"');
+  });
+
   it('keeps the generic title when the document has no heading', () => {
     expect(renderSharePage(html, 'no heading')).toContain(`<title>${FALLBACK_PAGE_TITLE}</title>`);
   });
 
   it('escapes HTML in the injected title', () => {
     expect(renderSharePage(html, '# <script>alert(1)</script>')).toContain('&lt;script&gt;');
+  });
+});
+
+describe('OG card', () => {
+  it('creates a branded SVG card without leaking markup', () => {
+    const svg = renderOgCard('# My **Doc**\n\nA useful summary.');
+    expect(svg).toContain('<svg');
+    expect(svg).toContain('Loadix');
+    expect(svg).toContain('My Doc · Loadix');
+    expect(svg).toContain('A useful summary.');
+    expect(svg).not.toContain('<script>');
+  });
+
+  it('extracts a short description outside fenced code', () => {
+    expect(shareDescription('# Title\n\n```js\nconst hidden = true\n```\n\nVisible summary.')).toBe('Visible summary.');
   });
 });

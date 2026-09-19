@@ -10,8 +10,16 @@ export const onRequestGet = async ({ params, env, request, next }) => {
   if (!record) return next();
   const asset = await env.ASSETS.fetch(new URL('/share.html', request.url));
   const html = await asset.text();
-  return new Response(renderSharePage(html, record.source), {
+  return new Response(
+    renderSharePage(html, record.source, {
+      origin: new URL(request.url).origin,
+      id: params.id,
+      updatedAt: record.updatedAt,
+    }), {
     status: 200,
-    headers: { 'content-type': 'text/html; charset=utf-8' },
+    headers: {
+      'content-type': 'text/html; charset=utf-8',
+      'cache-control': 'public, max-age=60, s-maxage=300',
+    },
   });
 };

@@ -7,8 +7,8 @@
 //
 // Product-consistent by design: the document renders flat on the same white
 // surface and measure as the workbench preview, under a fixed header whose
-// funnel link (返回首页) points visitors at the tool site (lab.loadix.dev),
-// not the marketing site.
+// Desktop keeps a restrained link back to the tool site; on mobile the
+// document stays the only prominent content.
 import { createRoot } from 'react-dom/client';
 import { Component, useCallback, useEffect, useRef, useState, type ErrorInfo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -220,14 +220,13 @@ function ShareApp() {
                 </svg>
               )}
             </button>
-            {/* Restrained on purpose: the shared document is the hero, so the
-                funnel CTA uses the app's quiet brand tint instead of a heavy
-                filled button — present, but it never competes with the content. */}
+            {/* Desktop-only discovery link. On mobile the reading surface gets
+                the full header width and this secondary CTA disappears. */}
             <a
               href={LAB_URL}
               target="_blank"
               rel="noreferrer"
-              className="flex shrink-0 items-center gap-1.5 rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary transition-colors duration-150 hover:bg-primary/15"
+              className="hidden shrink-0 items-center gap-1.5 rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary transition-colors duration-150 hover:bg-primary/15 sm:flex"
             >
               {t('share.backHome')}
               <ArrowUpRight size={13} />
