@@ -1,3 +1,10 @@
+## [1.58.2](https://github.com/hexiangtao/loadix/compare/v1.58.1...v1.58.2) (2026-09-19)
+
+
+### Bug Fixes
+
+* harden shared documents on mobile ([8113937](https://github.com/hexiangtao/loadix/commit/8113937e5579284ac6c7fedbbb0dcc9d16368399))
+
 ## [1.58.1](https://github.com/hexiangtao/loadix/compare/v1.58.0...v1.58.1) (2026-09-19)
 
 
