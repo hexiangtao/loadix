@@ -1,3 +1,10 @@
+# [1.70.0](https://github.com/hexiangtao/loadix/compare/v1.69.0...v1.70.0) (2026-09-19)
+
+
+### Features
+
+* add adaptive themes to shared OG cards ([1e05da9](https://github.com/hexiangtao/loadix/commit/1e05da956aa7f1e472e0de149da9ea9b707a329e))
+
 # [1.69.0](https://github.com/hexiangtao/loadix/compare/v1.68.0...v1.69.0) (2026-09-19)
 
 
