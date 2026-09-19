@@ -13,7 +13,7 @@ tables need no extra code on the receiving side.
 | `functions/_lib/share-core.mjs` | All backend logic — framework-agnostic so Cloudflare, the local preview server and the unit tests share one implementation. |
 | `functions/api/share.js` | `POST /api/share` route → `postShare(request, env.SHARE_KV)` |
 | `functions/api/share/[id].js` | `GET /api/share/<id>` route → `getShare(id, env.SHARE_KV)` |
-| `functions/api/share/[id]/og-image.js` | `GET /api/share/<id>/og-image` → dependency-free dynamic SVG Open Graph card |
+| `functions/api/share/[id]/og-image.js` | `GET /api/share/<id>/og-image` → dynamic PNG Open Graph card (resvg-wasm; falls back to SVG if the font is unavailable) |
 | `functions/s/[id].js` | `GET /s/<id>` — serves `share.html` with the document's own title baked in (`<title>` + og/twitter meta, via `renderSharePage`) so chat/office apps preview shared links with real context; unknown ids fall through to the static rewrite |
 | `functions/_lib/share-core.test.mjs` | Unit tests (run by `npm test`, in-memory KV + real `Request` objects) |
 | `src/web/public/_redirects` | `/s/*  →  /share.html 200` rewrite (keeps the URL in the browser so the viewer reads the id from the pathname; the `/s/[id]` function takes precedence for known ids) |
@@ -66,5 +66,10 @@ wrangler and point `--kv SHARE_KV` at a local namespace.
   400 for empty/malformed, 413 over the 1 MiB cap.
 - `GET /api/share/<id>` — `200 { id, source, createdAt }` or `404
   { error: "not_found" }`.
-- `GET /api/share/<id>/og-image` — a cached SVG card with the document title,
-  summary, and Loadix branding for `og:image` / `twitter:image`.
+- `GET /api/share/<id>/og-image` — a 1200×630 PNG card with the document
+  title, summary, and Loadix branding for `og:image` / `twitter:image`
+  (PNG is required by Lark/WeChat and widely preferred by crawlers). The
+  card SVG comes from `renderOgCard`; rasterisation uses resvg compiled to
+  WASM with the LXGW WenKai font (Latin + CJK) fetched once and cached in
+  KV for 30 days. If the font cannot be fetched, the route degrades to the
+  SVG variant so `og:image` never breaks.
