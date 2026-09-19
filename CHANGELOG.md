@@ -1,3 +1,10 @@
+# [1.61.0](https://github.com/hexiangtao/loadix/compare/v1.60.0...v1.61.0) (2026-09-19)
+
+
+### Features
+
+* media provider registry, worker API, and skeleton loading ([bf26c19](https://github.com/hexiangtao/loadix/commit/bf26c19b9e36c3966692d68ede3a1e56aaf971cf))
+
 # [1.60.0](https://github.com/hexiangtao/loadix/compare/v1.59.0...v1.60.0) (2026-09-19)
 
 
