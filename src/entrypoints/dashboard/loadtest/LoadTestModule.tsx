@@ -7,7 +7,8 @@ import type { Assertion, ContentType, HttpMethod, TestConfig } from '@/shared/ty
 import type { EngineHost } from '@/engine/engine-host';
 import { generateReport } from '@/shared/report';
 import { storageGet, storageSet } from '../storage';
-import { useUiStore } from '../store/ui-store';
+import { useLoadTestStore, type LoadTestSection } from '../store/loadtest-store';
+import { useRequestDetailsStore } from '../store/request-details-store';
 import { Breakdown } from '../components/Breakdown';
 import { LineChart } from '../components/LineChart';
 import { MetricsGrid } from '../components/MetricsGrid';
@@ -28,8 +29,6 @@ import { PresetMenu } from '../PresetMenu';
 
 const CONFIG_KEY = 'api-pressure-config';
 const HISTORY_KEY = 'api-pressure-history';
-
-export type LoadTestSection = 'request' | 'load' | 'assertions' | 'variables' | 'history';
 
 interface LoadTestModuleProps {
   host: EngineHost;
@@ -54,7 +53,8 @@ const SECTION_TITLE_KEYS: Record<LoadTestSection, string> = {
 
 export function LoadTestModule({ host, initialRequest, onInitialRequestConsumed }: LoadTestModuleProps) {
   const { t } = useTranslation();
-  const { activeSection, engineState, resultMessage, metrics, setActiveSection, setEngineState, setMetrics, setSelectedRequest } = useUiStore();
+  const { activeSection, engineState, resultMessage, metrics, setActiveSection, setEngineState, setMetrics } = useLoadTestStore();
+  const setSelectedRequest = useRequestDetailsStore((state) => state.setSelectedRequest);
   const [request, setRequest] = useState<RequestFormValue>(DEFAULT_REQUEST);
   const [load, setLoad] = useState<LoadFormValue>(DEFAULT_LOAD);
   const [assertions, setAssertions] = useState<Assertion[]>(DEFAULT_ASSERTIONS);

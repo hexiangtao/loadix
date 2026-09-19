@@ -30,7 +30,7 @@ import {
   Workflow,
   type LucideIcon,
 } from 'lucide-react';
-import { useUiStore } from '../store/ui-store';
+import { useThemeStore } from '../store/theme-store';
 import { markdownSmartInput } from './markdownSmartInput';
 
 interface MarkdownEditorProps {
@@ -55,7 +55,7 @@ interface MarkdownEditorProps {
  */
 export function MarkdownEditor({ value, onChange, placeholder, autoFocus }: MarkdownEditorProps) {
   const { t } = useTranslation();
-  const theme = useUiStore((s) => s.theme);
+  const theme = useThemeStore((s) => s.theme);
   const viewRef = useRef<EditorView | null>(null);
 
   const run = (action: (view: EditorView) => void) => {

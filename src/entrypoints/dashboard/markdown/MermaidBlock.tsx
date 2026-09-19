@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, Download, Maximize2, X } from 'lucide-react';
-import { useUiStore } from '../store/ui-store';
+import { useThemeStore } from '../store/theme-store';
 
 interface MermaidBlockProps {
   source: string;
@@ -35,7 +35,7 @@ type RenderState =
  */
 export function MermaidBlock({ source, zoomable = false }: MermaidBlockProps) {
   const { t } = useTranslation();
-  const theme = useUiStore((s) => s.theme);
+  const theme = useThemeStore((s) => s.theme);
   const [state, setState] = useState<RenderState>({ status: 'loading' });
   const [exporting, setExporting] = useState(false);
   const [exportFailed, setExportFailed] = useState(false);

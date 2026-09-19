@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import type { EngineHost } from '@/engine/engine-host';
 import type { ModuleIntent } from '../module-protocol';
 import { storageGet, storageSet } from '../storage';
-import { useUiStore } from '../store/ui-store';
+import { useThemeStore } from '../store/theme-store';
+import { useRequestDetailsStore } from '../store/request-details-store';
 import { RequestDetails } from '../components/RequestDetails';
 import { CommandPalette } from '../tools/CommandPalette';
 import { ToolsWorkspace } from '../tools/ToolsWorkspace';
@@ -31,7 +32,8 @@ function viewFromStorage(): DashboardView {
 }
 
 export function DashboardShell({ host }: { host: EngineHost }) {
-  const { theme, setTheme, selectedRequest, setSelectedRequest } = useUiStore();
+  const { theme, setTheme } = useThemeStore();
+  const { selectedRequest, setSelectedRequest } = useRequestDetailsStore();
   const [view, setView] = useState<DashboardView>(viewFromStorage);
   const [activeTool, setActiveTool] = useState<string | null>(() => initialTool() ?? 'base64');
   const [toolPayload, setToolPayload] = useState<string | undefined>();

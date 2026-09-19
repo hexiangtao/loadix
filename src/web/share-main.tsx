@@ -19,7 +19,7 @@ import { DocOutline } from '@/entrypoints/dashboard/markdown/DocOutline';
 import { MarkdownPreview } from '@/entrypoints/dashboard/markdown/MarkdownPreview';
 import { firstHeading } from '@/entrypoints/dashboard/markdown/docStore';
 import { storageGet, storageSet } from '@/entrypoints/dashboard/storage';
-import { useUiStore } from '@/entrypoints/dashboard/store/ui-store';
+import { useThemeStore } from '@/entrypoints/dashboard/store/theme-store';
 import '@/entrypoints/dashboard/app.css';
 
 const HOME_URL = 'https://loadix.dev';
@@ -54,8 +54,8 @@ function shareIdFromUrl(): string | null {
 const THEME_KEY = 'api-pressure-theme';
 
 function ShareApp() {
-  const theme = useUiStore((s) => s.theme);
-  const setTheme = useUiStore((s) => s.setTheme);
+  const theme = useThemeStore((s) => s.theme);
+  const setTheme = useThemeStore((s) => s.setTheme);
   const { t } = useTranslation();
   const [id] = useState(shareIdFromUrl);
   const [state, setState] = useState<ViewState>(() =>
@@ -66,7 +66,7 @@ function ShareApp() {
 
   // Restore the saved theme on mount (falling back to the OS preference),
   // then keep <html>'s .dark class and the stored value in sync with the
-  // ui-store — the same mechanism as the app. Mermaid subscribes to the same
+  // theme store — the same mechanism as the app. Mermaid subscribes to the same
   // store, so diagrams re-render in the picked theme too.
   useEffect(() => {
     storageGet<'light' | 'dark'>(THEME_KEY).then((saved) => {
