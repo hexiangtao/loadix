@@ -1,3 +1,10 @@
+## [1.58.1](https://github.com/hexiangtao/loadix/compare/v1.58.0...v1.58.1) (2026-09-19)
+
+
+### Bug Fixes
+
+* prevent mobile web and share page blank screens ([77e6958](https://github.com/hexiangtao/loadix/commit/77e6958b0e53a87a57b33ddfd37976ca18e6f4f1))
+
 # [1.58.0](https://github.com/hexiangtao/loadix/compare/v1.57.0...v1.58.0) (2026-09-19)
 
 
