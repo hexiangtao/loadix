@@ -403,6 +403,29 @@ describe('OG card', () => {
     expect(svg).not.toContain('<script>');
   });
 
+  it('renders code documents with a language chip and gutter', () => {
+    const svg = renderOgCard('# API Reference\n\n```ts\nconst a = 1\n```');
+    expect(svg).toContain('>ts<');
+    expect(svg).toContain('Consolas, monospace');
+    expect(svg).toContain('ts · Shared via Loadix');
+  });
+
+  it('renders prose documents with the standard footnote and no chip', () => {
+    const svg = renderOgCard('# Prose Doc\n\nJust words here.');
+    expect(svg).not.toContain('Consolas, monospace');
+    expect(svg).toContain('Markdown · Shared via Loadix');
+  });
+
+  it('uses a themed gradient derived from the document', () => {
+    const svg = renderOgCard('# Some Doc\n\nBody text.');
+    expect(svg).toMatch(/stop-color="#[0-9a-f]{6}"/);
+  });
+
+  it('escapes language chips', () => {
+    const svg = renderOgCard('# X\n\n```<img src=x onerror=alert(1)>\na\n```');
+    expect(svg).not.toContain('<img');
+  });
+
   it('extracts a short description outside fenced code', () => {
     expect(shareDescription('# Title\n\n```js\nconst hidden = true\n```\n\nVisible summary.')).toBe('Visible summary.');
   });

@@ -7,6 +7,8 @@
 // globals (available in workerd and Node >= 18) and on a KV-shaped store
 // ({ get(key) -> string|null, put(key, value) }).
 
+import { cardTheme } from './og-card-theme.mjs';
+
 export const ID_LENGTH = 8;
 /** Owner-token length: the secret that lets the creating client re-publish
     (PUT) or revoke (DELETE) a share. Never returned by public reads. */
@@ -263,21 +265,42 @@ export function renderOgCard(source) {
   const titleLines = wrapText(heading, 30, 2);
   const description = shareDescription(source, heading);
   const descriptionLines = wrapText(description, 60, 2);
+  const { palette, isCode, language } = cardTheme(source);
   const titleSvg = titleLines.map((line, index) => `<tspan x="92" dy="${index === 0 ? 0 : 62}">${esc(line)}</tspan>`).join('');
   const descriptionSvg = descriptionLines.map((line, index) => `<tspan x="96" dy="${index === 0 ? 0 : 30}">${esc(line)}</tspan>`).join('');
+
+  // Code documents: language chip under the brand + gutter of line numbers
+  // as a monospace texture strip; prose: decorative circles only.
+  const langChip = isCode && language
+    ? `<rect x="92" y="140" width="${34 + language.length * 11}" height="30" rx="15" fill="${palette.accent}" opacity=".18"/>
+  <text x="${109 + (34 + language.length * 11) / 2 - language.length * 3.3}" y="161" text-anchor="middle" fill="${palette.accent}" font-family="Consolas, monospace" font-size="17" font-weight="600">${esc(language)}</text>`
+    : '';
+  const gutter = isCode
+    ? `<g fill="${palette.accent}" opacity=".28" font-family="Consolas, monospace" font-size="15">
+  <text x="1204" y="140">1</text><text x="1204" y="175">2</text><text x="1204" y="210">3</text>
+  <text x="1204" y="245">4</text><text x="1204" y="280">5</text><text x="1204" y="315">6</text>
+  <text x="1204" y="350">7</text><text x="1204" y="385">8</text><text x="1204" y="420">9</text>
+  <text x="1204" y="455">10</text><text x="1204" y="490">11</text><text x="1204" y="525">12</text>
+</g>`
+    : `<circle cx="1080" cy="-40" r="260" fill="${palette.tint}" opacity=".22"/>
+  <circle cx="1130" cy="610" r="180" fill="${palette.tint}" opacity=".10"/>`;
+  const footnote = isCode
+    ? `${esc(language || 'Code')} · Shared via Loadix`
+    : 'Markdown · Shared via Loadix';
+
   return `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
   <title id="title">${esc(heading)} · Loadix</title>
   <desc id="desc">${esc(description)}</desc>
-  <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0f172a"/><stop offset="1" stop-color="#123b67"/></linearGradient></defs>
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${palette.bg0}"/><stop offset="1" stop-color="${palette.bg1}"/></linearGradient></defs>
   <rect width="1200" height="630" rx="28" fill="url(#bg)"/>
-  <circle cx="1080" cy="-40" r="260" fill="#0a84ff" opacity=".22"/>
-  <circle cx="1130" cy="610" r="180" fill="#30d158" opacity=".10"/>
-  <rect x="92" y="84" width="36" height="36" rx="10" fill="#0a84ff"/>
+  ${gutter}
+  <rect x="92" y="84" width="36" height="36" rx="10" fill="${palette.accent}"/>
   <path d="M102 102h16M110 94v16" stroke="white" stroke-width="3" stroke-linecap="round"/>
-  <text x="146" y="112" fill="#dbeafe" font-family="Arial, sans-serif" font-size="26" font-weight="700">Loadix</text>
-  <text x="92" y="256" fill="white" font-family="Arial, sans-serif" font-size="52" font-weight="700">${titleSvg}</text>
-  <text x="96" y="410" fill="#bfdbfe" font-family="Arial, sans-serif" font-size="24">${descriptionSvg}</text>
-  <text x="96" y="552" fill="#93c5fd" font-family="Arial, sans-serif" font-size="20">Markdown · Shared via Loadix</text>
+  <text x="146" y="112" fill="${palette.soft}" font-family="Arial, sans-serif" font-size="26" font-weight="700">Loadix</text>
+  ${langChip}
+  <text x="92" y="${isCode && language ? 268 : 256}" fill="white" font-family="Arial, sans-serif" font-size="52" font-weight="700">${titleSvg}</text>
+  <text x="96" y="410" fill="${palette.soft}" font-family="Arial, sans-serif" font-size="24" opacity=".85">${descriptionSvg}</text>
+  <text x="96" y="552" fill="${palette.accent}" font-family="Arial, sans-serif" font-size="20">${footnote}</text>
 </svg>`;
 }
 
