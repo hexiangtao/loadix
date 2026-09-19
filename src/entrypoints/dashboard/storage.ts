@@ -11,8 +11,14 @@ export async function storageGet<T>(key: string): Promise<T | undefined> {
     const data = await chrome.storage.local.get(key);
     return data[key] as T | undefined;
   }
-  const raw = localStorage.getItem(key);
-  return raw == null ? undefined : (JSON.parse(raw) as T);
+  try {
+    const raw = localStorage.getItem(key);
+    return raw == null ? undefined : (JSON.parse(raw) as T);
+  } catch {
+    // Private browsing and embedded webviews can expose storage but reject
+    // access. Storage must never prevent a page from mounting.
+    return undefined;
+  }
 }
 
 export async function storageSet(key: string, value: unknown): Promise<void> {
@@ -20,7 +26,12 @@ export async function storageSet(key: string, value: unknown): Promise<void> {
     await chrome.storage.local.set({ [key]: value });
     return;
   }
-  localStorage.setItem(key, JSON.stringify(value));
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // Persistence is optional; rendering and sharing must continue when the
+    // browser blocks localStorage.
+  }
 }
 
 export function onStorageChange(

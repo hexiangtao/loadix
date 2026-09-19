@@ -112,8 +112,8 @@ export function DocOutline({ containerRef, source, onClose, onItemsChange, class
     scan();
     computeActive();
     container.addEventListener('scroll', computeActive, { passive: true });
-    const ro = new ResizeObserver(computeActive);
-    ro.observe(container);
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(computeActive) : null;
+    ro?.observe(container);
     window.addEventListener('resize', computeActive);
     // Embedded webviews can coalesce or drop scroll events (especially while a
     // JS-driven scroll animation is running), which would freeze the highlight.
@@ -131,7 +131,7 @@ export function DocOutline({ containerRef, source, onClose, onItemsChange, class
     return () => {
       window.clearInterval(poll);
       container.removeEventListener('scroll', computeActive);
-      ro.disconnect();
+      ro?.disconnect();
       window.removeEventListener('resize', computeActive);
     };
   }, [source, containerRef]);

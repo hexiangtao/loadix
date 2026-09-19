@@ -13,7 +13,11 @@ export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number];
 const STORAGE_KEY = 'api-pressure-language';
 
 export function detectLanguage(): SupportedLanguage {
-  const uiLang = chrome.i18n?.getUILanguage?.() ?? navigator.language ?? 'en';
+  // The web and share builds run outside the extension host, where `chrome`
+  // does not exist. Keep language detection host-agnostic so bootstrap cannot
+  // fail before React mounts on mobile browsers.
+  const extensionLanguage = typeof chrome !== 'undefined' ? chrome.i18n?.getUILanguage?.() : undefined;
+  const uiLang = extensionLanguage ?? navigator.language ?? 'en';
   const lang = uiLang.toLowerCase();
   if (lang.startsWith('zh')) return 'zh-CN';
   if (lang.startsWith('ja')) return 'ja';

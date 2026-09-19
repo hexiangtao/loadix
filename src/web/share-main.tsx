@@ -115,9 +115,19 @@ function ShareApp() {
       setIsMobile(mobile);
       if (mobile) setOutlineOpen(false);
     };
-    mq.addEventListener('change', apply);
     apply();
-    return () => mq.removeEventListener('change', apply);
+    // Safari versions commonly used on older phones expose addListener
+    // instead of the newer EventTarget API.
+    if (typeof mq.addEventListener === 'function') {
+      mq.addEventListener('change', apply);
+      return () => mq.removeEventListener('change', apply);
+    }
+    const legacyMq = mq as MediaQueryList & {
+      addListener: (listener: (event: MediaQueryListEvent) => void) => void;
+      removeListener: (listener: (event: MediaQueryListEvent) => void) => void;
+    };
+    legacyMq.addListener(apply);
+    return () => legacyMq.removeListener(apply);
   }, []);
 
   // Fetch the stored source; retry re-runs this effect.
@@ -368,10 +378,27 @@ function ShareApp() {
   );
 }
 
+function showBootstrapError(error: unknown) {
+  const host = document.getElementById('app');
+  if (!host) return;
+  const message = error instanceof Error ? error.message : String(error);
+  host.innerHTML = `
+    <main style="min-height:100vh;padding:32px 20px;font:16px/1.6 system-ui,sans-serif;color:#1d1d1f;background:#f5f5f7">
+      <h1 style="font-size:20px;margin:0 0 12px">Shared document unavailable</h1>
+      <p style="margin:0;color:#6e6e73">The viewer could not start. Please reload this link.</p>
+      <details style="margin-top:20px;color:#6e6e73"><summary>Technical details</summary><pre style="white-space:pre-wrap">${message.replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char] ?? char)}</pre></details>
+    </main>`;
+}
+
 async function bootstrap() {
-  await initI18n();
-  const root = createRoot(document.getElementById('app')!);
-  root.render(<ShareApp />);
+  try {
+    await initI18n();
+    const host = document.getElementById('app');
+    if (!host) throw new Error('Share viewer mount point is missing');
+    createRoot(host).render(<ShareApp />);
+  } catch (error) {
+    showBootstrapError(error);
+  }
 }
 
 void bootstrap();
