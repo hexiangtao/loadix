@@ -1,3 +1,10 @@
+# [1.66.0](https://github.com/hexiangtao/loadix/compare/v1.65.0...v1.66.0) (2026-09-19)
+
+
+### Features
+
+* JSON workbench with tree view, TS type generation, and JSONPath query ([a4309b7](https://github.com/hexiangtao/loadix/commit/a4309b7bdb203626ff0f2d361f210102997772f2))
+
 # [1.65.0](https://github.com/hexiangtao/loadix/compare/v1.64.0...v1.65.0) (2026-09-19)
 
 
