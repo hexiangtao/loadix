@@ -1,3 +1,10 @@
+# [1.69.0](https://github.com/hexiangtao/loadix/compare/v1.68.0...v1.69.0) (2026-09-19)
+
+
+### Features
+
+* rasterise share OG cards to PNG for Lark/WeChat compatibility ([3232ee5](https://github.com/hexiangtao/loadix/commit/3232ee5e7d05786640464a6276978f20803e660d))
+
 # [1.68.0](https://github.com/hexiangtao/loadix/compare/v1.67.0...v1.68.0) (2026-09-19)
 
 
