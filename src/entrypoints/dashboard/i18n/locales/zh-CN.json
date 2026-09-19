@@ -676,7 +676,10 @@
       "generate": "生成",
       "nameLabel": "名称",
       "namespace": "命名空间",
-      "customNamespace": "自定义命名空间 (UUID)"
+      "customNamespace": "自定义命名空间 (UUID)",
+      "decode": "解码 UUID",
+      "ago": "前",
+      "invalid": "不是有效的 UUID"
     },
     "timestamp": {
       "name": "时间戳转换",
@@ -720,7 +723,11 @@
       "name": "颜色取色器",
       "desc": "HEX、RGB、HSL 互转与可视化调色",
       "hex": "HEX",
-      "preview": "实时预览"
+      "preview": "实时预览",
+      "contrast": "WCAG 对比度",
+      "onWhite": "白底",
+      "onBlack": "黑底",
+      "ramp": "Tailwind 风格色阶（点击色块即可选用）"
     },
     "requests": {
       "name": "接口测试",

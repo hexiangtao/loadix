@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Palette } from 'lucide-react';
 import { ToolShell } from '../ToolShell';
@@ -67,6 +67,49 @@ function hslToRgb(h: number, s: number, l: number): [number, number, number] {
   return [Math.round(conv(h + 1 / 3) * 255), Math.round(conv(h) * 255), Math.round(conv(h - 1 / 3) * 255)];
 }
 
+/** WCAG 2.x relative luminance. */
+function relativeLuminance(r: number, g: number, b: number): number {
+  const lin = [r, g, b].map((v) => {
+    const c = v / 255;
+    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  });
+  return 0.2126 * lin[0]! + 0.7152 * lin[1]! + 0.0722 * lin[2]!;
+}
+
+function contrastRatio(rgbA: [number, number, number], rgbB: [number, number, number]): number {
+  const la = relativeLuminance(...rgbA);
+  const lb = relativeLuminance(...rgbB);
+  const [hi, lo] = la >= lb ? [la, lb] : [lb, la];
+  return (hi + 0.05) / (lo + 0.05);
+}
+
+const TW_STEPS = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950] as const;
+
+/**
+ * Generate a Tailwind-like ramp from one base color by mixing toward white
+ * (lighter steps) or black (darker steps) in HSL space, keeping hue constant.
+ */
+function twRamp(hex: string): Record<(typeof TW_STEPS)[number], string> {
+  const [r, g, b] = hexToRgb(hex);
+  const [h, s, l] = rgbToHsl(r, g, b);
+  // Target lightness per step — mirrors how Tailwind ramps are distributed.
+  const targets: Record<(typeof TW_STEPS)[number], number> = {
+    50: 97, 100: 94, 200: 86, 300: 77, 400: 66, 500: Math.round(Math.max(45, Math.min(60, l))),
+    600: Math.max(35, l - 10), 700: Math.max(28, l - 18), 800: Math.max(20, l - 26),
+    900: Math.max(14, l - 32), 950: Math.max(8, l - 40),
+  };
+  const out = {} as Record<(typeof TW_STEPS)[number], string>;
+  for (const step of TW_STEPS) {
+    const [rr, gg, bb] = hslToRgb(h, s, targets[step]);
+    out[step] = rgbToHex(rr, gg, bb);
+  }
+  return out;
+}
+
+function grade(ratio: number): { label: string; ok: boolean } {
+  return { label: ratio >= 7 ? 'AAA' : ratio >= 4.5 ? 'AA' : ratio >= 3 ? 'AA Large' : 'Fail', ok: ratio >= 4.5 };
+}
+
 export function ColorTool({ initialPayload }: ColorToolProps) {
   const { t } = useTranslation();
   const [hex, setHex] = usePersistedState('color.hex', initialPayload ?? '#16a34a');
@@ -80,6 +123,11 @@ export function ColorTool({ initialPayload }: ColorToolProps) {
     rgb: `rgb(${r}, ${g}, ${b})`,
     hsl: `hsl(${h}, ${s}%, ${l}%)`,
   };
+
+  const rgb: [number, number, number] = [r, g, b];
+  const vsWhite = useMemo(() => contrastRatio(rgb, [255, 255, 255]), [r, g, b]);
+  const vsBlack = useMemo(() => contrastRatio(rgb, [0, 0, 0]), [r, g, b]);
+  const ramp = useMemo(() => (isHex(hex) ? twRamp(hex) : null), [hex]);
 
   const onPickerChange = (e: React.ChangeEvent<HTMLInputElement>) => setHex(e.target.value);
 
@@ -135,11 +183,75 @@ export function ColorTool({ initialPayload }: ColorToolProps) {
         <ChannelSlider label="B" max={255} value={b} onChange={(v) => setHex(rgbToHex(r, g, v))} />
       </div>
 
+      {/* WCAG contrast checks */}
+      <div className="mt-4">
+        <span className="text-xs font-semibold text-muted">{t('tools.color.contrast')}</span>
+        <div className="mt-2 grid grid-cols-2 gap-2 max-sm:grid-cols-1">
+          <ContrastCard
+            bg={rgbToHex(r, g, b)}
+            fg="#FFFFFF"
+            ratio={vsWhite}
+            gLabel={t('tools.color.onWhite')}
+          />
+          <ContrastCard
+            bg={rgbToHex(r, g, b)}
+            fg="#000000"
+            ratio={vsBlack}
+            gLabel={t('tools.color.onBlack')}
+          />
+        </div>
+      </div>
+
+      {/* Tailwind-style ramp */}
+      {ramp && (
+        <div className="mt-4">
+          <div className="mb-2 flex items-center justify-between">
+            <span className="text-xs font-semibold text-muted">{t('tools.color.ramp')}</span>
+            <CopyButton
+              text={TW_STEPS.map((st) => `${st}: ${ramp[st]}`).join('\n')}
+              className="shrink-0"
+            />
+          </div>
+          <div className="flex overflow-hidden rounded-lg border border-line">
+            {TW_STEPS.map((step) => (
+              <button
+                key={step}
+                onClick={() => setHex(ramp[step])}
+                className="group flex-1"
+                title={`${step} — ${ramp[step]}`}
+              >
+                <div className="h-12 w-full transition-transform duration-150 group-hover:scale-y-110" style={{ backgroundColor: ramp[step] }} />
+                <div className="bg-panel px-0.5 py-1 text-center">
+                  <div className="text-[10px] font-semibold text-muted">{step}</div>
+                  <div className="truncate font-mono text-[9px] text-muted">{ramp[step].slice(1)}</div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* HSL hint */}
       <p className="mt-3 text-xs text-muted">
         HSL({h}, {s}%, {l}%) · {t('tools.color.preview')}
       </p>
     </ToolShell>
+  );
+}
+
+function ContrastCard({ bg, fg, ratio, gLabel }: { bg: string; fg: string; ratio: number; gLabel: string }) {
+  const g = grade(ratio);
+  return (
+    <div className="rounded-lg border border-line" style={{ backgroundColor: bg }}>
+      <div className="px-3 py-4" style={{ color: fg }}>
+        <div className="text-sm font-semibold">Aa</div>
+        <div className="text-[11px]">{gLabel} · {ratio.toFixed(2)}:1</div>
+      </div>
+      <div className="flex justify-between px-2.5 py-1 text-[10px]" style={{ color: fg, opacity: 0.85 }}>
+        <span>{g.label}</span>
+        <span className={g.ok ? 'font-semibold' : ''}>{g.ok ? '✓' : '✗'}</span>
+      </div>
+    </div>
   );
 }
 

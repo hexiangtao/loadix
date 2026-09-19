@@ -4,6 +4,7 @@ import { Fingerprint } from 'lucide-react';
 import { ToolShell } from '../ToolShell';
 import { CopyButton } from '../CopyButton';
 import { md5 } from '../md5';
+import { decodeUuid, formatAgo } from './uuidDecode';
 
 type UuidVersion = 'v1' | 'v3' | 'v4' | 'v5' | 'v7';
 
@@ -108,7 +109,10 @@ export function UuidTool({ initialPayload }: UuidToolProps) {
   const [namespace, setNamespace] = useState(NAMESPACE_DNS);
   const [customNs, setCustomNs] = useState('');
   const [singleUuid, setSingleUuid] = useState('');
+  const [decodeInput, setDecodeInput] = useState('');
   void initialPayload;
+
+  const decodeInfo = decodeInput.trim() ? decodeUuid(decodeInput) : null;
 
   const isBulk = version === 'v4' || version === 'v7';
 
@@ -228,6 +232,33 @@ export function UuidTool({ initialPayload }: UuidToolProps) {
           )}
         </>
       )}
+
+      <div className="mt-5 border-t border-line pt-4">
+        <span className="mb-1.5 block text-xs font-semibold text-muted">{t('tools.uuid.decode')}</span>
+        <input
+          value={decodeInput}
+          onChange={(e) => setDecodeInput(e.target.value)}
+          className="w-full rounded-lg border border-line bg-panel px-2.5 py-2 font-mono text-sm outline-none transition-colors duration-150 focus:border-primary"
+          placeholder="9b2f1c5e-3a4d-4c6b-8f2a-1d3e5f7a9b0c"
+          spellCheck={false}
+        />
+        {decodeInfo && (
+          <div className="mt-2 flex flex-wrap gap-2">
+            <span className="rounded bg-primary/10 px-2 py-0.5 font-mono text-xs font-semibold text-primary">
+              v{decodeInfo.version}
+            </span>
+            <span className="rounded bg-line/50 px-2 py-0.5 text-xs text-muted">{decodeInfo.variant}</span>
+            {decodeInfo.timestamp && (
+              <span className="rounded bg-warning/15 px-2 py-0.5 font-mono text-xs text-warning">
+                {decodeInfo.timestamp.iso} · {formatAgo(decodeInfo.timestamp.agoMs)} {t('tools.uuid.ago')}
+              </span>
+            )}
+          </div>
+        )}
+        {decodeInput.trim() && !decodeInfo && (
+          <p className="mt-2 text-xs text-danger">{t('tools.uuid.invalid')}</p>
+        )}
+      </div>
 
       <p className="mt-3 text-xs text-muted">{t('tools.uuid.hint')}</p>
     </ToolShell>

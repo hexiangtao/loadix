@@ -676,7 +676,10 @@
       "generate": "Generate",
       "nameLabel": "Name",
       "namespace": "Namespace",
-      "customNamespace": "Custom namespace (UUID)"
+      "customNamespace": "Custom namespace (UUID)",
+      "decode": "Decode a UUID",
+      "ago": "ago",
+      "invalid": "Not a valid UUID"
     },
     "timestamp": {
       "name": "Timestamp",
@@ -718,6 +721,10 @@
     },
     "color": {
       "name": "Color Picker",
+      "contrast": "WCAG contrast",
+      "onWhite": "on white",
+      "onBlack": "on black",
+      "ramp": "Tailwind-style ramp (click a swatch to use it)",
       "desc": "Pick & convert between HEX, RGB, HSL",
       "hex": "HEX",
       "preview": "Live preview"
