@@ -1,3 +1,15 @@
+# [1.60.0](https://github.com/hexiangtao/loadix/compare/v1.59.0...v1.60.0) (2026-09-19)
+
+
+### Bug Fixes
+
+* add bilibili wbi signing to media resolver ([3f948a7](https://github.com/hexiangtao/loadix/commit/3f948a7337bdc5fc3aacd1dd1e543d41b91613d1))
+
+
+### Features
+
+* refresh landing page around markdown sharing ([33f605f](https://github.com/hexiangtao/loadix/commit/33f605fa38960524746c25f9fca69e2babeac0ee))
+
 # [1.59.0](https://github.com/hexiangtao/loadix/compare/v1.58.2...v1.59.0) (2026-09-19)
 
 
