@@ -56,7 +56,7 @@
           d.classList.add('dark');
         }
         var lang = localStorage.getItem('lx-lang');
-        if (lang !== 'zh-CN' && lang !== 'en') lang = /^zh/i.test(navigator.language || '') ? 'zh-CN' : 'en';
+        if (lang !== 'zh-CN' && lang !== 'en') lang = 'en';
         d.lang = lang;
       } catch (e) {
         d.classList.add('dark');
