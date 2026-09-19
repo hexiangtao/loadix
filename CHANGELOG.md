@@ -1,3 +1,10 @@
+# [1.64.0](https://github.com/hexiangtao/loadix/compare/v1.63.0...v1.64.0) (2026-09-19)
+
+
+### Features
+
+* add streaming download proxy to media worker ([6c8b1e0](https://github.com/hexiangtao/loadix/commit/6c8b1e022b3f0db9b11901079eeecd1c33ec46ad))
+
 # [1.63.0](https://github.com/hexiangtao/loadix/compare/v1.62.0...v1.63.0) (2026-09-19)
 
 
