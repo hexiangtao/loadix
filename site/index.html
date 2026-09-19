@@ -8,7 +8,7 @@
   <meta name="description" content="Paste Markdown and get a beautiful shareable link — no account, no install. Plus load testing, an API client and 19 utilities, all in your browser." />
   <meta name="keywords" content="loadix, api tools, load tester, load testing, stress testing, api client, curl, markdown preview, markdown renderer, markdown share, markdown editor, llm output markdown, jwt decoder, base64 encoder, url parser, json formatter, regex tester, hash generator, uuid generator, cron parser, local first" />
   <meta name="robots" content="index, follow" />
-  <meta name="theme-color" content="#0f172a" />
+  <meta name="theme-color" content="#ffffff" />
   <link rel="canonical" href="https://loadix.dev/" />
 
   <meta property="og:type" content="website" />
@@ -44,18 +44,42 @@
   }
   </script>
 
+  <script>
+    // Apply theme & language before first paint to avoid a flash.
+    (function () {
+      var d = document.documentElement;
+      try {
+        var theme = localStorage.getItem('lx-theme');
+        if (theme === 'light') {
+          d.classList.remove('dark');
+        } else {
+          d.classList.add('dark');
+        }
+        var lang = localStorage.getItem('lx-lang');
+        if (lang !== 'zh-CN' && lang !== 'en') lang = /^zh/i.test(navigator.language || '') ? 'zh-CN' : 'en';
+        d.lang = lang;
+      } catch (e) {
+        d.classList.add('dark');
+      }
+    })();
+  </script>
   <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
   <header class="nav">
     <a class="brand" href="https://lab.loadix.dev">Loadix</a>
     <nav class="links">
-      <a href="#modules">Modules</a>
-      <a href="#tools">Toolbox</a>
-      <a href="#why">Why Loadix</a>
-      <a href="#install">Install</a>
-      <a class="nav-cta" href="https://lab.loadix.dev">Launch</a>
+      <a href="#install" data-i18n="nav.install">Install</a>
+      <a class="nav-cta" href="https://lab.loadix.dev" data-i18n="nav.launch">Launch</a>
       <a href="https://github.com/hexiangtao/loadix" target="_blank" rel="noopener">GitHub</a>
+      <div class="lang-toggle" role="group" aria-label="Language / 语言">
+        <button type="button" class="lang-btn on" data-lang="en">EN</button>
+        <button type="button" class="lang-btn" data-lang="zh-CN">中文</button>
+      </div>
+      <button type="button" id="theme-toggle" class="icon-btn" aria-label="Toggle dark mode" title="Toggle dark mode">
+        <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+      </button>
     </nav>
   </header>
 
@@ -64,22 +88,22 @@
       <div class="hero-inner">
       <div class="hero-copy">
         <h1><span id="typewriter" data-text="Paste Markdown. Get a shareable page."></span><span class="caret" aria-hidden="true"></span></h1>
-        <p class="sub">Render, keep and share Markdown as a beautiful link — no account, no install. Plus load testing, an API client and 19 utilities, all in your browser.</p>
+        <p class="sub" data-i18n="hero.sub">Paste Markdown, get a shareable link. No account, no install.</p>
         <div class="cta">
-          <a class="btn solid" href="https://lab.loadix.dev">Launch Loadix</a>
-          <a class="btn ghost" href="https://github.com/hexiangtao/loadix" target="_blank" rel="noopener">Source on GitHub</a>
+          <a class="btn solid" href="https://lab.loadix.dev" data-i18n="hero.cta">Launch Loadix</a>
+          <a class="btn-link" href="https://github.com/hexiangtao/loadix" target="_blank" rel="noopener" data-i18n="hero.source">Source on GitHub</a>
         </div>
       </div>
       <div class="hero-visual">
         <div class="app-mock demo" role="region" aria-label="Loadix interactive demo">
           <div class="mock-bar">
             <span class="dot"></span><span class="dot"></span><span class="dot"></span>
-            <span class="mock-title">Loadix — live demo</span>
+            <span class="mock-title" data-i18n="demo.title">Loadix — live demo</span>
           </div>
 
           <div class="demo-tabs" role="tablist">
             <button class="demo-tab on" role="tab" aria-selected="true" data-demo="markdown">Markdown</button>
-            <button class="demo-tab" role="tab" aria-selected="false" data-demo="loadtest">Load Test</button>
+            <button class="demo-tab" role="tab" aria-selected="false" data-demo="loadtest" data-i18n="demo.tab.lt">Load Test</button>
           </div>
 
           <!-- Markdown: paste → render → share -->
@@ -107,13 +131,13 @@ List **paid** orders with totals.
 | o-109 | paid | 61.50 |</textarea>
               </div>
               <div class="demo-pv">
-                <div class="demo-pane-head">Preview</div>
+                <div class="demo-pane-head" data-i18n="demo.preview">Preview</div>
                 <div id="demo-md-preview" class="demo-md-preview"></div>
               </div>
             </div>
             <div class="demo-actions">
-              <button id="demo-copy-link" class="btn-mini dark">Copy share link</button>
-              <a class="btn-mini ghost" href="https://lab.loadix.dev?tool=markdown" target="_blank" rel="noopener">Open in Loadix ↗</a>
+              <button id="demo-copy-link" class="btn-mini dark" data-i18n="demo.copy">Copy share link</button>
+              <a class="btn-mini ghost" href="https://lab.loadix.dev?tool=markdown" target="_blank" rel="noopener" data-i18n="demo.open">Open in Loadix ↗</a>
             </div>
           </div>
 
@@ -123,17 +147,17 @@ List **paid** orders with totals.
               <div class="r">
                 <span class="method">GET</span>
                 <span class="url">https://api.example.com/v1/orders</span>
-                <button id="demo-lt-start" class="btn-mini dark">Start</button>
+                <button id="demo-lt-start" class="btn-mini dark" data-i18n="demo.start">Start</button>
               </div>
               <div class="stats">
-                <div class="stat"><span>Requests</span><b id="demo-lt-req">0</b></div>
+                <div class="stat"><span data-i18n="demo.stat.req">Requests</span><b id="demo-lt-req">0</b></div>
                 <div class="stat"><span>RPS</span><b id="demo-lt-rps">0</b></div>
-                <div class="stat"><span>Errors</span><b id="demo-lt-err" class="grn">0</b></div>
+                <div class="stat"><span data-i18n="demo.stat.err">Errors</span><b id="demo-lt-err" class="grn">0</b></div>
               </div>
               <div class="panel">
                 <div class="r">
                   <span id="demo-lt-dot" class="dot-live"></span>
-                  <span id="demo-lt-status" class="mini grn">Ready</span>
+                  <span id="demo-lt-status" class="mini grn" data-i18n="demo.ready">Ready</span>
                   <span class="grow"></span>
                   <span class="pill ok" id="demo-lt-p50">P50 —</span>
                   <span class="pill" id="demo-lt-p95">P95 —</span>
@@ -149,18 +173,96 @@ List **paid** orders with totals.
     </section>
 
     <section id="modules" class="section">
-      <p class="eyebrow">Modules</p>
+      <p class="eyebrow" data-i18n="modules.eyebrow">Modules</p>
 
       <div class="mod feature">
         <div class="mod-copy">
-          <span class="mod-num">01 — Load test</span>
-          <h3>Load Test</h3>
-          <p class="tagline">Stress an endpoint from the browser and watch it live.</p>
+          <span class="mod-num" data-i18n="mod1.num">01 — Markdown</span>
+          <h3 data-i18n="mod1.title">Markdown</h3>
+          <p class="tagline" data-i18n="mod1.tag">Paste Markdown from anywhere — render, keep and share it.</p>
           <ul>
-            <li>Constant, ramp, step, spike or soak</li>
-            <li>Live P50 / P95 / P99, RPS and errors</li>
-            <li>Assertions, variables and auto-stop</li>
-            <li>Keeps running in the background (extension)</li>
+            <li data-i18n="mod1.li1">Render instantly: GFM · KaTeX · Mermaid</li>
+            <li data-i18n="mod1.li2">Stored locally in your browser</li>
+            <li data-i18n="mod1.li3">Share as a rendered link — no files to send</li>
+            <li data-i18n="mod1.li4">Capture a request response into the page</li>
+          </ul>
+        </div>
+        <div class="mod-shot">
+          <div class="shot">
+            <div class="shot-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="t" data-i18n="shot1.title">Loadix · Markdown — split view</span></div>
+            <div class="shot-body split">
+              <div class="md-ed">
+                <div class="md mh"># Orders API</div>
+                <div class="md mp">List <b>paid</b> orders with totals.</div>
+                <div class="md mf">```json</div>
+                <div class="md mc">{ "status": "paid", "total": 129.0 }</div>
+                <div class="md mf">```</div>
+              </div>
+              <div class="md-pv">
+                <div class="pv-h">Orders API</div>
+                <div class="pv-p">List <b>paid</b> orders with totals.</div>
+                <div class="r pv-row"><span class="pill ok">200 OK</span><span class="pill" data-i18n="shot.captured">captured live</span></div>
+                <div class="tbl">
+                  <div class="tr th"><span>ID</span><span>Status</span><span>Total</span></div>
+                  <div class="tr"><span>o-104</span><span class="grn">paid</span><span>129.00</span></div>
+                  <div class="tr"><span>o-109</span><span class="grn">paid</span><span>61.50</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mod feature flip">
+        <div class="mod-copy">
+          <span class="mod-num" data-i18n="mod2.num">02 — Requests</span>
+          <h3 data-i18n="mod2.title">Requests</h3>
+          <p class="tagline" data-i18n="mod2.tag">Paste a URL or a cURL — read the insight card.</p>
+          <ul>
+            <li data-i18n="mod2.li1">Status, time, size and shape at a glance</li>
+            <li data-i18n="mod2.li2">Faster / slower than the previous run</li>
+            <li data-i18n="mod2.li3">Drafts, collections and history</li>
+            <li data-i18n="mod2.li4">Postman v2.1 import · send to Load Test</li>
+          </ul>
+        </div>
+        <div class="mod-shot">
+          <div class="shot">
+            <div class="shot-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="t">Loadix · Requests</span></div>
+            <div class="shot-body">
+              <div class="r">
+                <span class="method">GET</span>
+                <span class="url">https://api.example.com/v1/orders?status=paid</span>
+                <span class="btn-mini dark" data-i18n="shot.send">Send</span>
+              </div>
+              <div class="panel resp">
+                <div class="r">
+                  <span class="pill ok">200 OK</span>
+                  <span class="mini">214 ms · 1.2 KB</span>
+                  <span class="grow"></span>
+                  <span class="mini grn" data-i18n="shot.vsLast">↘ 38 ms vs last run</span>
+                </div>
+                <div class="code">{ <span class="k">"status"</span>: <span class="s">"paid"</span>,<br>&nbsp;&nbsp;<span class="k">"total"</span>: <span class="n">129.0</span>,<br>&nbsp;&nbsp;<span class="k">"items"</span>: [ <span class="n">4</span> ] }</div>
+              </div>
+              <div class="stats">
+                <div class="stat"><span data-i18n="shot.latency">Latency</span><b>214 ms</b></div>
+                <div class="stat"><span data-i18n="shot.size">Size</span><b>1.2 KB</b></div>
+                <div class="stat"><span data-i18n="shot.shape">Shape</span><b>array[4]</b></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mod feature">
+        <div class="mod-copy">
+          <span class="mod-num" data-i18n="mod3.num">03 — Load test</span>
+          <h3 data-i18n="mod3.title">Load Test</h3>
+          <p class="tagline" data-i18n="mod3.tag">Stress an endpoint from the browser and watch it live.</p>
+          <ul>
+            <li data-i18n="mod3.li1">Constant, ramp, step, spike or soak</li>
+            <li data-i18n="mod3.li2">Live P50 / P95 / P99, RPS and errors</li>
+            <li data-i18n="mod3.li3">Assertions, variables and auto-stop</li>
+            <li data-i18n="mod3.li4">Keeps running in the background (extension)</li>
           </ul>
         </div>
         <div class="mod-shot">
@@ -168,19 +270,19 @@ List **paid** orders with totals.
             <div class="shot-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="t">Loadix · Load Test</span></div>
             <div class="shot-body">
               <div class="r">
-                <span class="pill on">Constant</span><span class="pill">Ramp</span><span class="pill">Step</span><span class="pill">Spike</span><span class="pill">Soak</span>
+                <span class="pill on" data-i18n="pill.constant">Constant</span><span class="pill" data-i18n="pill.ramp">Ramp</span><span class="pill" data-i18n="pill.step">Step</span><span class="pill" data-i18n="pill.spike">Spike</span><span class="pill" data-i18n="pill.soak">Soak</span>
                 <span class="grow"></span>
-                <span class="mini">120 users · 60 s</span>
-                <span class="btn-mini dark">Start</span>
+                <span class="mini" data-i18n="shot.users">120 users · 60 s</span>
+                <span class="btn-mini dark" data-i18n="demo.start">Start</span>
               </div>
               <div class="stats">
-                <div class="stat"><span>Requests</span><b>7,204</b></div>
+                <div class="stat"><span data-i18n="demo.stat.req">Requests</span><b>7,204</b></div>
                 <div class="stat"><span>RPS</span><b>126</b></div>
-                <div class="stat"><span>Errors</span><b class="grn">0</b></div>
+                <div class="stat"><span data-i18n="demo.stat.err">Errors</span><b class="grn">0</b></div>
               </div>
               <div class="panel">
                 <div class="r">
-                  <span class="dot-live"></span><span class="mini grn">Running — 0:42 / 1:00</span>
+                  <span class="dot-live"></span><span class="mini grn" data-i18n="shot.running">Running — 0:42 / 1:00</span>
                   <span class="grow"></span>
                   <span class="pill ok">P50 86 ms</span><span class="pill">P95 210 ms</span><span class="pill">P99 540 ms</span>
                 </div>
@@ -195,92 +297,12 @@ List **paid** orders with totals.
 
       <div class="mod feature flip">
         <div class="mod-copy">
-          <span class="mod-num">02 — Requests</span>
-          <h3>Requests</h3>
-          <p class="tagline">Paste a URL or a cURL — read the insight card.</p>
+          <span class="mod-num" data-i18n="mod4.num">04 — Toolbox</span>
+          <h3 data-i18n="mod4.title">Toolbox</h3>
           <ul>
-            <li>Status, time, size and shape at a glance</li>
-            <li>Faster / slower than the previous run</li>
-            <li>Drafts, collections and history</li>
-            <li>Postman v2.1 import · send to Load Test</li>
-          </ul>
-        </div>
-        <div class="mod-shot">
-          <div class="shot">
-            <div class="shot-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="t">Loadix · Requests</span></div>
-            <div class="shot-body">
-              <div class="r">
-                <span class="method">GET</span>
-                <span class="url">https://api.example.com/v1/orders?status=paid</span>
-                <span class="btn-mini dark">Send</span>
-              </div>
-              <div class="panel resp">
-                <div class="r">
-                  <span class="pill ok">200 OK</span>
-                  <span class="mini">214 ms · 1.2 KB</span>
-                  <span class="grow"></span>
-                  <span class="mini grn">↘ 38 ms vs last run</span>
-                </div>
-                <div class="code">{ <span class="k">"status"</span>: <span class="s">"paid"</span>,<br>&nbsp;&nbsp;<span class="k">"total"</span>: <span class="n">129.0</span>,<br>&nbsp;&nbsp;<span class="k">"items"</span>: [ <span class="n">4</span> ] }</div>
-              </div>
-              <div class="stats">
-                <div class="stat"><span>Latency</span><b>214 ms</b></div>
-                <div class="stat"><span>Size</span><b>1.2 KB</b></div>
-                <div class="stat"><span>Shape</span><b>array[4]</b></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="mod feature">
-        <div class="mod-copy">
-          <span class="mod-num">03 — Markdown</span>
-          <h3>Markdown</h3>
-          <p class="tagline">Paste Markdown from anywhere — render, keep and share it.</p>
-          <ul>
-            <li>Render instantly: GFM · KaTeX · Mermaid</li>
-            <li>Stored locally in your browser</li>
-            <li>Share as a rendered link — no files to send</li>
-            <li>Capture a request response into the page</li>
-          </ul>
-        </div>
-        <div class="mod-shot">
-          <div class="shot">
-            <div class="shot-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="t">Loadix · Markdown — split view</span></div>
-            <div class="shot-body split">
-              <div class="md-ed">
-                <div class="md mh"># Orders API</div>
-                <div class="md mp">List <b>paid</b> orders with totals.</div>
-                <div class="md mf">```json</div>
-                <div class="md mc">{ "status": "paid", "total": 129.0 }</div>
-                <div class="md mf">```</div>
-              </div>
-              <div class="md-pv">
-                <div class="pv-h">Orders API</div>
-                <div class="pv-p">List <b>paid</b> orders with totals.</div>
-                <div class="r pv-row"><span class="pill ok">200 OK</span><span class="pill">captured live</span></div>
-                <div class="tbl">
-                  <div class="tr th"><span>ID</span><span>Status</span><span>Total</span></div>
-                  <div class="tr"><span>o-104</span><span class="grn">paid</span><span>129.00</span></div>
-                  <div class="tr"><span>o-109</span><span class="grn">paid</span><span>61.50</span></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="mod feature flip">
-        <div class="mod-copy">
-          <span class="mod-num">04 — Toolbox</span>
-          <h3>Toolbox</h3>
-          <p class="tagline">19 single-purpose utilities behind one palette.</p>
-          <ul>
-            <li>JWT · Base64 · URL parse &amp; encode</li>
-            <li>JSON &amp; SQL formatters · regex · hash</li>
-            <li>UUID · timestamp · cron · color</li>
-            <li>Every tool available at <code>Ctrl/⌘K</code></li>
+            <li data-i18n="mod4.li1">JWT · Base64 · URL parse &amp; encode</li>
+            <li data-i18n="mod4.li2">JSON &amp; SQL formatters · regex · hash</li>
+            <li data-i18n="mod4.li3">UUID · timestamp · cron · color</li>
           </ul>
         </div>
         <div class="mod-shot">
@@ -309,7 +331,7 @@ List **paid** orders with totals.
                     <div class="pal-row on"><span class="sq sm"></span><span>JWT</span><span class="tag-r">auth</span></div>
                     <div class="pal-row"><span class="sq sm"></span><span>Base64</span><span class="tag-r">encode</span></div>
                     <div class="pal-row"><span class="sq sm"></span><span>URL Parser</span><span class="tag-r">encode</span></div>
-                    <div class="pal-ftr"><span class="kbd dim">↑↓</span><span class="mini">navigate</span><span class="kbd dim">↵</span><span class="mini">open</span></div>
+                    <div class="pal-ftr"><span class="kbd dim">↑↓</span><span class="mini" data-i18n="pal.navigate">navigate</span><span class="kbd dim">↵</span><span class="mini" data-i18n="pal.open">open</span></div>
                   </div>
                 </div>
               </div>
@@ -320,61 +342,60 @@ List **paid** orders with totals.
     </section>
 
     <section id="tools" class="section">
-      <p class="eyebrow">Toolbox</p>
+      <p class="eyebrow" data-i18n="tools.eyebrow">Toolbox</p>
       <div class="tool-grid">
         <div class="tool"><h3>JWT</h3></div>
         <div class="tool"><h3>Base64</h3></div>
-        <div class="tool"><h3>URL Encode</h3></div>
-        <div class="tool"><h3>URL Parser</h3></div>
-        <div class="tool"><h3>Base Converter</h3></div>
-        <div class="tool"><h3>HTML Entities</h3></div>
+        <div class="tool"><h3 data-i18n="tool.urlEncode">URL Encode</h3></div>
+        <div class="tool"><h3 data-i18n="tool.urlParser">URL Parser</h3></div>
+        <div class="tool"><h3 data-i18n="tool.baseConverter">Base Converter</h3></div>
+        <div class="tool"><h3 data-i18n="tool.htmlEntities">HTML Entities</h3></div>
         <div class="tool"><h3>Unicode</h3></div>
-        <div class="tool"><h3>Hash</h3></div>
-        <div class="tool"><h3>JSON Formatter</h3></div>
-        <div class="tool"><h3>SQL Formatter</h3></div>
-        <div class="tool"><h3>Diff</h3></div>
-        <div class="tool"><h3>Regex Tester</h3></div>
-        <div class="tool"><h3>UUID Generator</h3></div>
-        <div class="tool"><h3>Timestamp</h3></div>
-        <div class="tool"><h3>Cron Parser</h3></div>
-        <div class="tool"><h3>CSS Gradient</h3></div>
-        <div class="tool"><h3>Color Picker</h3></div>
+        <div class="tool"><h3 data-i18n="tool.hash">Hash</h3></div>
+        <div class="tool"><h3 data-i18n="tool.jsonFormatter">JSON Formatter</h3></div>
+        <div class="tool"><h3 data-i18n="tool.sqlFormatter">SQL Formatter</h3></div>
+        <div class="tool"><h3 data-i18n="tool.diff">Diff</h3></div>
+        <div class="tool"><h3 data-i18n="tool.regex">Regex Tester</h3></div>
+        <div class="tool"><h3 data-i18n="tool.uuid">UUID Generator</h3></div>
+        <div class="tool"><h3 data-i18n="tool.timestamp">Timestamp</h3></div>
+        <div class="tool"><h3 data-i18n="tool.cron">Cron Parser</h3></div>
+        <div class="tool"><h3 data-i18n="tool.gradient">CSS Gradient</h3></div>
+        <div class="tool"><h3 data-i18n="tool.colorPicker">Color Picker</h3></div>
         <div class="tool"><h3>JSONPath</h3></div>
-        <div class="tool"><h3>Element Snapshot</h3></div>
+        <div class="tool"><h3 data-i18n="tool.snapshot">Element Snapshot</h3></div>
       </div>
     </section>
 
     <section id="why" class="section">
-      <p class="eyebrow">Why Loadix</p>
+      <p class="eyebrow" data-i18n="why.eyebrow">Why Loadix</p>
       <div class="grid">
         <div class="feature">
-          <h3>No account</h3>
-          <p>Open it and go. Nothing to register.</p>
+          <h3 data-i18n="why1.h">No account</h3>
+          <p data-i18n="why1.p">Open it and go. Nothing to register.</p>
         </div>
         <div class="feature">
-          <h3>No telemetry</h3>
-          <p>Your data stays in your browser.</p>
+          <h3 data-i18n="why2.h">No telemetry</h3>
+          <p data-i18n="why2.p">Your data stays in your browser.</p>
         </div>
         <div class="feature">
-          <h3>Web or extension</h3>
-          <p>Same engine. The extension adds background tests and CORS-free requests.</p>
+          <h3 data-i18n="why3.h">Web or extension</h3>
+          <p data-i18n="why3.p">Same engine. The extension adds background tests and CORS-free requests.</p>
         </div>
       </div>
     </section>
 
     <section id="install" class="section">
-      <p class="eyebrow">Install</p>
+      <p class="eyebrow" data-i18n="install.eyebrow">Install</p>
       <div class="steps">
-        <div class="step"><span>01</span><div>Open <code class="sh"><a href="https://lab.loadix.dev">lab.loadix.dev</a></code> — no install</div></div>
-        <div class="step"><span>02</span><div>Or grab <code class="sh">loadix-*.zip</code> from <a href="https://github.com/hexiangtao/loadix/releases" target="_blank" rel="noopener">GitHub Releases</a></div></div>
-        <div class="step"><span>03</span><div><code class="sh">chrome://extensions</code> → Developer mode → Load unpacked</div></div>
+        <div class="step"><span>01</span><div data-i18n-html="install.step1">Open <code class="sh"><a href="https://lab.loadix.dev">lab.loadix.dev</a></code> — no install</div></div>
+        <div class="step"><span>02</span><div data-i18n-html="install.step2">Or grab <code class="sh">loadix-*.zip</code> from <a href="https://github.com/hexiangtao/loadix/releases" target="_blank" rel="noopener">GitHub Releases</a></div></div>
+        <div class="step"><span>03</span><div data-i18n-html="install.step3"><code class="sh">chrome://extensions</code> → Developer mode → Load unpacked</div></div>
       </div>
     </section>
   </main>
 
   <footer class="footer">
     <p>Loadix · <a href="https://github.com/hexiangtao/loadix" target="_blank" rel="noopener">GitHub</a> · <a href="https://lab.loadix.dev">lab.loadix.dev</a></p>
-    <p>Use only against systems you own or are authorized to test.</p>
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/lib/marked.umd.min.js"></script>
