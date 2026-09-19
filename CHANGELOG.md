@@ -1,3 +1,10 @@
+# [1.62.0](https://github.com/hexiangtao/loadix/compare/v1.61.0...v1.62.0) (2026-09-19)
+
+
+### Features
+
+* add yt-dlp executor to media worker ([1fbf9cc](https://github.com/hexiangtao/loadix/commit/1fbf9ccac12a2eff7fcb8fdb3f314cb3a2b9f23c))
+
 # [1.61.0](https://github.com/hexiangtao/loadix/compare/v1.60.0...v1.61.0) (2026-09-19)
 
 
