@@ -4,8 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <title>Loadix — Test APIs, render &amp; share Markdown, all local</title>
-  <meta name="description" content="Load test an endpoint, send requests, and preview &amp; share Markdown from anywhere — all in your browser. 19 utilities included. No account, no install." />
+  <title>Loadix — Paste Markdown, get a shareable page</title>
+  <meta name="description" content="Paste Markdown and get a beautiful shareable link — no account, no install. Plus load testing, an API client and 19 utilities, all in your browser." />
   <meta name="keywords" content="loadix, api tools, load tester, load testing, stress testing, api client, curl, markdown preview, markdown renderer, markdown share, markdown editor, llm output markdown, jwt decoder, base64 encoder, url parser, json formatter, regex tester, hash generator, uuid generator, cron parser, local first" />
   <meta name="robots" content="index, follow" />
   <meta name="theme-color" content="#0f172a" />
@@ -13,13 +13,13 @@
 
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://loadix.dev/" />
-  <meta property="og:title" content="Loadix — Test APIs, render &amp; share Markdown, all local" />
-  <meta property="og:description" content="Load test an endpoint, send requests, and preview &amp; share Markdown from anywhere. No account, no install." />
+  <meta property="og:title" content="Loadix — Paste Markdown, get a shareable page" />
+  <meta property="og:description" content="Paste Markdown and get a beautiful shareable link. Plus load testing, an API client and 19 utilities — all in your browser." />
   <meta property="og:site_name" content="Loadix" />
 
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Loadix — Test APIs, render &amp; share Markdown, all local" />
-  <meta name="twitter:description" content="Load test an endpoint, send requests, and preview &amp; share Markdown from anywhere. No account, no install." />
+  <meta name="twitter:title" content="Loadix — Paste Markdown, get a shareable page" />
+  <meta name="twitter:description" content="Paste Markdown and get a beautiful shareable link. Plus load testing, an API client and 19 utilities — all in your browser." />
 
   <script type="application/ld+json">
   {
@@ -61,71 +61,90 @@
 
   <main>
     <section class="hero">
+      <div class="hero-inner">
       <div class="hero-copy">
-        <h1>All-in-one developer toolkit.</h1>
-        <p class="sub">Load testing · request client · Markdown preview &amp; share · 19 utilities — all in your browser, no account, no install.</p>
+        <h1><span id="typewriter" data-text="Paste Markdown. Get a shareable page."></span><span class="caret" aria-hidden="true"></span></h1>
+        <p class="sub">Render, keep and share Markdown as a beautiful link — no account, no install. Plus load testing, an API client and 19 utilities, all in your browser.</p>
         <div class="cta">
           <a class="btn solid" href="https://lab.loadix.dev">Launch Loadix</a>
           <a class="btn ghost" href="https://github.com/hexiangtao/loadix" target="_blank" rel="noopener">Source on GitHub</a>
         </div>
       </div>
       <div class="hero-visual">
-        <div class="app-mock" role="img" aria-label="Loadix — load test run in progress">
+        <div class="app-mock demo" role="region" aria-label="Loadix interactive demo">
           <div class="mock-bar">
             <span class="dot"></span><span class="dot"></span><span class="dot"></span>
-            <span class="mock-title">Loadix — Load Test</span>
+            <span class="mock-title">Loadix — live demo</span>
           </div>
-          <div class="mock-body">
-            <aside class="mock-side">
-              <div class="mock-tool active"><span class="mock-icon"></span>Load Test</div>
-              <div class="mock-tool"><span class="mock-icon"></span>Requests</div>
-              <div class="mock-tool"><span class="mock-icon"></span>Markdown</div>
-              <div class="mock-tool"><span class="mock-icon"></span>JWT</div>
-              <div class="mock-tool"><span class="mock-icon"></span>Base64</div>
-              <div class="mock-tool"><span class="mock-icon"></span>URL Parser</div>
-              <div class="mock-tool"><span class="mock-icon"></span>JSON</div>
-            </aside>
-            <main class="mock-main">
-              <div class="mock-tabs">
-                <span class="mock-tab on">Config</span>
-                <span class="mock-tab">Assertions</span>
+
+          <div class="demo-tabs" role="tablist">
+            <button class="demo-tab on" role="tab" aria-selected="true" data-demo="markdown">Markdown</button>
+            <button class="demo-tab" role="tab" aria-selected="false" data-demo="loadtest">Load Test</button>
+          </div>
+
+          <!-- Markdown: paste → render → share -->
+          <div class="demo-pane on" data-pane="markdown">
+            <div class="demo-split">
+              <div class="demo-ed">
+                <div class="demo-pane-head">Markdown</div>
+                <textarea id="demo-md-input" class="demo-md-input" spellcheck="false" aria-label="Markdown input"># Orders API
+
+List **paid** orders with totals.
+
+## Endpoint
+
+`GET /v1/orders?status=paid`
+
+## Response
+
+```json
+{ "status": "paid", "total": 129.0, "items": 4 }
+```
+
+| ID | Status | Total |
+|----|--------|-------|
+| o-104 | paid | 129.00 |
+| o-109 | paid | 61.50 |</textarea>
               </div>
-              <div class="mock-label">Target</div>
-              <div class="mock-input">https://api.example.com/v1/orders</div>
-              <div class="mock-stats">
-                <div><b>Requests</b><span>7,204</span></div>
-                <div><b>RPS</b><span>126</span></div>
-                <div><b>Errors</b><span class="ok">0</span></div>
+              <div class="demo-pv">
+                <div class="demo-pane-head">Preview</div>
+                <div id="demo-md-preview" class="demo-md-preview"></div>
               </div>
-              <div class="mock-chart">
-                <div class="mock-bar" style="height:34%"></div>
-                <div class="mock-bar" style="height:44%"></div>
-                <div class="mock-bar" style="height:38%"></div>
-                <div class="mock-bar" style="height:52%"></div>
-                <div class="mock-bar" style="height:46%"></div>
-                <div class="mock-bar" style="height:60%"></div>
-                <div class="mock-bar" style="height:54%"></div>
-                <div class="mock-bar" style="height:66%"></div>
-                <div class="mock-bar" style="height:58%"></div>
-                <div class="mock-bar" style="height:74%"></div>
-                <div class="mock-bar" style="height:62%"></div>
-                <div class="mock-bar" style="height:82%"></div>
-                <div class="mock-bar hot" style="height:70%"></div>
-                <div class="mock-bar hot" style="height:88%"></div>
-                <div class="mock-bar hot" style="height:80%"></div>
+            </div>
+            <div class="demo-actions">
+              <button id="demo-copy-link" class="btn-mini dark">Copy share link</button>
+              <a class="btn-mini ghost" href="https://lab.loadix.dev?tool=markdown" target="_blank" rel="noopener">Open in Loadix ↗</a>
+            </div>
+          </div>
+
+          <!-- Load test: click Start, watch it run -->
+          <div class="demo-pane" data-pane="loadtest">
+            <div class="demo-lt">
+              <div class="r">
+                <span class="method">GET</span>
+                <span class="url">https://api.example.com/v1/orders</span>
+                <button id="demo-lt-start" class="btn-mini dark">Start</button>
               </div>
-              <div class="mock-pills">
-                <span class="mock-chip ok">P50 86 ms</span>
-                <span class="mock-chip">P95 210 ms</span>
-                <span class="mock-chip">P99 540 ms</span>
+              <div class="stats">
+                <div class="stat"><span>Requests</span><b id="demo-lt-req">0</b></div>
+                <div class="stat"><span>RPS</span><b id="demo-lt-rps">0</b></div>
+                <div class="stat"><span>Errors</span><b id="demo-lt-err" class="grn">0</b></div>
               </div>
-              <div class="mock-verify">
-                <span class="mock-verify-icon live"></span>
-                Running — 0:42 / 1:00
+              <div class="panel">
+                <div class="r">
+                  <span id="demo-lt-dot" class="dot-live"></span>
+                  <span id="demo-lt-status" class="mini grn">Ready</span>
+                  <span class="grow"></span>
+                  <span class="pill ok" id="demo-lt-p50">P50 —</span>
+                  <span class="pill" id="demo-lt-p95">P95 —</span>
+                  <span class="pill" id="demo-lt-p99">P99 —</span>
+                </div>
+                <div id="demo-lt-bars" class="bars"></div>
               </div>
-            </main>
+            </div>
           </div>
         </div>
+      </div>
       </div>
     </section>
 
@@ -358,6 +377,7 @@
     <p>Use only against systems you own or are authorized to test.</p>
   </footer>
 
+  <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/lib/marked.umd.min.js"></script>
   <script src="./script.js"></script>
 </body>
 </html>
