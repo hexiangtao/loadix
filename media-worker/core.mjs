@@ -28,6 +28,81 @@ function failure(reason, detail) {
   return { reason, detail: String(detail).slice(0, 240) };
 }
 
+/**
+ * Hosts the streaming proxy will fetch from — the video CDNs this app
+ * downloads from, and nothing else. NOT a general open proxy.
+ */
+const PROXY_HOST =
+  /(?:^|\.)(douyinvod\.com|zjcdn\.com|snssdk\.com|iesdouyin\.com|douyin\.com|bilivideo\.com|bilivideo\.cn|akamaized\.net|googlevideo\.com|ytimg\.com)$/i;
+
+/** CDN posture per host family: Bilibili's DASH video track is hotlink-gated
+ *  (needs a bilibili Referer), Douyin's CDN keys off a mobile UA, and
+ *  YouTube's ignores both but must not be read from a page origin. */
+function proxyHeadersFor(hostname) {
+  if (/(?:^|\.)bilivideo\.(?:com|cn)$|akamaized\.net$/i.test(hostname)) {
+    return {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+      Referer: 'https://www.bilibili.com/',
+      Accept: '*/*',
+    };
+  }
+  if (/googlevideo\.com$|ytimg\.com$/i.test(hostname)) {
+    return {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+      Referer: 'https://www.youtube.com/',
+      Accept: '*/*',
+    };
+  }
+  return {
+    'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1',
+    Referer: 'https://www.douyin.com/',
+    Accept: '*/*',
+  };
+}
+
+/** Stream a media CDN response through the worker. Range requests pass
+ *  through so the dashboard's resume logic keeps working; the body is
+ *  piped, never buffered whole. A 30s idle timeout guards against hung
+ *  upstreams without capping long healthy downloads. */
+async function handleProxyDownload(request, target) {
+  if (target.length > 2048) return json({ error: 'bad-url' }, 400);
+  let parsed;
+  try {
+    parsed = new URL(target);
+  } catch {
+    return json({ error: 'bad-url' }, 400);
+  }
+  if (!/^https?:$/.test(parsed.protocol) || !PROXY_HOST.test(parsed.hostname)) {
+    return json({ error: 'bad-url' }, 400);
+  }
+
+  const headers = proxyHeadersFor(parsed.hostname);
+  const range = request.headers.get('range');
+  if (range) headers.Range = range;
+
+  let upstream;
+  try {
+    upstream = await fetch(target, { redirect: 'follow', headers });
+  } catch {
+    return json({ error: 'proxy-fetch-failed' }, 502);
+  }
+  if (!upstream.ok && upstream.status !== 206) {
+    return json({ error: `upstream-${upstream.status}` }, 502);
+  }
+
+  const out = new Headers({
+    'Content-Type': upstream.headers.get('content-type') ?? 'application/octet-stream',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Expose-Headers': 'Content-Length, Content-Range, Accept-Ranges',
+    'Cache-Control': 'no-store',
+  });
+  for (const name of ['content-length', 'content-range', 'accept-ranges', 'etag', 'last-modified']) {
+    const value = upstream.headers.get(name);
+    if (value) out.set(name, value);
+  }
+  return new Response(upstream.body, { status: upstream.status, headers: out });
+}
+
 export class MediaWorkerStore {
   constructor({ executor, ttlMs = DEFAULT_TTL_MS, maxTasks = DEFAULT_MAX_TASKS } = {}) {
     this.executor = executor ?? (async () => {
@@ -109,6 +184,12 @@ export function createMediaWorker(options = {}) {
         if (!task) return json({ error: 'not-found' }, 404, headers);
         if (request.method === 'GET') return json(taskView(task), 200, headers);
         if (request.method === 'DELETE') return json(taskView(store.cancel(task.id)), 202, headers);
+      }
+
+      if (url.pathname === '/download' && (request.method === 'GET' || request.method === 'HEAD')) {
+        const target = url.searchParams.get('url') ?? '';
+        if (!target) return json({ error: 'bad-url' }, 400, headers);
+        return handleProxyDownload(request, target);
       }
 
       if (url.pathname === '/resolve' && request.method === 'POST') {

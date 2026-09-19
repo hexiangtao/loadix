@@ -47,6 +47,7 @@ GET    /health
 POST   /resolve                 { "url": "https://..." }
 GET    /tasks/:taskId
 DELETE /tasks/:taskId
+GET    /download?url=<cdn-url>   streaming media proxy (Range-aware)
 OPTIONS /*
 ```
 
@@ -60,3 +61,17 @@ A task eventually becomes `succeeded`, `failed`, or `canceled`. Completed tasks
 are retained in memory for 15 minutes by default and then removed. This is a
 single-process experimental queue; production can replace the store with Redis,
 Cloudflare Queues, or another durable broker without changing the HTTP shape.
+
+## Streaming download proxy
+
+`GET /download?url=<cdn-url>` pipes a media CDN response through the worker,
+which matters when the CDN refuses the browser's request context:
+
+- Bilibili's DASH video track needs a bilibili `Referer` no page can set;
+- Douyin's CDN keys off a mobile User-Agent;
+- some CDNs send no CORS headers, so a page cannot read the stream.
+
+The proxy adds the right per-CDN headers, forwards `Range` requests so the
+dashboard's resume logic keeps working, and streams the body without
+buffering. It is allowlisted to known video CDN hosts only — never a general
+open proxy. The dashboard's `proxiedByWorker(url)` builds these URLs.
