@@ -88,6 +88,7 @@ import {
   type VideoPart,
 } from './mediaResolver';
 import { classifyClientFailure, FAILURE_COPY_KEY, type ResolveFailure, type ResolveFailureReason } from './resolveFailure';
+import { isWorthRemoteRetry, remoteProviderIfConfigured } from './mediaFallback';
 
 interface MediaPanelProps {
   /** false on the web build — no sniffer, paste-URL mode only. */
@@ -137,8 +138,30 @@ type MediaJob =
  *  asset carrying `failure`, because throwing is where the reason used to die:
  *  the caller held nothing but a message and had to answer with one generic
  *  sentence. Whichever side saw the real error classifies it (the worker, the
- *  server); this only classifies what never left this machine. */
+ *  server); this only classifies what never left this machine.
+ *
+ *  When the local chain comes back blocked/empty and a Media Worker endpoint
+ *  is configured, the same URL is retried once through the worker — the site
+ *  refusal is usually about OUR exit point, not the content. */
 async function resolvePageForBuild(pageUrl: string, extensionMode: boolean): Promise<ResolvedPageAsset> {
+  const local = await resolvePageLocal(pageUrl, extensionMode);
+  if (!isWorthRemoteRetry(local)) return local;
+  const remote = remoteProviderIfConfigured();
+  if (!remote) return local;
+  try {
+    const retried = await remote.resolve({
+      pageUrl,
+      fetchText: async () => { throw new Error('remote provider does not fetch locally'); },
+      report: () => undefined,
+    });
+    if (retried && retried.formats.length > 0) return { ...retried, provider: retried.provider ?? remote.id };
+  } catch {
+    /* worker unreachable — the local failure is the honest answer */
+  }
+  return local;
+}
+
+async function resolvePageLocal(pageUrl: string, extensionMode: boolean): Promise<ResolvedPageAsset> {
   try {
     if (extensionMode) {
       const response = await chrome.runtime.sendMessage({ type: 'media:scrape', pageUrl });
