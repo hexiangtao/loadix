@@ -36,6 +36,7 @@ import {
 } from './pageHtml';
 import { BUILT_IN_ADAPTERS, isYouTubePageUrl, type SiteAdapter } from './siteAdapters';
 import { bestFailure, failureFromError, hostOf, type ResolveFailure } from './resolveFailure';
+import { md5Hex } from '../tools/md5';
 
 // Pure HTML readers that used to live here. Re-exported because they are
 // part of this module's public surface (the tests read them) even though
@@ -303,6 +304,71 @@ function bilibiliFailure(code: number, message: string | undefined, host: string
   return { reason: 'blocked', host, detail };
 }
 
+const MIXIN_KEY_ENC_TAB = [
+  46, 47, 18, 2, 53, 8, 23, 32, 15, 50, 10, 31, 58, 3, 45, 35, 27, 43, 5, 49,
+  33, 9, 42, 19, 29, 28, 14, 39, 12, 38, 41, 13, 37, 48, 7, 16, 24, 55, 40,
+  61, 26, 17, 0, 1, 60, 51, 30, 4, 22, 25, 54, 21, 56, 59, 6, 63, 57, 62, 11,
+  36, 20, 34, 44, 52,
+] as const;
+
+let wbiKeys: { mixin: string; expiresAt: number } | null = null;
+
+/** Build the current WBI-signed query used by Bilibili's web APIs. */
+export function mixinKeyForBilibili(imgKey: string, subKey: string): string {
+  const raw = imgKey + subKey;
+  return MIXIN_KEY_ENC_TAB.map((index) => raw[index] ?? '').join('').slice(0, 32);
+}
+
+export function signBilibiliParams(
+  params: Record<string, string | number>,
+  imgKey: string,
+  subKey: string,
+  timestamp = Math.floor(Date.now() / 1000),
+): string {
+  const mixin = mixinKeyForBilibili(imgKey, subKey);
+  const values: Record<string, string | number> = { ...params, wts: timestamp };
+  const query = Object.keys(values)
+    .sort()
+    .map((key) => `${encodeURIComponent(key)}=${encodeURIComponent(String(values[key]).replace(/[!'()*]/g, ''))}`)
+    .join('&');
+  return `${query}&w_rid=${md5Hex(query + mixin)}`;
+}
+
+async function signedBilibiliUrl(
+  base: string,
+  params: Record<string, string | number>,
+  fetchText: FetchText,
+): Promise<string> {
+  try {
+    const now = Date.now();
+    if (!wbiKeys || wbiKeys.expiresAt <= now) {
+      const nav = JSON.parse(await fetchText('https://api.bilibili.com/x/web-interface/nav')) as {
+        data?: { wbi_img?: { img_url?: string; sub_url?: string } };
+      };
+      const imgUrl = nav.data?.wbi_img?.img_url ?? '';
+      const subUrl = nav.data?.wbi_img?.sub_url ?? '';
+      const fileKey = (url: string) => url.split('/').pop()?.split('.')[0] ?? '';
+      const imgKey = fileKey(imgUrl);
+      const subKey = fileKey(subUrl);
+      if (!imgKey || !subKey) throw new Error('Bilibili WBI keys unavailable');
+      wbiKeys = { mixin: mixinKeyForBilibili(imgKey, subKey), expiresAt: now + 60 * 60 * 1000 };
+    }
+    const values: Record<string, string | number> = { ...params, wts: Math.floor(now / 1000) };
+    const query = Object.keys(values)
+      .sort()
+      .map((key) => `${encodeURIComponent(key)}=${encodeURIComponent(String(values[key]).replace(/[!'()*]/g, ''))}`)
+      .join('&');
+    return `${base}?${query}&w_rid=${md5Hex(query + wbiKeys.mixin)}`;
+  } catch {
+    // Keep old fixtures and legacy endpoints working when nav itself is
+    // blocked. WBI is an enhancement, not a reason to hide a valid result.
+    const query = Object.keys(params)
+      .map((key) => `${encodeURIComponent(key)}=${encodeURIComponent(String(params[key]))}`)
+      .join('&');
+    return `${base}?${query}`;
+  }
+}
+
 async function resolveBilibili(
   pageUrl: string,
   fetchText: FetchText,
@@ -340,7 +406,7 @@ async function resolveBilibili(
   // 2. HTML5 playurl API → muxed MP4s with sound. The headline feature.
   if (cid) {
     try {
-      const api = `https://api.bilibili.com/x/player/playurl?bvid=${bvid}&cid=${cid}&platform=${UA_HINT}&high_quality=1`;
+      const api = await signedBilibiliUrl('https://api.bilibili.com/x/player/playurl', { bvid, cid, platform: UA_HINT, high_quality: 1 }, fetchText);
       const payload = JSON.parse(await fetchText(api)) as {
         code?: number;
         message?: string;
@@ -371,7 +437,7 @@ async function resolveBilibili(
         if (formats.some((f) => f.quality === BILI_MP4_QUALITY[qid])) continue;
         try {
           const qPayload = JSON.parse(
-            await fetchText(`https://api.bilibili.com/x/player/playurl?bvid=${bvid}&cid=${cid}&platform=${UA_HINT}&qn=${qid}`),
+            await fetchText(await signedBilibiliUrl('https://api.bilibili.com/x/player/playurl', { bvid, cid, platform: UA_HINT, qn: qid }, fetchText)),
           ) as { data?: { durl?: { url?: string; backup_url?: string[]; size?: number }[] } };
           const first = qPayload.data?.durl?.[0];
           if (first?.url) {
@@ -477,7 +543,7 @@ async function fetchVideoMeta(
 ): Promise<VideoMeta> {
   try {
     const payload = JSON.parse(
-      await fetchText(`https://api.bilibili.com/x/web-interface/view?bvid=${bvid}`),
+      await fetchText(await signedBilibiliUrl('https://api.bilibili.com/x/web-interface/view', { bvid }, fetchText)),
     ) as {
       code?: number;
       message?: string;
@@ -525,9 +591,9 @@ async function fetchDashFormats(
   coveredHeight: number,
   report: (failure: ResolveFailure) => void = () => undefined,
 ): Promise<MediaFormatOption[]> {
-  const api =
-    `https://api.bilibili.com/x/player/playurl?bvid=${bvid}&cid=${cid}` +
-    '&platform=pc&fnval=4048&qn=127&fnver=0&fourk=1';
+  const api = await signedBilibiliUrl('https://api.bilibili.com/x/player/playurl', {
+    bvid, cid, platform: 'pc', fnval: 4048, qn: 127, fnver: 0, fourk: 1,
+  }, fetchText);
   try {
     const payload = JSON.parse(await fetchText(api)) as {
       code?: number;

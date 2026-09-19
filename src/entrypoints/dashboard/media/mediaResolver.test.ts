@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { md5Hex } from '../tools/md5';
 import {
   extractUrlFromText,
   fetchableUrl,
@@ -8,7 +9,9 @@ import {
   originalImageUrl,
   partsFromWatchPage,
   preferredFormat,
+  mixinKeyForBilibili,
   resolvePageUrl,
+  signBilibiliParams,
   SUPPORTED_PLATFORMS,
   titleFromWatchPage,
   withPartParam,
@@ -31,6 +34,22 @@ ${playinfo ? `<script>window.__playinfo__=${JSON.stringify(playinfo)}</script>` 
 
 const playurl = (quality: number, url: string, size = 0): string =>
   JSON.stringify({ code: 0, data: { quality, accept_quality: [64, 32, 16], durl: [{ url, size, backup_url: [url + '.bak'] }] } });
+
+describe('Bilibili WBI signing', () => {
+  it('uses the RFC MD5 digest required by WBI', () => {
+    expect(md5Hex('abc')).toBe('900150983cd24fb0d6963f7d28e17f72');
+  });
+
+  it('uses the documented WBI mixin key', () => {
+    expect(mixinKeyForBilibili('7cd084941338484aae1ad9425b84077c', '4932caff0ff746eab6f01bf08b70ac45')).toBe('ea1db124af3c7062474693fa704f4ff8');
+  });
+
+  it('creates a sorted, encoded query with an MD5 WBI suffix', () => {
+    const signed = signBilibiliParams({ foo: '114', bar: '514', baz: 1919810 }, '7cd084941338484aae1ad9425b84077c', '4932caff0ff746eab6f01bf08b70ac45', 1702204169);
+    const query = 'bar=514&baz=1919810&foo=114&wts=1702204169';
+    expect(signed).toBe(`${query}&w_rid=${md5Hex(query + mixinKeyForBilibili('7cd084941338484aae1ad9425b84077c', '4932caff0ff746eab6f01bf08b70ac45'))}`);
+  });
+});
 
 describe('resolvePageUrl — bilibili', () => {
   it('resolves muxed MP4 formats from the html5 playurl API', async () => {
