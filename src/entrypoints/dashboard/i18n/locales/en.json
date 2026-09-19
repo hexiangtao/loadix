@@ -612,7 +612,9 @@
       "verifyHint": "Recompute HS256 with your secret and compare it to the signature in the token.",
       "verified": "Signature is valid",
       "invalidSignature": "Signature does not match — wrong secret?",
-      "algMismatch": "Only HS256 is supported for verification (token uses {{alg}})"
+      "algMismatch": "Only HS256 is supported for verification (token uses {{alg}})",
+      "needPublicKey": "A public key is required for asymmetric verification (PEM or JWK)",
+      "algNoneWarning": "This token uses alg:none — it is unsigned and provides zero security. Never trust it."
     },
     "regex": {
       "name": "Regex Tester",
@@ -709,7 +711,10 @@
     },
     "hash": {
       "name": "Hash",
-      "desc": "Compute MD5 / SHA-1 / SHA-256 / SHA-512"
+      "desc": "Compute MD5 / SHA-1 / SHA-256 / SHA-512",
+      "dropFile": "Drop a file here or click to pick one — hashes are computed locally",
+      "fileHashes": "File checksums",
+      "optional": "optional"
     },
     "color": {
       "name": "Color Picker",

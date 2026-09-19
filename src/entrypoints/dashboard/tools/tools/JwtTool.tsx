@@ -4,6 +4,9 @@ import { KeyRound, ShieldCheck, ShieldAlert, FileSearch, Lock } from 'lucide-rea
 import { ToolShell } from '../ToolShell';
 import { CopyButton } from '../CopyButton';
 import { usePersistedState } from '../usePersistedState';
+import { verifyJwtAsymmetric } from './jwtVerifyAsymmetric';
+
+const ASYM_ALGS = ['RS256', 'RS384', 'RS512', 'ES256', 'ES384', 'ES512'];
 
 interface JwtSegment {
   key: 'header' | 'payload' | 'signature';
@@ -73,6 +76,7 @@ export function JwtTool({ initialPayload }: JwtToolProps) {
   const [secret, setSecret] = usePersistedState('jwt.secret', '');
   const [signedToken, setSignedToken] = useState('');
   const [encodeError, setEncodeError] = useState('');
+  const [publicKey, setPublicKey] = usePersistedState('jwt.publicKey', '');
   const [verifyStatus, setVerifyStatus] = useState<'idle' | 'ok' | 'bad' | 'alg' | 'err'>('idle');
   const [verifyMsg, setVerifyMsg] = useState('');
 
@@ -148,6 +152,22 @@ export function JwtTool({ initialPayload }: JwtToolProps) {
     const payloadObj = payload?.obj;
     if (!sig || !headerObj || !payloadObj) return;
     const alg = String(headerObj.alg ?? '').toUpperCase();
+    if (ASYM_ALGS.includes(alg)) {
+      if (!publicKey.trim()) {
+        setVerifyStatus('err');
+        setVerifyMsg(t('tools.jwt.needPublicKey'));
+        return;
+      }
+      const res = await verifyJwtAsymmetric(token, alg, publicKey);
+      if (res.ok) {
+        setVerifyStatus('ok');
+        setVerifyMsg(t('tools.jwt.verified'));
+      } else {
+        setVerifyStatus('bad');
+        setVerifyMsg(res.reason);
+      }
+      return;
+    }
     if (alg !== 'HS256') {
       setVerifyStatus('alg');
       setVerifyMsg(t('tools.jwt.algMismatch', { alg }));
@@ -268,6 +288,15 @@ export function JwtTool({ initialPayload }: JwtToolProps) {
                 </div>
               )}
 
+              {payload?.obj && <JwtTimeline obj={payload.obj} />}
+
+              {segments.find((s) => s.key === 'header')?.obj?.alg === 'none' && (
+                <div className="mt-4 flex items-center gap-2 rounded-lg bg-danger/10 px-3 py-2.5 text-xs font-semibold text-danger">
+                  <ShieldAlert size={14} />
+                  {t('tools.jwt.algNoneWarning')}
+                </div>
+              )}
+
               <details className="group mt-4">
                 <summary className="flex cursor-pointer list-none items-center gap-1.5 text-xs text-muted transition-colors duration-150 hover:text-ink">
                   <span className="text-base leading-none transition-transform duration-150 group-open:rotate-90">▸</span>
@@ -292,6 +321,17 @@ export function JwtTool({ initialPayload }: JwtToolProps) {
                       {t('tools.jwt.verify')}
                     </button>
                   </div>
+                  {(() => {
+                    const alg = String(segments.find((s) => s.key === 'header')?.obj?.alg ?? '').toUpperCase();
+                    return ASYM_ALGS.includes(alg) ? (
+                      <textarea
+                        className="min-h-[90px] w-full resize-y rounded-lg border border-line bg-panel px-2.5 py-2 font-mono text-xs outline-none transition-colors duration-150 focus:border-primary"
+                        value={publicKey}
+                        onChange={(e) => setPublicKey(e.target.value)}
+                        placeholder={'-----BEGIN PUBLIC KEY-----\n…\n-----END PUBLIC KEY-----\n\nor paste a JWK as JSON'}
+                      />
+                    ) : null;
+                  })()}
                   {verifyStatus === 'ok' && (
                     <div className="flex items-center gap-1.5 rounded-md bg-success/10 px-2.5 py-1.5 text-xs font-semibold text-success">
                       <ShieldCheck size={12} /> {verifyMsg}
@@ -387,6 +427,72 @@ export function JwtTool({ initialPayload }: JwtToolProps) {
       )}
     </ToolShell>
   );
+}
+
+/** Visual timeline of iat/nbf/exp relative to now. */
+function JwtTimeline({ obj }: { obj: Record<string, unknown> }) {
+  const now = Date.now() / 1000;
+  const points = (['iat', 'nbf', 'exp'] as const)
+    .map((k) => ({ key: k, value: Number(obj[k]) }))
+    .filter((p) => Number.isFinite(p.value) && p.value > 0);
+  if (points.length === 0) return null;
+
+  const times = points.map((p) => p.value);
+  const min = Math.min(now, ...times);
+  const max = Math.max(now, ...times);
+  const span = Math.max(max - min, 60);
+  const pct = (v: number) => ((v - min) / span) * 100;
+
+  const exp = obj.exp != null ? Number(obj.exp) : null;
+  const expired = exp != null && exp < now;
+  const lifetime = exp != null && obj.iat != null ? exp - Number(obj.iat) : null;
+
+  return (
+    <div className="mt-4">
+      <div className="mb-1.5 flex items-center justify-between">
+        <span className="text-xs font-semibold text-muted">Timeline</span>
+        {exp != null && (
+          <span className={`text-xs font-semibold ${expired ? 'text-danger' : 'text-success'}`}>
+            {expired
+              ? `⚠ expired ${formatAgo(now - exp)} ago`
+              : `✓ valid for ${formatAgo(exp - now)} more`}
+          </span>
+        )}
+      </div>
+      <div className="relative h-8 rounded-lg bg-line/40">
+        <div
+          className="absolute top-0 h-full w-0.5 bg-ink"
+          style={{ left: `${Math.min(Math.max(pct(now), 0), 100)}%` }}
+          title="now"
+        />
+        {points.map((p) => (
+          <div
+            key={p.key}
+            className={`absolute top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full ${
+              p.key === 'exp' ? 'bg-danger' : p.key === 'nbf' ? 'bg-warning' : 'bg-primary'
+            }`}
+            style={{ left: `${Math.min(Math.max(pct(p.value), 0), 100)}%` }}
+            title={`${p.key}: ${new Date(p.value * 1000).toISOString()}`}
+          />
+        ))}
+      </div>
+      <div className="mt-1 flex justify-between text-[10px] text-muted">
+        <span>{new Date(min * 1000).toISOString().slice(0, 16)}Z</span>
+        <span>{new Date(max * 1000).toISOString().slice(0, 16)}Z</span>
+      </div>
+      {lifetime != null && lifetime > 0 && (
+        <p className="mt-1 text-[11px] text-muted">Token lifetime: {formatAgo(lifetime)}</p>
+      )}
+    </div>
+  );
+}
+
+function formatAgo(seconds: number): string {
+  const s = Math.round(seconds);
+  if (s < 60) return `${s}s`;
+  if (s < 3600) return `${Math.round(s / 60)}m`;
+  if (s < 86400) return `${Math.round(s / 3600)}h`;
+  return `${Math.round(s / 86400)}d`;
 }
 
 function renderClaim(key: string, value: unknown, t: (k: string) => string): string {

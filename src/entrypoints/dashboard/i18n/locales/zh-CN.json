@@ -612,7 +612,9 @@
       "verifyHint": "用密钥重新计算 HS256 签名，与 Token 中的签名比对。",
       "verified": "签名有效",
       "invalidSignature": "签名不匹配——密钥错误？",
-      "algMismatch": "验证仅支持 HS256（Token 使用 {{alg}}）"
+      "algMismatch": "验证仅支持 HS256（Token 使用 {{alg}}）",
+      "needPublicKey": "非对称验签需要粘贴公钥（PEM 或 JWK 格式）",
+      "algNoneWarning": "该 token 使用 alg:none —— 未签名、无任何安全保障，请勿信任。"
     },
     "regex": {
       "name": "正则测试器",
@@ -709,7 +711,10 @@
     },
     "hash": {
       "name": "哈希",
-      "desc": "计算 MD5 / SHA-1 / SHA-256 / SHA-512"
+      "desc": "计算 MD5 / SHA-1 / SHA-256 / SHA-512",
+      "dropFile": "拖拽文件到此处或点击选择 —— 校验全程在本地完成",
+      "fileHashes": "文件校验值",
+      "optional": "可选"
     },
     "color": {
       "name": "颜色取色器",

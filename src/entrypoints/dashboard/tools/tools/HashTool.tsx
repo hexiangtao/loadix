@@ -10,20 +10,32 @@ type Algo = 'MD5' | 'SHA-1' | 'SHA-256' | 'SHA-512';
 const ALGOS: Algo[] = ['MD5', 'SHA-1', 'SHA-256', 'SHA-512'];
 
 /** Compute a hex digest using the Web Crypto API (or a tiny MD5 fallback). */
-async function digest(algo: Algo, text: string): Promise<string> {
-  const bytes = new TextEncoder().encode(text);
+async function digest(algo: Algo, data: string | ArrayBuffer): Promise<string> {
+  const bytes = typeof data === 'string' ? new TextEncoder().encode(data) : new Uint8Array(data);
   if (algo !== 'MD5') {
     const hash = await crypto.subtle.digest(algo, bytes);
     return [...new Uint8Array(hash)].map((b) => b.toString(16).padStart(2, '0')).join('');
   }
   // MD5 is not in SubtleCrypto. Use a small pure-JS implementation.
-  return md5Hex(text);
+  return md5HexBytes(bytes);
 }
 
-/** Minimal RFC1321 MD5 — sufficient for fingerprint / cache-key use. */
-function md5Hex(s: string): string {
-  const enc = new TextEncoder();
-  const bytes = enc.encode(s);
+async function hmac(algo: Algo, keyText: string, data: string | ArrayBuffer): Promise<string> {
+  if (algo === 'MD5') throw new Error('HMAC-MD5 is not supported');
+  const bytes = typeof data === 'string' ? new TextEncoder().encode(data) : new Uint8Array(data);
+  const key = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(keyText),
+    { name: 'HMAC', hash: algo },
+    false,
+    ['sign'],
+  );
+  const mac = await crypto.subtle.sign('HMAC', key, bytes);
+  return [...new Uint8Array(mac)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+/** Minimal RFC1321 MD5 over raw bytes — sufficient for fingerprint use. */
+function md5HexBytes(bytes: Uint8Array): string {
   const N = bytes.length;
   const x = new Uint32Array(((N + 8) >> 6) * 16 + 16);
   for (let i = 0; i < N; i++) {
@@ -130,31 +142,97 @@ interface HashToolProps {
 export function HashTool({ initialPayload }: HashToolProps) {
   const { t } = useTranslation();
   const [input, setInput] = usePersistedState('hash.input', initialPayload ?? '');
+  const [hmacKey, setHmacKey] = usePersistedState('hash.hmacKey', '');
+  const [file, setFile] = useState<File | null>(null);
+  const [fileHashes, setFileHashes] = useState<Record<string, string>>({});
   const [hashes, setHashes] = useState<Record<Algo, string>>({
     MD5: '',
     'SHA-1': '',
     'SHA-256': '',
     'SHA-512': '',
   });
+  const [dragOver, setDragOver] = useState(false);
 
-  // Recompute all hashes whenever input changes.
+  // Recompute all hashes whenever input or HMAC key changes.
   useMemo(() => {
-    if (!input) {
-      setHashes({ MD5: '', 'SHA-1': '', 'SHA-256': '', 'SHA-512': '' });
-      return;
-    }
-    let cancelled = false;
-    Promise.all(ALGOS.map((a) => digest(a, input).then((h) => [a, h] as const))).then((entries) => {
-      if (cancelled) return;
-      setHashes({ MD5: '', 'SHA-1': '', 'SHA-256': '', 'SHA-512': '', ...Object.fromEntries(entries) });
-    });
-    return () => {
-      cancelled = true;
+    const compute = async () => {
+      if (!input) {
+        setHashes({ MD5: '', 'SHA-1': '', 'SHA-256': '', 'SHA-512': '' });
+        return;
+      }
+      const entries = await Promise.all(
+        ALGOS.map(async (a) => [a, hmacKey ? await hmacSafe(a, hmacKey, input) : await digest(a, input)] as const),
+      );
+      setHashes(Object.fromEntries(entries) as Record<Algo, string>);
     };
-  }, [input]);
+    void compute();
+  }, [input, hmacKey]);
+
+  const computeFile = async (f: File) => {
+    setFile(f);
+    setFileHashes({});
+    const buf = await f.arrayBuffer();
+    const entries = await Promise.all(ALGOS.map(async (a) => [a, await digest(a, buf)] as const));
+    setFileHashes(Object.fromEntries(entries));
+  };
 
   return (
     <ToolShell icon={Hash} title={t('tools.hash.name')}>
+      <div
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragOver(true);
+        }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setDragOver(false);
+          const f = e.dataTransfer.files[0];
+          if (f) void computeFile(f);
+        }}
+        className={`mb-4 rounded-lg border border-dashed px-4 py-4 text-center text-xs transition-colors duration-150 ${
+          dragOver ? 'border-primary bg-primary/5 text-primary' : 'border-line text-muted hover:border-primary/50'
+        }`}
+      >
+        <input
+          type="file"
+          id="hash-file-input"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) void computeFile(f);
+          }}
+        />
+        {file ? (
+          <div>
+            <div className="font-semibold text-ink">{file.name}</div>
+            <div className="text-[11px]">{formatSize(file.size)}</div>
+          </div>
+        ) : (
+          <label htmlFor="hash-file-input" className="cursor-pointer">
+            {t('tools.hash.dropFile')}
+          </label>
+        )}
+      </div>
+
+      {file && (
+        <div className="mb-4 flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-muted">{t('tools.hash.fileHashes')}</span>
+            <button onClick={() => { setFile(null); setFileHashes({}); }} className="text-[11px] text-muted hover:text-danger">
+              ✕
+            </button>
+          </div>
+          {ALGOS.map((algo) => (
+            <div key={algo} className="flex items-center gap-2.5 rounded-lg border border-line bg-hover px-3 py-2">
+              <span className="w-20 shrink-0 text-xs font-semibold text-muted">{algo}</span>
+              <span className="flex-1 truncate font-mono text-xs">{fileHashes[algo] || '…'}</span>
+              {fileHashes[algo] && <CopyButton text={fileHashes[algo]} className="shrink-0" />}
+            </div>
+          ))}
+        </div>
+      )}
+
       <label className="mb-1.5 block text-xs font-semibold text-muted">{t('tools.input')}</label>
       <textarea
         autoFocus
@@ -164,10 +242,22 @@ export function HashTool({ initialPayload }: HashToolProps) {
         placeholder="Hello, World!"
       />
 
+      <div className="mt-3">
+        <label className="mb-1.5 block text-xs font-semibold text-muted">HMAC key ({t('tools.hash.optional')})</label>
+        <input
+          type="password"
+          autoComplete="off"
+          className="w-full rounded-lg border border-line bg-panel px-2.5 py-2 font-mono text-sm outline-none transition-colors duration-150 focus:border-primary"
+          value={hmacKey}
+          onChange={(e) => setHmacKey(e.target.value)}
+          placeholder="my-hmac-key"
+        />
+      </div>
+
       <div className="mt-4 flex flex-col gap-2">
         {ALGOS.map((algo) => (
           <div key={algo} className="flex items-center gap-2.5 rounded-lg border border-line bg-hover px-3 py-2">
-            <span className="w-20 shrink-0 text-xs font-semibold text-muted">{algo}</span>
+            <span className="w-20 shrink-0 text-xs font-semibold text-muted">{hmacKey ? `HMAC-${algo}` : algo}</span>
             <span className="flex-1 truncate font-mono text-xs">{hashes[algo] || '—'}</span>
             {hashes[algo] && <CopyButton text={hashes[algo]} className="shrink-0" />}
           </div>
@@ -175,4 +265,18 @@ export function HashTool({ initialPayload }: HashToolProps) {
       </div>
     </ToolShell>
   );
+}
+
+async function hmacSafe(algo: Algo, key: string, data: string): Promise<string> {
+  try {
+    return await hmac(algo, key, data);
+  } catch {
+    return '—';
+  }
+}
+
+function formatSize(n: number): string {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
 }

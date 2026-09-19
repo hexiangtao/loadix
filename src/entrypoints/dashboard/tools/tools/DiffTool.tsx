@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { diffChars, diffWordsWithSpace } from 'diff';
 import { GitCompareArrows, Plus, Minus, Equal } from 'lucide-react';
 import { ToolShell } from '../ToolShell';
 import { CopyButton } from '../CopyButton';
@@ -10,19 +11,21 @@ interface DiffToolProps {
 }
 
 type View = 'unified' | 'split';
-type Unit = 'line' | 'word';
 
 interface Row {
   kind: 'eq' | 'add' | 'del' | 'mod';
   left?: string;
   right?: string;
+  /** Char-level changed segments within a modified line pair. */
+  inline?: { left: InlinePart[]; right: InlinePart[] };
 }
 
+type InlinePart = { text: string; changed: boolean };
+
 /**
- * Compute a line-level diff using the classic LCS dynamic-programming
- * algorithm. O(n*m) memory; fine for typical config / response sizes
- * (a few thousand lines each). Returns a list of rows that the renderer
- * turns into the unified or side-by-side view.
+ * Line diff via LCS (kept local — fast and allocation-light for the typical
+ * sizes), plus word/char-level inline highlighting from the `diff` package
+ * for changed line pairs.
  */
 function lineDiff(a: string, b: string): Row[] {
   const left = a.split('\n');
@@ -51,26 +54,42 @@ function lineDiff(a: string, b: string): Row[] {
       j++;
     }
   }
-  while (i < n) {
-    rows.push({ kind: 'del', left: left[i++] });
-  }
-  while (j < m) {
-    rows.push({ kind: 'add', right: right[j++] });
-  }
-  // Pair adjacent del+add as 'mod' to highlight in-place changes.
+  while (i < n) rows.push({ kind: 'del', left: left[i++] });
+  while (j < m) rows.push({ kind: 'add', right: right[j++] });
+  // Pair adjacent del+add as 'mod' and compute char-level inline parts.
   for (let k = 0; k < rows.length - 1; k++) {
     if (rows[k]!.kind === 'del' && rows[k + 1]!.kind === 'add') {
-      rows[k] = { kind: 'mod', left: rows[k]!.left, right: rows[k + 1]!.right };
+      const l = rows[k]!.left ?? '';
+      const r = rows[k + 1]!.right ?? '';
+      rows[k] = { kind: 'mod', left: l, right: r, inline: inlineDiff(l, r) };
       rows.splice(k + 1, 1);
     }
   }
   return rows;
 }
 
+/** Word-level for latin text, char-level fallback for dense CJK lines. */
+function inlineDiff(a: string, b: string): { left: InlinePart[]; right: InlinePart[] } {
+  const cjk = /[\u4e00-\u9fff\u3040-\u30ff]/.test(a + b);
+  const parts = cjk ? diffChars(a, b) : diffWordsWithSpace(a, b);
+  const left: InlinePart[] = [];
+  const right: InlinePart[] = [];
+  for (const p of parts) {
+    if (p.added) right.push({ text: p.value, changed: true });
+    else if (p.removed) left.push({ text: p.value, changed: true });
+    else {
+      left.push({ text: p.value, changed: false });
+      right.push({ text: p.value, changed: false });
+    }
+  }
+  return { left, right };
+}
+
 const SAMPLES = [
   { name: 'Config (A → B)', left: 'host: api.example.com\nport: 80\nretries: 3\ntimeout: 5000', right: 'host: api.example.com\nport: 443\nretries: 5\ntimeout: 5000' },
   { name: 'JSON response', left: '{\n  "id": 1,\n  "name": "Alice",\n  "role": "user"\n}', right: '{\n  "id": 1,\n  "name": "Alice",\n  "role": "admin",\n  "active": true\n}' },
   { name: 'HTTP headers', left: 'GET /api/v1/users HTTP/1.1\nHost: api.example.com\nAccept: application/json', right: 'GET /api/v2/users HTTP/1.1\nHost: api.example.com\nAccept: application/json\nAuthorization: Bearer xyz' },
+  { name: '中文文本', left: '负载测试工具支持多种协议和可自定义的压测策略。', right: '负载测试工具支持多种协议、可自定义的压测策略与实时报告。' },
 ];
 
 export function DiffTool({ initialPayload }: DiffToolProps) {
@@ -214,8 +233,18 @@ export function DiffTool({ initialPayload }: DiffToolProps) {
                     {r.kind === 'add' ? '+' : r.kind === 'del' ? '-' : ' '}
                   </span>
                   <span className="whitespace-pre-wrap break-all">
-                    {r.kind === 'mod' ? `${r.left ?? ''} → ${r.right ?? ''}` : r.kind === 'add' ? r.right : r.left}
+                    {r.kind === 'mod'
+                      ? r.inline && <InlineParts parts={r.inline.left} />
+                      : r.kind === 'add'
+                        ? r.right
+                        : r.left}
                   </span>
+                  {r.kind === 'mod' && r.inline && (
+                    <span className="whitespace-pre-wrap break-all text-success">
+                      {' → '}
+                      <InlineParts parts={r.inline.right} />
+                    </span>
+                  )}
                 </div>
               ))
             )}
@@ -226,7 +255,7 @@ export function DiffTool({ initialPayload }: DiffToolProps) {
               <div className="col-span-2 px-3 py-4 text-center text-muted">{t('tools.diff.empty')}</div>
             ) : (
               rows.flatMap((r, i) => {
-                const cell = (text: string | undefined, kind: 'eq' | 'add' | 'del' | 'mod' | 'pad', side: 'L' | 'R') => {
+                const cell = (text: string | undefined, kind: 'eq' | 'add' | 'del' | 'mod' | 'pad', side: 'L' | 'R', inline?: InlinePart[]) => {
                   const cls =
                     kind === 'add'
                       ? 'bg-success/10 text-success'
@@ -240,7 +269,9 @@ export function DiffTool({ initialPayload }: DiffToolProps) {
                       <span className="inline-block w-6 select-none text-center text-muted">
                         {kind === 'add' ? '+' : kind === 'del' ? '-' : ' '}
                       </span>
-                      <span className="whitespace-pre-wrap break-all">{text ?? ' '}</span>
+                      <span className="whitespace-pre-wrap break-all">
+                        {inline ? <InlineParts parts={inline} /> : (text ?? ' ')}
+                      </span>
                     </div>
                   );
                 };
@@ -253,7 +284,7 @@ export function DiffTool({ initialPayload }: DiffToolProps) {
                 if (r.kind === 'del') {
                   return [cell(r.left, 'del', 'L'), cell('', 'pad', 'R')];
                 }
-                return [cell(r.left, 'del', 'L'), cell(r.right, 'add', 'R')];
+                return [cell(r.left, 'del', 'L', r.inline?.left), cell(r.right, 'add', 'R', r.inline?.right)];
               })
             )}
           </div>
@@ -272,5 +303,21 @@ export function DiffTool({ initialPayload }: DiffToolProps) {
         </div>
       )}
     </ToolShell>
+  );
+}
+
+function InlineParts({ parts }: { parts: InlinePart[] }) {
+  return (
+    <>
+      {parts.map((p, i) =>
+        p.changed ? (
+          <mark key={i} className="rounded bg-warning/25 text-inherit">
+            {p.text}
+          </mark>
+        ) : (
+          <span key={i}>{p.text}</span>
+        ),
+      )}
+    </>
   );
 }
