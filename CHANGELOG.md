@@ -1,3 +1,10 @@
+# [1.59.0](https://github.com/hexiangtao/loadix/compare/v1.58.2...v1.59.0) (2026-09-19)
+
+
+### Features
+
+* add dynamic share preview cards ([a050f76](https://github.com/hexiangtao/loadix/commit/a050f76b455f872414da6058a67b437d4f70be5d))
+
 ## [1.58.2](https://github.com/hexiangtao/loadix/compare/v1.58.1...v1.58.2) (2026-09-19)
 
 
