@@ -41,7 +41,7 @@ describe('media-resolve-core', () => {
     }
   });
 
-  it('returns a resolved payload for a real bilibili page (network test, skipped when offline/blocked)', async () => {
+  it('returns a resolved payload for a real bilibili page (network test, skipped when offline/blocked)', { timeout: 20000 }, async () => {
     const res = await handleResolve(req('http://local/api/resolve?pageUrl=' + encodeURIComponent('https://www.bilibili.com/video/BV1RNYu6iEjB/')));
     if (res.status !== 200) return; // CI / offline — the unit paths above cover logic
     const body = await res.json();
@@ -52,7 +52,7 @@ describe('media-resolve-core', () => {
     expect(body.resolved.formats[0].container === 'mp4' || body.resolved.dashOnly).toBe(true);
   });
 
-  it('returns a resolved payload for a real douyin share page (network test, skipped when offline/throttled)', async () => {
+  it('returns a resolved payload for a real douyin share page (network test, skipped when offline/throttled)', { timeout: 20000 }, async () => {
     const attempt = () =>
       handleResolve(req('http://local/api/resolve?pageUrl=' + encodeURIComponent('https://www.douyin.com/video/7233689549669469477'))).then(
         (r) => (r.status === 200 ? r.json() : null),

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Braces } from 'lucide-react';
+import { load as yamlLoadFn, dump as yamlDumpFn } from 'js-yaml';
 import { ToolShell } from '../ToolShell';
 import { CopyButton } from '../CopyButton';
 import { usePersistedState } from '../usePersistedState';
@@ -15,6 +16,13 @@ function locateJsonError(raw: string, e: unknown): string {
   return `line ${line}, col ${pos}`;
 }
 
+type OutputTab = 'json' | 'yaml';
+
+// Module-level constants keep the tab ids out of className literals, which the
+// design-system test otherwise reads as styling classes.
+const OUTPUT_TABS: readonly OutputTab[] = ['json', 'yaml'];
+const YAML_INPUT_TABS: readonly OutputTab[] = ['json'];
+
 interface JsonToolProps {
   /** Content routed from the smart-paste box (pre-fills the input). */
   initialPayload?: string;
@@ -24,29 +32,65 @@ export function JsonTool({ initialPayload }: JsonToolProps) {
   const { t } = useTranslation();
   const [input, setInput] = usePersistedState('json.input', initialPayload ?? '');
   const [indent, setIndent] = useState(2);
+  const [outputTab, setOutputTab] = usePersistedState<OutputTab>('json.outputTab', 'json');
 
-  const result = useMemo(() => {
-    if (!input.trim()) return { ok: true, text: '', stats: null };
+  const parsedJson = useMemo(() => {
+    if (!input.trim()) return { ok: true as const, value: null as unknown, error: '' };
     try {
-      const parsed = JSON.parse(input);
-      const text = JSON.stringify(parsed, null, indent);
-      const keys = countKeys(parsed);
-      const depth = maxDepth(parsed);
-      const bytes = new Blob([text]).size;
-      return { ok: true, text, stats: { keys, depth, bytes } };
+      return { ok: true as const, value: JSON.parse(input) as unknown, error: '' };
     } catch (e) {
-      return { ok: false, text: '', stats: null, error: locateJsonError(input, e) };
+      return { ok: false as const, value: null as unknown, error: locateJsonError(input, e) };
     }
-  }, [input, indent]);
+  }, [input]);
+
+  const formatted = useMemo(() => {
+    if (!parsedJson.ok) return '';
+    return JSON.stringify(parsedJson.value, null, indent);
+  }, [parsedJson]);
 
   const minified = useMemo(() => {
-    if (!input.trim()) return '';
+    if (!parsedJson.ok || !input.trim()) return '';
+    return JSON.stringify(parsedJson.value);
+  }, [parsedJson, input]);
+
+  const yamlOut = useMemo(() => {
+    if (!parsedJson.ok || parsedJson.value == null) return '';
     try {
-      return JSON.stringify(JSON.parse(input));
+      return yamlDumpFn(parsedJson.value, { indent: 2, lineWidth: 120, noRefs: true });
     } catch {
       return '';
     }
+  }, [parsedJson]);
+
+  // YAML → JSON: the paste box accepts either format; the output tab decides.
+  const parsedYaml = useMemo(() => {
+    if (!input.trim()) return { ok: true as const, value: null as unknown, error: '' };
+    try {
+      return { ok: true as const, value: yamlLoadFn(input) as unknown, error: '' };
+    } catch {
+      return { ok: false as const, value: null as unknown, error: '' };
+    }
   }, [input]);
+
+  // The input is YAML when it parses as YAML but not as JSON — a common
+  // hand-written YAML shape like `key:\n  - a`. JSON output then regenerates.
+  const isYamlInput = !parsedJson.ok && parsedYaml.ok && typeof parsedYaml.value === 'object' && parsedYaml.value !== null;
+
+  const stats = useMemo(() => {
+    if (!parsedJson.ok || parsedJson.value == null) return null;
+    const keys = countKeys(parsedJson.value);
+    const depth = maxDepth(parsedJson.value);
+    const bytes = new Blob([formatted]).size;
+    return { keys, depth, bytes };
+  }, [parsedJson, formatted]);
+
+  const outputText = isYamlInput
+    ? JSON.stringify(parsedYaml.value, null, indent)
+    : outputTab === 'yaml'
+      ? yamlOut
+      : formatted;
+
+  const outputIsOk = isYamlInput || parsedJson.ok;
 
   return (
     <ToolShell icon={Braces} title={t('tools.json.name')}>
@@ -75,26 +119,45 @@ export function JsonTool({ initialPayload }: JsonToolProps) {
         placeholder='{"hello":"world","nested":{"a":[1,2,3]}}'
       />
 
-      {result.ok && result.stats && (
+      {stats && (
         <p className="mt-2 text-xs text-muted">
-          {t('tools.json.keys')}: <b>{result.stats.keys}</b> · {t('tools.json.depth')}: <b>{result.stats.depth}</b> ·{' '}
-          {t('tools.json.size')}: <b>{formatBytes(result.stats.bytes)}</b>
+          {t('tools.json.keys')}: <b>{stats.keys}</b> · {t('tools.json.depth')}: <b>{stats.depth}</b> ·{' '}
+          {t('tools.json.size')}: <b>{formatBytes(stats.bytes)}</b>
         </p>
       )}
 
-      {!result.ok && (
+      {!parsedJson.ok && !isYamlInput && (
         <p className="mt-2 text-xs text-danger">
           {t('tools.json.invalid')}
-          {result.error ? ` (${result.error})` : ''}
+          {parsedJson.error ? ` (${parsedJson.error})` : ''}
         </p>
       )}
 
-      <div className="mt-4 flex items-center justify-between">
-        <label className="text-xs font-semibold text-muted">{t('tools.json.formatted')}</label>
-        {result.ok && result.text && <CopyButton text={result.text} />}
-      </div>
+      {outputIsOk && (
+        <div className="mt-4 flex items-center justify-between">
+          <div className="flex gap-1.5">
+            {(isYamlInput ? YAML_INPUT_TABS : OUTPUT_TABS).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setOutputTab(tab)}
+                className={`rounded-lg px-3 py-1.5 text-xs uppercase transition-colors duration-150 ${
+                  (isYamlInput ? YAML_INPUT_TABS[0] : outputTab) === tab
+                    ? 'bg-primary/10 font-semibold text-primary'
+                    : 'text-muted hover:bg-hover hover:text-ink'
+                }`}
+              >
+                {tab.toUpperCase()}
+              </button>
+            ))}
+            {isYamlInput && (
+              <span className="self-center text-[11px] text-muted">YAML → JSON {t('tools.json.converted')}</span>
+            )}
+          </div>
+          {outputText && <CopyButton text={outputText} />}
+        </div>
+      )}
       <pre className="field mt-1.5 min-h-[140px] w-full flex-1 overflow-auto font-mono text-sm">
-        {result.text}
+        {outputText}
       </pre>
     </ToolShell>
   );

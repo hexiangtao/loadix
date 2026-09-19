@@ -696,12 +696,16 @@
       "month": "Month",
       "dayOfWeek": "Day of week",
       "next": "Next 5 runs",
-      "invalid": "Invalid cron expression (expected 5 fields)"
+      "invalid": "Invalid cron expression",
+      "examples": "Examples:",
+      "meaning": "What this means",
+      "tzHint": "Times shown in your local timezone."
     },
     "sql": {
       "name": "SQL Formatter",
       "desc": "Format & beautify SQL queries",
-      "uppercase": "Uppercase keywords"
+      "uppercase": "Uppercase keywords",
+      "formatted": "Formatted"
     },
     "hash": {
       "name": "Hash",
@@ -876,7 +880,13 @@
       "name": "JSONPath",
       "desc": "Extract data from JSON with a path expression",
       "presets": "Quick:",
-      "matches": "Matches"
+      "matches": "Matches",
+      "loadSample": "Load sample data"
+    },
+    "json": {
+      "name": "JSON Formatter",
+      "desc": "Format, validate & convert JSON",
+      "converted": "detected"
     }
   },
   "share": {

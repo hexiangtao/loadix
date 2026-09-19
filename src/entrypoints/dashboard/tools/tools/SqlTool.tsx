@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Database } from 'lucide-react';
+import { format } from 'sql-formatter';
 import { ToolShell } from '../ToolShell';
 import { CopyButton } from '../CopyButton';
 import { usePersistedState } from '../usePersistedState';
@@ -9,88 +10,100 @@ interface SqlToolProps {
   initialPayload?: string;
 }
 
-/**
- * Lightweight SQL formatter: uppercases keywords, normalizes commas and
- * whitespace, and breaks major clauses onto their own lines. Purely
- * token-based (no SQL parser), so it works for any dialect reasonably well.
- */
-function formatSql(sql: string, uppercase: boolean): string {
-  const KEYWORDS = [
-    'SELECT', 'FROM', 'WHERE', 'GROUP BY', 'ORDER BY', 'HAVING', 'LIMIT', 'OFFSET',
-    'INSERT INTO', 'VALUES', 'UPDATE', 'SET', 'DELETE FROM', 'JOIN', 'LEFT JOIN',
-    'RIGHT JOIN', 'INNER JOIN', 'OUTER JOIN', 'FULL JOIN', 'ON', 'AND', 'OR', 'NOT',
-    'IN', 'AS', 'UNION', 'UNION ALL', 'DISTINCT', 'CASE', 'WHEN', 'THEN', 'ELSE', 'END',
-  ];
+/** Dialects offered in the picker. The library supports more; these cover
+ *  the engines users actually paste from, keeping the UI scannable. */
+const DIALECTS = [
+  { id: 'sql', label: 'Standard SQL' },
+  { id: 'mysql', label: 'MySQL' },
+  { id: 'postgresql', label: 'PostgreSQL' },
+  { id: 'sqlite', label: 'SQLite' },
+  { id: 'mariadb', label: 'MariaDB' },
+  { id: 'bigquery', label: 'BigQuery' },
+  { id: 'clickhouse', label: 'ClickHouse' },
+  { id: 'transactsql', label: 'SQL Server (T-SQL)' },
+  { id: 'plsql', label: 'Oracle PL/SQL' },
+  { id: 'hive', label: 'Apache Hive' },
+  { id: 'spark', label: 'Spark' },
+  { id: 'duckdb', label: 'DuckDB' },
+] as const;
 
-  let out = sql.replace(/\s+/g, ' ').trim();
-
-  // Protect string literals from keyword replacement.
-  const strings: string[] = [];
-  out = out.replace(/'(?:[^']|'')*'/g, (m) => {
-    strings.push(m);
-    return `\u0000${strings.length - 1}\u0000`;
-  });
-
-  for (const kw of KEYWORDS) {
-    const re = new RegExp(`\\b${kw.replace(/ /g, '\\s+')}\\b`, 'gi');
-    out = out.replace(re, uppercase ? kw : kw.toLowerCase());
-  }
-
-  // Break major clauses onto separate lines.
-  out = out
-    .replace(/\s*\bFROM\b\s*/gi, '\nFROM ')
-    .replace(/\s*\bWHERE\b\s*/gi, '\nWHERE ')
-    .replace(/\s*\bGROUP BY\b\s*/gi, '\nGROUP BY ')
-    .replace(/\s*\bORDER BY\b\s*/gi, '\nORDER BY ')
-    .replace(/\s*\bHAVING\b\s*/gi, '\nHAVING ')
-    .replace(/\s*\bLIMIT\b\s*/gi, '\nLIMIT ')
-    .replace(/\s*\bOFFSET\b\s*/gi, '\nOFFSET ')
-    .replace(/\s*\bLEFT JOIN\b\s*/gi, '\nLEFT JOIN ')
-    .replace(/\s*\bRIGHT JOIN\b\s*/gi, '\nRIGHT JOIN ')
-    .replace(/\s*\bINNER JOIN\b\s*/gi, '\nINNER JOIN ')
-    .replace(/\s*\bJOIN\b\s*/gi, '\nJOIN ')
-    .replace(/,\s*/g, ', ');
-
-  // Restore string literals.
-  out = out.replace(/\u0000(\d+)\u0000/g, (_, i) => strings[Number(i)] ?? '');
-
-  return out;
-}
+type DialectId = (typeof DIALECTS)[number]['id'];
 
 export function SqlTool({ initialPayload }: SqlToolProps) {
   const { t } = useTranslation();
   const [input, setInput] = usePersistedState('sql.input', initialPayload ?? '');
-  const [uppercase, setUppercase] = useState(true);
+  const [dialect, setDialect] = usePersistedState<DialectId>('sql.dialect', 'mysql');
+  const [uppercase, setUppercase] = usePersistedState('sql.uppercase', true);
+  const [indent, setIndent] = usePersistedState('sql.indent', 2);
 
-  const formatted = useMemo(() => {
-    if (!input.trim()) return '';
+  const result = useMemo(() => {
+    if (!input.trim()) return { ok: true as const, text: '', error: '' };
     try {
-      return formatSql(input, uppercase);
-    } catch {
-      return '';
+      const text = format(input, {
+        // The picker's ids are the library's own language names.
+        language: dialect,
+        keywordCase: uppercase ? 'upper' : 'preserve',
+        tabWidth: indent,
+      });
+      return { ok: true as const, text, error: '' };
+    } catch (e) {
+      // A parse the real parser rejects (a truncated snippet, a stored-proc
+      // fragment) is reported, not silently swallowed.
+      return { ok: false as const, text: '', error: (e as Error).message.slice(0, 200) };
     }
-  }, [input, uppercase]);
+  }, [input, dialect, uppercase, indent]);
 
   return (
     <ToolShell icon={Database} title={t('tools.sql.name')}>
+      <div className="mb-3 flex flex-wrap items-center gap-3">
+        <select
+          value={dialect}
+          onChange={(e) => setDialect(e.target.value as DialectId)}
+          className="cursor-pointer rounded-lg border border-line bg-panel px-2.5 py-1.5 text-[13px] outline-none hover:border-primary focus:border-primary"
+          aria-label="SQL dialect"
+        >
+          {DIALECTS.map((d) => (
+            <option key={d.id} value={d.id}>{d.label}</option>
+          ))}
+        </select>
+
+        <div className="flex gap-1.5">
+          {[2, 4].map((n) => (
+            <button
+              key={n}
+              onClick={() => setIndent(n)}
+              className={`rounded-lg px-3 py-1.5 text-xs transition-colors duration-150 ${
+                indent === n ? 'bg-primary/10 font-semibold text-primary' : 'text-muted hover:bg-hover hover:text-ink'
+              }`}
+            >
+              {n} {t('tools.json.spaces')}
+            </button>
+          ))}
+        </div>
+
+        <label className="flex items-center gap-2 text-xs font-semibold text-muted">
+          <input type="checkbox" checked={uppercase} onChange={(e) => setUppercase(e.target.checked)} />
+          {t('tools.sql.uppercase')}
+        </label>
+      </div>
+
       <label className="mb-1.5 block text-xs font-semibold text-muted">{t('tools.input')}</label>
       <textarea
         autoFocus
-        className="min-h-[120px] w-full flex-1 resize-y rounded-lg border border-line bg-panel px-2.5 py-2 font-mono text-sm outline-none transition-colors duration-150 focus:border-primary"
+        className="field min-h-[120px] w-full flex-1 resize-y font-mono text-sm"
         value={input}
         onChange={(e) => setInput(e.target.value)}
         placeholder="select id,name from users where age>18 order by id limit 10"
       />
 
+      {!result.ok && result.error && <p className="mt-2 text-xs text-danger">{result.error}</p>}
+
       <div className="mt-4 flex items-center justify-between">
-        <label className="flex items-center gap-2 text-xs font-semibold text-muted">
-          <input type="checkbox" checked={uppercase} onChange={(e) => setUppercase(e.target.checked)} />
-          {t('tools.sql.uppercase')}
-        </label>
-        {formatted && <CopyButton text={formatted} />}
+        <label className="text-xs font-semibold text-muted">{t('tools.sql.formatted')}</label>
+        {result.text && <CopyButton text={result.text} />}
       </div>
-      <pre className="mt-1.5 min-h-[120px] w-full flex-1 overflow-auto rounded-lg border border-line bg-hover px-2.5 py-2 font-mono text-sm">
-        {formatted}
+      <pre className="field mt-1.5 min-h-[120px] w-full flex-1 overflow-auto font-mono text-sm">
+        {result.text}
       </pre>
     </ToolShell>
   );
