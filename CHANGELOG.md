@@ -1,3 +1,10 @@
+# [1.67.0](https://github.com/hexiangtao/loadix/compare/v1.66.0...v1.67.0) (2026-09-19)
+
+
+### Features
+
+* batch three tool upgrades — inline diff, asymmetric JWT verify, HMAC + file hashing ([9d9ccf4](https://github.com/hexiangtao/loadix/commit/9d9ccf4270708f00bb716f34bf5a12b90605785e))
+
 # [1.66.0](https://github.com/hexiangtao/loadix/compare/v1.65.0...v1.66.0) (2026-09-19)
 
 
