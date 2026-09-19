@@ -10,7 +10,7 @@
 // funnel link (返回首页) points visitors at the tool site (lab.loadix.dev),
 // not the marketing site.
 import { createRoot } from 'react-dom/client';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Component, useCallback, useEffect, useRef, useState, type ErrorInfo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, ArrowUpRight, FileQuestion, ListTree, Loader2, RotateCw } from 'lucide-react';
 import { initI18n } from '@/entrypoints/dashboard/i18n';
@@ -134,8 +134,10 @@ function ShareApp() {
   useEffect(() => {
     if (!id) return;
     let cancelled = false;
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 15_000);
     setState({ status: 'loading' });
-    fetch(`/api/share/${encodeURIComponent(id)}`)
+    fetch(`/api/share/${encodeURIComponent(id)}`, { signal: controller.signal })
       .then(async (res) => {
         if (res.status === 404) throw Object.assign(new Error('not-found'), { code: 'not-found' });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -151,9 +153,12 @@ function ShareApp() {
         if (cancelled) return;
         const code = (e as { code?: string } | null)?.code;
         setState({ status: code === 'not-found' ? 'not-found' : 'error' });
-      });
+      })
+      .finally(() => window.clearTimeout(timeout));
     return () => {
       cancelled = true;
+      window.clearTimeout(timeout);
+      controller.abort();
     };
   }, [id, attempt]);
 
@@ -168,7 +173,7 @@ function ShareApp() {
   }, [state]);
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-panel">
+    <div className="share-page flex h-screen min-h-[100dvh] flex-col overflow-hidden bg-panel">
       {/* The nav is FIXED (out of the layout flow): the document scroller below
           always spans the full viewport, and a top spacer inside the scrollable
           content keeps the first line clear while the nav is visible. Hiding /
@@ -279,7 +284,11 @@ function ShareApp() {
               {/* Rendered media is click-to-zoom on the share page: diagrams
                   open full-size in a lightbox (vector-crisp) and images at
                   their natural resolution — never just the in-flow size. */}
-              {state.status === 'ready' && <MarkdownPreview source={state.source} zoomable />}
+              {state.status === 'ready' && (
+                <ShareRenderBoundary>
+                  <MarkdownPreview source={state.source} zoomable />
+                </ShareRenderBoundary>
+              )}
             </div>
           )}
 
@@ -388,6 +397,46 @@ function showBootstrapError(error: unknown) {
       <p style="margin:0;color:#6e6e73">The viewer could not start. Please reload this link.</p>
       <details style="margin-top:20px;color:#6e6e73"><summary>Technical details</summary><pre style="white-space:pre-wrap">${message.replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char] ?? char)}</pre></details>
     </main>`;
+}
+
+interface ShareRenderBoundaryProps {
+  children: ReactNode;
+}
+
+interface ShareRenderBoundaryState {
+  failed: boolean;
+}
+
+/**
+ * Markdown enhancements are optional on a shared page. If a malformed plugin,
+ * diagram, or browser-specific renderer crashes, keep the page readable and
+ * offer a reload instead of unmounting the whole viewer.
+ */
+class ShareRenderBoundary extends Component<ShareRenderBoundaryProps, ShareRenderBoundaryState> {
+  state: ShareRenderBoundaryState = { failed: false };
+
+  static getDerivedStateFromError(): ShareRenderBoundaryState {
+    return { failed: true };
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error('[share] markdown render failed:', error, info.componentStack);
+  }
+
+  render() {
+    if (this.state.failed) {
+      return (
+        <div className="rounded-xl border border-danger/30 bg-danger/5 p-4 text-sm text-muted">
+          <p className="font-semibold text-danger">This document could not be rendered.</p>
+          <p className="mt-1">Try reloading the page or opening the shared link again.</p>
+          <button type="button" className="ghost-btn mt-3" onClick={() => window.location.reload()}>
+            Reload
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
 }
 
 async function bootstrap() {

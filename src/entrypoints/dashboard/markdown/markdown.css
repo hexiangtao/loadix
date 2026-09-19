@@ -3,6 +3,8 @@
    styles never leak into other tool UI. */
 
 .md-prose {
+  min-width: 0;
+  overflow-wrap: anywhere;
   font-size: 13.5px;
   line-height: 1.7;
   color: var(--color-ink);
@@ -13,6 +15,34 @@
      inline-size container so running text can take a readable measure only
      once the pane is wide enough (see below). */
   container-type: inline-size;
+}
+
+/* Mobile reading hardening: keep the share viewer inside the visual viewport.
+   Long URLs and inline code must wrap; fenced blocks and tables retain their
+   own horizontal scroller instead of widening the document itself. */
+@media (max-width: 640px) {
+  .share-page .md-prose {
+    font-size: 14px;
+    line-height: 1.65;
+  }
+  .share-page .md-prose h1 { font-size: 20px; }
+  .share-page .md-prose h2 { font-size: 17px; }
+  .share-page .md-prose pre,
+  .share-page .md-codeblock pre {
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .share-page .md-prose img,
+  .share-page .md-mermaid svg {
+    max-width: 100%;
+    height: auto;
+  }
+  .share-page .md-table-wrap {
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
 }
 
 /* Running text keeps a readable measure on wide panes while content blocks —
