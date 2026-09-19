@@ -1,3 +1,10 @@
+# [1.68.0](https://github.com/hexiangtao/loadix/compare/v1.67.0...v1.68.0) (2026-09-19)
+
+
+### Features
+
+* color WCAG contrast + Tailwind ramp, UUID decode panel ([bb5989b](https://github.com/hexiangtao/loadix/commit/bb5989b90759fdf7cb74408b6ba25e2eff4d6256))
+
 # [1.67.0](https://github.com/hexiangtao/loadix/compare/v1.66.0...v1.67.0) (2026-09-19)
 
 
