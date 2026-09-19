@@ -1,11 +1,20 @@
 import { createServer } from 'node:http';
 import { createMediaWorker } from './core.mjs';
+import { createYtdlpExecutor } from './ytdlp-executor.mjs';
 
 /**
- * Development/standalone entrypoint. Production should inject an executor
- * that owns yt-dlp/FFmpeg; the default intentionally reports not configured.
+ * Development/standalone entrypoint.
+ *
+ * MEDIA_WORKER_EXECUTOR=ytdlp enables the yt-dlp executor (requires the
+ * yt-dlp binary on PATH or at MEDIA_WORKER_YTDLP_PATH); without it the
+ * default intentionally reports not configured.
  */
-const worker = createMediaWorker();
+const executor = process.env.MEDIA_WORKER_EXECUTOR === 'ytdlp'
+  ? createYtdlpExecutor({
+      ...(process.env.MEDIA_WORKER_YTDLP_PATH ? { ytDlpPath: process.env.MEDIA_WORKER_YTDLP_PATH } : {}),
+    })
+  : undefined;
+const worker = createMediaWorker(executor ? { executor } : {});
 const port = Number(process.env.MEDIA_WORKER_PORT ?? 8787);
 
 const server = createServer(async (req, res) => {

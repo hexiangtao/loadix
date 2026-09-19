@@ -22,6 +22,24 @@ The default executor returns `backend / media executor is not configured`.
 That is intentional: deploying the API before configuring a downloader must
 not pretend to resolve media.
 
+## Enable the yt-dlp executor
+
+Requires the `yt-dlp` binary on the host (or a path via
+`MEDIA_WORKER_YTDLP_PATH`):
+
+```bash
+MEDIA_WORKER_EXECUTOR=ytdlp node media-worker/server.mjs
+```
+
+The executor runs `yt-dlp -J --no-warnings --no-playlist <url>` and normalizes
+the JSON into the dashboard's `ResolvedPageAsset` format ladder — muxed files
+first, video-only rows paired with the best audio track for the existing mux
+step. Failures map onto the shared ResolveFailure taxonomy (login wall,
+region lock, throttling), so the panel's advice works unchanged.
+
+This is not a bypass tool: yt-dlp only reaches what an anonymous (or
+cookie-provided) session may access. DRM content stays out of scope.
+
 ## API
 
 ```text
