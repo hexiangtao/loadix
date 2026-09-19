@@ -1,3 +1,11 @@
+# [1.58.0](https://github.com/hexiangtao/loadix/compare/v1.57.0...v1.58.0) (2026-09-19)
+
+
+### Features
+
+* **media:** server-side page resolve — web build can now resolve watch pages ([384e811](https://github.com/hexiangtao/loadix/commit/384e81163e37c1c7fdb391e170081cf82f925d1b))
+* **media:** site-adapter registry — AcFun and Bilibili 番剧/课程, plus a resolve UI driven by it ([f3af188](https://github.com/hexiangtao/loadix/commit/f3af1883e9cf7992e3a6e398f59666b8aa60f23c))
+
 # [1.57.0](https://github.com/hexiangtao/loadix/compare/v1.56.1...v1.57.0) (2026-09-13)
 
 
